@@ -14,6 +14,67 @@ export type Database = {
   }
   public: {
     Tables: {
+      appointments: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          owner_id: string
+          pet_id: string
+          scheduled_at: string
+          service_id: string | null
+          status: string
+          updated_at: string
+          vet_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          owner_id: string
+          pet_id: string
+          scheduled_at: string
+          service_id?: string | null
+          status?: string
+          updated_at?: string
+          vet_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          owner_id?: string
+          pet_id?: string
+          scheduled_at?: string
+          service_id?: string | null
+          status?: string
+          updated_at?: string
+          vet_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: false
+            referencedRelation: "pets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_vet_id_fkey"
+            columns: ["vet_id"]
+            isOneToOne: false
+            referencedRelation: "vet_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       emergency_contacts: {
         Row: {
           contact_name: string
@@ -212,6 +273,50 @@ export type Database = {
         }
         Relationships: []
       }
+      services: {
+        Row: {
+          created_at: string
+          description: string | null
+          duration_minutes: number | null
+          id: string
+          is_active: boolean
+          name: string
+          price: number
+          updated_at: string
+          vet_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          is_active?: boolean
+          name: string
+          price?: number
+          updated_at?: string
+          vet_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          price?: number
+          updated_at?: string
+          vet_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "services_vet_id_fkey"
+            columns: ["vet_id"]
+            isOneToOne: false
+            referencedRelation: "vet_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       story_comments: {
         Row: {
           content: string
@@ -291,6 +396,48 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      vet_profiles: {
+        Row: {
+          bio: string | null
+          clinic_name: string
+          created_at: string
+          id: string
+          is_approved: boolean
+          location: string | null
+          phone: string | null
+          specializations: string[] | null
+          updated_at: string
+          user_id: string
+          website: string | null
+        }
+        Insert: {
+          bio?: string | null
+          clinic_name?: string
+          created_at?: string
+          id?: string
+          is_approved?: boolean
+          location?: string | null
+          phone?: string | null
+          specializations?: string[] | null
+          updated_at?: string
+          user_id: string
+          website?: string | null
+        }
+        Update: {
+          bio?: string | null
+          clinic_name?: string
+          created_at?: string
+          id?: string
+          is_approved?: boolean
+          location?: string | null
+          phone?: string | null
+          specializations?: string[] | null
+          updated_at?: string
+          user_id?: string
+          website?: string | null
         }
         Relationships: []
       }
@@ -389,6 +536,10 @@ export type Database = {
       }
       is_pet_owner: {
         Args: { _pet_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_vet_profile_owner: {
+        Args: { _user_id: string; _vet_profile_id: string }
         Returns: boolean
       }
       process_donation: {

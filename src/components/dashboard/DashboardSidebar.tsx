@@ -1,4 +1,4 @@
-import { PawPrint, LayoutDashboard, LogOut, Users, Wallet } from "lucide-react";
+import { PawPrint, LayoutDashboard, LogOut, Users, Wallet, Stethoscope, Briefcase, Calendar } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -14,15 +14,24 @@ import {
   SidebarHeader,
 } from "@/components/ui/sidebar";
 
-const navItems = [
+const ownerNav = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "My Pets", url: "/dashboard/pets", icon: PawPrint },
   { title: "Community", url: "/dashboard/community", icon: Users },
   { title: "Wallet", url: "/dashboard/wallet", icon: Wallet },
 ];
 
+const vetNav = [
+  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+  { title: "My Profile", url: "/dashboard/vet-profile", icon: Stethoscope },
+  { title: "Services", url: "/dashboard/vet-services", icon: Briefcase },
+  { title: "Community", url: "/dashboard/community", icon: Users },
+  { title: "Wallet", url: "/dashboard/wallet", icon: Wallet },
+];
+
 export function DashboardSidebar() {
   const { signOut, user, role } = useAuth();
+  const navItems = role === "vet" ? vetNav : ownerNav;
 
   return (
     <Sidebar className="border-r-0">
