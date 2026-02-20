@@ -10,6 +10,8 @@ import SelectRole from "./pages/SelectRole";
 import DashboardLayout from "./pages/DashboardLayout";
 import DashboardHome from "./pages/DashboardHome";
 import PetsPage from "./pages/PetsPage";
+import CommunityPage from "./pages/CommunityPage";
+import WalletPage from "./pages/WalletPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +30,8 @@ const App = () => (
             <Route path="/dashboard" element={<DashboardLayout />}>
               <Route index element={<DashboardHome />} />
               <Route path="pets" element={<PetsPage />} />
+              <Route path="community" element={<CommunityPage />} />
+              <Route path="wallet" element={<WalletPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
