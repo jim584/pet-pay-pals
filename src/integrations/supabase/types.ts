@@ -14,6 +14,124 @@ export type Database = {
   }
   public: {
     Tables: {
+      emergency_contacts: {
+        Row: {
+          contact_name: string
+          created_at: string
+          id: string
+          pet_id: string
+          phone: string
+          relationship: string | null
+        }
+        Insert: {
+          contact_name: string
+          created_at?: string
+          id?: string
+          pet_id: string
+          phone: string
+          relationship?: string | null
+        }
+        Update: {
+          contact_name?: string
+          created_at?: string
+          id?: string
+          pet_id?: string
+          phone?: string
+          relationship?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "emergency_contacts_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: false
+            referencedRelation: "pets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      health_records: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          pet_id: string
+          record_date: string
+          record_type: string
+          title: string
+          vet_name: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          pet_id: string
+          record_date?: string
+          record_type?: string
+          title: string
+          vet_name?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          pet_id?: string
+          record_date?: string
+          record_type?: string
+          title?: string
+          vet_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "health_records_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: false
+            referencedRelation: "pets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pets: {
+        Row: {
+          age_years: number | null
+          breed: string | null
+          created_at: string
+          id: string
+          name: string
+          notes: string | null
+          owner_id: string
+          photo_url: string | null
+          species: string
+          updated_at: string
+          weight_kg: number | null
+        }
+        Insert: {
+          age_years?: number | null
+          breed?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string | null
+          owner_id: string
+          photo_url?: string | null
+          species?: string
+          updated_at?: string
+          weight_kg?: number | null
+        }
+        Update: {
+          age_years?: number | null
+          breed?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          owner_id?: string
+          photo_url?: string | null
+          species?: string
+          updated_at?: string
+          weight_kg?: number | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           address: string | null
@@ -78,6 +196,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_pet_owner: {
+        Args: { _pet_id: string; _user_id: string }
         Returns: boolean
       }
       user_has_any_role: { Args: { _user_id: string }; Returns: boolean }
