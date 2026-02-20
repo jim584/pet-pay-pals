@@ -1,0 +1,178 @@
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { toast } from "@/components/ui/sonner";
+import { Pet, HealthRecord, EmergencyContact, fetchHealthRecords, fetchEmergencyContacts, deleteHealthRecord, deleteEmergencyContact } from "@/lib/pets-api";
+import { AddHealthRecordDialog } from "./AddHealthRecordDialog";
+import { AddEmergencyContactDialog } from "./AddEmergencyContactDialog";
+import { PawPrint, Plus, Trash2, Calendar, Stethoscope, Phone, ArrowLeft } from "lucide-react";
+
+interface PetDetailProps {
+  pet: Pet;
+  onBack: () => void;
+  onEdit: () => void;
+}
+
+export function PetDetail({ pet, onBack, onEdit }: PetDetailProps) {
+  const [records, setRecords] = useState<HealthRecord[]>([]);
+  const [contacts, setContacts] = useState<EmergencyContact[]>([]);
+  const [showAddRecord, setShowAddRecord] = useState(false);
+  const [showAddContact, setShowAddContact] = useState(false);
+
+  const loadRecords = () => fetchHealthRecords(pet.id).then(setRecords).catch(() => {});
+  const loadContacts = () => fetchEmergencyContacts(pet.id).then(setContacts).catch(() => {});
+
+  useEffect(() => {
+    loadRecords();
+    loadContacts();
+  }, [pet.id]);
+
+  const handleDeleteRecord = async (id: string) => {
+    try {
+      await deleteHealthRecord(id);
+      toast.success("Record deleted");
+      loadRecords();
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  const handleDeleteContact = async (id: string) => {
+    try {
+      await deleteEmergencyContact(id);
+      toast.success("Contact deleted");
+      loadContacts();
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  const recordTypeColors: Record<string, string> = {
+    vaccination: "bg-accent text-accent-foreground",
+    surgery: "bg-destructive text-destructive-foreground",
+    checkup: "bg-primary text-primary-foreground",
+    allergy: "bg-destructive/80 text-destructive-foreground",
+    medication: "bg-secondary text-secondary-foreground",
+    general: "bg-muted text-muted-foreground",
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="icon" onClick={onBack}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div className="flex-1">
+          <h2 className="text-2xl font-bold font-display">{pet.name}</h2>
+          <p className="text-muted-foreground capitalize">{pet.species}{pet.breed ? ` · ${pet.breed}` : ""}</p>
+        </div>
+        <Button variant="outline" onClick={onEdit}>Edit</Button>
+      </div>
+
+      {/* Pet Info */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {[
+          { label: "Age", value: pet.age_years ? `${pet.age_years} yr${pet.age_years > 1 ? "s" : ""}` : "—" },
+          { label: "Weight", value: pet.weight_kg ? `${pet.weight_kg} kg` : "—" },
+          { label: "Species", value: pet.species },
+          { label: "Breed", value: pet.breed || "—" },
+        ].map((item) => (
+          <Card key={item.label}>
+            <CardContent className="p-4 text-center">
+              <p className="text-xs text-muted-foreground uppercase tracking-wider">{item.label}</p>
+              <p className="text-lg font-semibold capitalize mt-1">{item.value}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {pet.notes && (
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">{pet.notes}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      <Separator />
+
+      {/* Health Records */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold font-display flex items-center gap-2">
+            <Stethoscope className="h-5 w-5 text-primary" /> Health Records
+          </h3>
+          <Button size="sm" onClick={() => setShowAddRecord(true)} className="gap-1">
+            <Plus className="h-4 w-4" /> Add
+          </Button>
+        </div>
+        {records.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No health records yet.</p>
+        ) : (
+          <div className="space-y-3">
+            {records.map((r) => (
+              <Card key={r.id}>
+                <CardContent className="p-4 flex items-start justify-between">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold">{r.title}</span>
+                      <Badge className={recordTypeColors[r.record_type] || recordTypeColors.general} variant="secondary">
+                        {r.record_type}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{r.record_date}</span>
+                      {r.vet_name && <span>Dr. {r.vet_name}</span>}
+                    </div>
+                    {r.description && <p className="text-sm text-muted-foreground mt-1">{r.description}</p>}
+                  </div>
+                  <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteRecord(r.id)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <Separator />
+
+      {/* Emergency Contacts */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold font-display flex items-center gap-2">
+            <Phone className="h-5 w-5 text-accent" /> Emergency Contacts
+          </h3>
+          <Button size="sm" onClick={() => setShowAddContact(true)} className="gap-1">
+            <Plus className="h-4 w-4" /> Add
+          </Button>
+        </div>
+        {contacts.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No emergency contacts yet.</p>
+        ) : (
+          <div className="space-y-3">
+            {contacts.map((c) => (
+              <Card key={c.id}>
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold">{c.contact_name}</p>
+                    <p className="text-sm text-muted-foreground">{c.phone}{c.relationship ? ` · ${c.relationship}` : ""}</p>
+                  </div>
+                  <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteContact(c.id)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <AddHealthRecordDialog open={showAddRecord} onOpenChange={setShowAddRecord} petId={pet.id} onSuccess={loadRecords} />
+      <AddEmergencyContactDialog open={showAddContact} onOpenChange={setShowAddContact} petId={pet.id} onSuccess={loadContacts} />
+    </div>
+  );
+}
