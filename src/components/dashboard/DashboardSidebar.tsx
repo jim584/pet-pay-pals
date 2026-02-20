@@ -1,4 +1,4 @@
-import { PawPrint, LayoutDashboard, LogOut, Settings } from "lucide-react";
+import { PawPrint, LayoutDashboard, LogOut, Users, Wallet } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -14,9 +14,11 @@ import {
   SidebarHeader,
 } from "@/components/ui/sidebar";
 
-const ownerNav = [
+const navItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "My Pets", url: "/dashboard/pets", icon: PawPrint },
+  { title: "Community", url: "/dashboard/community", icon: Users },
+  { title: "Wallet", url: "/dashboard/wallet", icon: Wallet },
 ];
 
 export function DashboardSidebar() {
@@ -42,7 +44,7 @@ export function DashboardSidebar() {
           <SidebarGroupLabel>Menu</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {ownerNav.map((item) => (
+              {navItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink

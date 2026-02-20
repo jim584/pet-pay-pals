@@ -90,6 +90,53 @@ export type Database = {
           },
         ]
       }
+      pet_stories: {
+        Row: {
+          author_id: string
+          comments_count: number
+          content: string
+          created_at: string
+          id: string
+          likes_count: number
+          pet_id: string
+          photo_urls: string[] | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          comments_count?: number
+          content: string
+          created_at?: string
+          id?: string
+          likes_count?: number
+          pet_id: string
+          photo_urls?: string[] | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          comments_count?: number
+          content?: string
+          created_at?: string
+          id?: string
+          likes_count?: number
+          pet_id?: string
+          photo_urls?: string[] | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pet_stories_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: false
+            referencedRelation: "pets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pets: {
         Row: {
           age_years: number | null
@@ -165,6 +212,67 @@ export type Database = {
         }
         Relationships: []
       }
+      story_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          story_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          story_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          story_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "story_comments_story_id_fkey"
+            columns: ["story_id"]
+            isOneToOne: false
+            referencedRelation: "pet_stories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      story_likes: {
+        Row: {
+          created_at: string
+          id: string
+          story_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          story_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          story_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "story_likes_story_id_fkey"
+            columns: ["story_id"]
+            isOneToOne: false
+            referencedRelation: "pet_stories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -186,6 +294,87 @@ export type Database = {
         }
         Relationships: []
       }
+      wallet_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          direct_pay_portion: number
+          from_user_id: string | null
+          id: string
+          related_story_id: string | null
+          type: Database["public"]["Enums"]["transaction_type"]
+          wallet_id: string
+          wallet_portion: number
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string | null
+          direct_pay_portion?: number
+          from_user_id?: string | null
+          id?: string
+          related_story_id?: string | null
+          type: Database["public"]["Enums"]["transaction_type"]
+          wallet_id: string
+          wallet_portion?: number
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          direct_pay_portion?: number
+          from_user_id?: string | null
+          id?: string
+          related_story_id?: string | null
+          type?: Database["public"]["Enums"]["transaction_type"]
+          wallet_id?: string
+          wallet_portion?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallet_transactions_related_story_id_fkey"
+            columns: ["related_story_id"]
+            isOneToOne: false
+            referencedRelation: "pet_stories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wallet_transactions_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wallets: {
+        Row: {
+          created_at: string
+          direct_pay_balance: number
+          id: string
+          updated_at: string
+          user_id: string
+          wallet_balance: number
+        }
+        Insert: {
+          created_at?: string
+          direct_pay_balance?: number
+          id?: string
+          updated_at?: string
+          user_id: string
+          wallet_balance?: number
+        }
+        Update: {
+          created_at?: string
+          direct_pay_balance?: number
+          id?: string
+          updated_at?: string
+          user_id?: string
+          wallet_balance?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -202,10 +391,25 @@ export type Database = {
         Args: { _pet_id: string; _user_id: string }
         Returns: boolean
       }
+      process_donation: {
+        Args: {
+          _amount: number
+          _from_user_id: string
+          _story_id?: string
+          _to_user_id: string
+        }
+        Returns: undefined
+      }
       user_has_any_role: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "pet_owner" | "vet" | "admin"
+      transaction_type:
+        | "donation_received"
+        | "donation_sent"
+        | "withdrawal"
+        | "vet_payment"
+        | "refund"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -334,6 +538,13 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["pet_owner", "vet", "admin"],
+      transaction_type: [
+        "donation_received",
+        "donation_sent",
+        "withdrawal",
+        "vet_payment",
+        "refund",
+      ],
     },
   },
 } as const
