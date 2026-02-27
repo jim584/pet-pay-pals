@@ -1,118 +1,76 @@
 
-# PetCare Platform — Full MVP Plan
 
-## Overview
-A modern, bold-styled pet care platform connecting pet owners, veterinarians, and administrators. Built with Supabase for backend (auth, database, edge functions) and Stripe for payments with Klarna/Afterpay BNPL support.
+## Plan: Public Homepage with Instagram-Style Feed
 
----
+This is a major architectural change — transforming the app from a login-gated dashboard into a public-first social platform where unlogged users can browse pet content.
 
-## Phase 1: Foundation & Authentication
+### Current State
+- `/` redirects to `/auth` if not logged in — no public content
+- Community feed exists but only inside the authenticated `/dashboard/community` route
+- No concept of "following" individual pets — only story posts exist
+- No public pet profiles
 
-### User Registration & Login
-- Email/password authentication via Supabase Auth
-- Role-based access: **Pet Owner**, **Vet**, **Admin**
-- After signup, users select their role (pet owner or vet); admins are assigned manually
-- Profile creation flow tailored to each role
+### What Changes
 
-### Design System
-- Modern & bold aesthetic: strong typography, gradients, dark accents
-- Mobile-responsive throughout
-- Sidebar navigation for dashboards
+**Database Migration**
+- New `pet_follows` table (user_id, pet_id, unique constraint) with RLS: authenticated users can manage their own follows, public can read counts
+- Add `followers_count` column to `pets` table (default 0)
+- Trigger to auto-increment/decrement `followers_count` on follow/unfollow
+- Add SELECT RLS policy on `pets`, `pet_stories`, `profiles` for anonymous (public) read access so unlogged users can see the feed
 
----
+**New API Layer — `src/lib/feed-api.ts`**
+- `fetchPublicFeed()` — fetch recent pet stories with pet + owner profile joins (no auth required)
+- `fetchSuggestedPets()` — fetch pets ordered by followers_count desc, excluding already-followed
+- `followPet(petId)` / `unfollowPet(petId)` — toggle follow
+- `checkFollowing(petId)` — check if current user follows a pet
+- `fetchPetProfile(petId)` — public pet profile with stats
 
-## Phase 2: Pet Owner Experience
+**New Components**
 
-### Pet Profiles
-- Create/edit pet profiles with: name, breed, age, photo, weight
-- Health records section: vaccination history, medical notes, allergies
-- Emergency contacts per pet
-- Multiple pets per owner
+1. `src/components/home/CompassMenu.tsx` — Left sidebar with 8 branded menu items in compass layout:
+   - North: Help A Pet Now, South: Help A Pet Forever, East: Four Feet Under, West: FearFreed
+   - NE: Help A Pet Overcome, NW: Help A Pet Protect, SE: Help A Pet Behave, SW: Vetted
+   - Each item styled with icon + hover effect; links to placeholder routes for now
 
-### Membership System
-- Membership tiers (e.g., Basic, Premium) managed by admin
-- Users can view, upgrade, downgrade, or cancel membership from their dashboard
-- Membership status visible on profile
+2. `src/components/home/PublicFeed.tsx` — Center column, Instagram-style card feed:
+   - Pet avatar + name + owner name header
+   - Photo carousel/grid
+   - Like, comment, share, follow buttons
+   - For unlogged users: buttons are visually disabled with tooltip "Log in to like and follow this pet"
+   - Clicking disabled buttons redirects to `/auth`
 
-### Pet Owner Dashboard
-- Overview of pets, upcoming appointments, payment history
-- Notifications for payment reminders, appointment confirmations, membership renewals
-- Quick actions: book consultation, make payment, manage pets
+3. `src/components/home/SuggestedPets.tsx` — Right sidebar:
+   - List of pet profiles with avatar, name, breed
+   - Follow button (disabled with CTA for unlogged users)
 
----
+4. `src/components/home/PetProfilePreview.tsx` — Hover card showing pet bio, photo, follower count
 
-## Phase 3: Vet Experience
+5. `src/pages/HomePage.tsx` — New public homepage layout:
+   - 3-column grid: CompassMenu (left, fixed ~240px) | PublicFeed (center, flex) | SuggestedPets (right, fixed ~280px)
+   - Top bar with app logo + "Sign Up" / "Log In" buttons (for unlogged users) or user avatar (for logged users)
+   - Responsive: on mobile, hide sidebars, show feed only with bottom nav
 
-### Vet Profiles & Services
-- Vets create profiles with: clinic name, specializations, location, contact info
-- List services with pricing
-- Manage availability for consultations
+**Routing Changes — `src/App.tsx` & `src/pages/Index.tsx`**
+- `/` renders `HomePage` for ALL users (logged or not) instead of redirecting
+- Logged-in users see the same feed but with interactive buttons enabled
+- Dashboard remains at `/dashboard` for account management, pets CRUD, wallet, etc.
+- Add placeholder routes for the 8 compass menu sections
 
-### Vet Dashboard
-- View patient history (pets they've treated)
-- Track upcoming appointments
-- View and approve BNPL payment plans from pet owners
-- Payment tracking: completed, pending, overdue
+### Implementation Steps
 
----
+1. Run database migration (pet_follows table, public read policies, followers_count on pets)
+2. Create `feed-api.ts` with public feed queries and follow logic
+3. Build `CompassMenu` component with compass-style layout
+4. Build `PublicFeed` component with auth-aware interaction buttons
+5. Build `SuggestedPets` sidebar component
+6. Build `PetProfilePreview` hover card
+7. Build `HomePage` with 3-column layout and top bar
+8. Update routing: `/` shows HomePage for everyone, add compass section placeholder routes
 
-## Phase 4: Payments & BNPL
+### Technical Details
 
-### Direct Payments via Stripe
-- Pet owners pay vets directly for services
-- Stripe Checkout integration for secure card payments
-- Payment history for both owners and vets
+- Public read access uses Supabase anonymous role via RLS policies (`USING (true)` for SELECT on pets, pet_stories, profiles)
+- `useAuth()` hook returns `user: null` for unlogged visitors — components check this to toggle interactivity
+- Follow counts maintained via Postgres trigger (not app-side counting) to avoid race conditions
+- Feed query: `pet_stories` joined with `pets(name, photo_url, species, breed)` and `profiles(full_name, avatar_url)`, ordered by `created_at desc`
 
-### BNPL via Stripe (Klarna/Afterpay)
-- Enable Klarna and Afterpay as payment methods in Stripe Checkout
-- Pet owners can split payments over installments at checkout
-- Vets see full payment amount; Stripe/Klarna handles installment collection
-- Payment schedule visibility for pet owners
-
----
-
-## Phase 5: Admin Dashboard
-
-### User Management
-- View/search all pet owners and vets
-- Approve or decline vet registration requests
-- Manage membership tiers and pricing
-
-### Analytics Overview
-- Total members, active users, new signups
-- Payment summary: total revenue, pending payments, BNPL usage
-- System health metrics
-
-### Content Management
-- Manage membership plans
-- View and resolve flagged issues or disputes
-
----
-
-## Phase 6: Notifications
-
-### In-App Notifications
-- Payment due reminders
-- Appointment confirmations and reminders
-- Membership renewal alerts
-- Profile update confirmations
-
-### Email Notifications (via Supabase Edge Functions)
-- Key transactional emails: welcome, payment confirmation, appointment booking
-
----
-
-## Database Structure (Supabase)
-- **profiles** — linked to auth, stores name, avatar, contact info
-- **user_roles** — separate role table (pet_owner, vet, admin)
-- **pets** — pet profiles linked to owners
-- **health_records** — vaccination, medical history per pet
-- **emergency_contacts** — per pet
-- **vet_profiles** — clinic details, specializations, services
-- **services** — vet service listings with pricing
-- **appointments** — bookings between owners and vets
-- **memberships** — membership plans and user subscriptions
-- **payments** — payment records linked to Stripe
-- **notifications** — in-app notification storage
-
-All tables will have proper RLS policies to ensure data security.
