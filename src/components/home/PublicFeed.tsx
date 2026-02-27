@@ -79,6 +79,19 @@ const SAMPLE_STORIES: FeedStory[] = [
     pets: { name: "Charlie", photo_url: "https://images.unsplash.com/photo-1530281700549-e82e7bf110d6?w=100&h=100&fit=crop", species: "dog", breed: "Beagle", followers_count: 178 },
     profiles: { full_name: "Lisa Thompson", avatar_url: null },
   },
+  {
+    id: "sample-6",
+    pet_id: "sample-pet-6",
+    author_id: "sample-author-6",
+    title: "someone loves the snow! ❄️",
+    content: "Took Daisy out for her first snow day and she went absolutely crazy! Zoomies for 20 minutes straight. She tried to eat every snowflake. Winter is officially her favorite season 🐾",
+    photo_urls: ["https://images.unsplash.com/photo-1477884213360-7e9d7dcc8f9b?w=800&h=600&fit=crop"],
+    likes_count: 67,
+    comments_count: 18,
+    created_at: new Date(Date.now() - 30 * 60 * 60 * 1000).toISOString(),
+    pets: { name: "Daisy", photo_url: "https://images.unsplash.com/photo-1477884213360-7e9d7dcc8f9b?w=100&h=100&fit=crop", species: "dog", breed: "Husky", followers_count: 312 },
+    profiles: { full_name: "Olivia Park", avatar_url: null },
+  },
 ];
 
 function FeedCard({ story, isFollowing, isLiked, onFollow, onLike, user, isSample }: {
