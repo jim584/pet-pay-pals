@@ -15,6 +15,7 @@ import WalletPage from "./pages/WalletPage";
 import VetProfilePage from "./pages/VetProfilePage";
 import VetServicesPage from "./pages/VetServicesPage";
 import NotFound from "./pages/NotFound";
+import PlaceholderSection from "./pages/PlaceholderSection";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +38,15 @@ const App = () => (
               <Route path="vet-profile" element={<VetProfilePage />} />
               <Route path="vet-services" element={<VetServicesPage />} />
             </Route>
+            {/* Compass menu placeholder routes */}
+            <Route path="/help-now" element={<PlaceholderSection title="Help A Pet Now™" />} />
+            <Route path="/help-forever" element={<PlaceholderSection title="Help A Pet Forever™" />} />
+            <Route path="/four-feet-under" element={<PlaceholderSection title="Four Feet Under™" />} />
+            <Route path="/fearfreed" element={<PlaceholderSection title="FearFreed™" />} />
+            <Route path="/help-overcome" element={<PlaceholderSection title="Help A Pet Overcome™" />} />
+            <Route path="/help-protect" element={<PlaceholderSection title="Help A Pet Protect™" />} />
+            <Route path="/help-behave" element={<PlaceholderSection title="Help A Pet Behave™" />} />
+            <Route path="/vetted" element={<PlaceholderSection title="Vetted™" />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
