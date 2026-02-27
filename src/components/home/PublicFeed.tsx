@@ -13,13 +13,82 @@ import { PetProfilePreview } from "./PetProfilePreview";
 import { Heart, MessageCircle, Share2, UserPlus, PawPrint } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
-function FeedCard({ story, isFollowing, isLiked, onFollow, onLike, user }: {
+const SAMPLE_STORIES: FeedStory[] = [
+  {
+    id: "sample-1",
+    pet_id: "sample-pet-1",
+    author_id: "sample-author-1",
+    title: "had the best day at the park! 🌳",
+    content: "We spent the whole afternoon chasing squirrels and making new friends. Max even learned to catch a frisbee mid-air! So proud of this little guy.",
+    photo_urls: ["https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=800&h=600&fit=crop"],
+    likes_count: 24,
+    comments_count: 5,
+    created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    pets: { name: "Max", photo_url: "https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=100&h=100&fit=crop", species: "dog", breed: "Golden Retriever", followers_count: 142 },
+    profiles: { full_name: "Sarah Mitchell", avatar_url: null },
+  },
+  {
+    id: "sample-2",
+    pet_id: "sample-pet-2",
+    author_id: "sample-author-2",
+    title: "nap queen strikes again 😴",
+    content: "Luna found a sunny spot on the couch and hasn't moved in 3 hours. Living her best life honestly. Who else has a cat that sleeps 20 hours a day?",
+    photo_urls: ["https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800&h=600&fit=crop"],
+    likes_count: 38,
+    comments_count: 12,
+    created_at: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+    pets: { name: "Luna", photo_url: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=100&h=100&fit=crop", species: "cat", breed: "British Shorthair", followers_count: 89 },
+    profiles: { full_name: "James Cooper", avatar_url: null },
+  },
+  {
+    id: "sample-3",
+    pet_id: "sample-pet-3",
+    author_id: "sample-author-3",
+    title: "first swim of the summer! 🏊",
+    content: "Buddy was so scared at first but once he got in, we couldn't get him out! He's officially a water dog now. Can't wait for more beach days together.",
+    photo_urls: ["https://images.unsplash.com/photo-1558788353-f76d92427f16?w=800&h=600&fit=crop"],
+    likes_count: 56,
+    comments_count: 8,
+    created_at: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
+    pets: { name: "Buddy", photo_url: "https://images.unsplash.com/photo-1558788353-f76d92427f16?w=100&h=100&fit=crop", species: "dog", breed: "Labrador", followers_count: 203 },
+    profiles: { full_name: "Emily Rodriguez", avatar_url: null },
+  },
+  {
+    id: "sample-4",
+    pet_id: "sample-pet-4",
+    author_id: "sample-author-4",
+    title: "adopted this sweet girl today! 🎉",
+    content: "Meet Bella! She's a 2-year-old rescue and she already feels like family. She curled up in my lap within 10 minutes of coming home. Adopt, don't shop! ❤️",
+    photo_urls: ["https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800&h=600&fit=crop"],
+    likes_count: 91,
+    comments_count: 22,
+    created_at: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
+    pets: { name: "Bella", photo_url: "https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=100&h=100&fit=crop", species: "cat", breed: "Tabby", followers_count: 67 },
+    profiles: { full_name: "Michael Chen", avatar_url: null },
+  },
+  {
+    id: "sample-5",
+    pet_id: "sample-pet-5",
+    author_id: "sample-author-5",
+    title: "graduated puppy school! 🎓",
+    content: "Charlie passed his obedience training with flying colors! He can now sit, stay, shake, and roll over. Treats were definitely the secret weapon 🦴",
+    photo_urls: ["https://images.unsplash.com/photo-1530281700549-e82e7bf110d6?w=800&h=600&fit=crop"],
+    likes_count: 43,
+    comments_count: 15,
+    created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+    pets: { name: "Charlie", photo_url: "https://images.unsplash.com/photo-1530281700549-e82e7bf110d6?w=100&h=100&fit=crop", species: "dog", breed: "Beagle", followers_count: 178 },
+    profiles: { full_name: "Lisa Thompson", avatar_url: null },
+  },
+];
+
+function FeedCard({ story, isFollowing, isLiked, onFollow, onLike, user, isSample }: {
   story: FeedStory;
   isFollowing: boolean;
   isLiked: boolean;
   onFollow: (petId: string) => void;
   onLike: (storyId: string) => void;
   user: any;
+  isSample?: boolean;
 }) {
   const navigate = useNavigate();
   const requireAuth = (action: () => void) => {
@@ -56,8 +125,7 @@ function FeedCard({ story, isFollowing, isLiked, onFollow, onLike, user }: {
                   size="sm"
                   variant="outline"
                   className="gap-1 text-xs"
-                  onClick={() => requireAuth(() => onFollow(story.pet_id))}
-                  disabled={!user ? false : undefined}
+                  onClick={() => isSample ? navigate("/auth") : requireAuth(() => onFollow(story.pet_id))}
                 >
                   <UserPlus className="h-3 w-3" /> Follow
                 </Button>
@@ -89,7 +157,7 @@ function FeedCard({ story, isFollowing, isLiked, onFollow, onLike, user }: {
             <TooltipTrigger asChild>
               <button
                 className="flex items-center gap-1 text-sm transition-colors hover:text-destructive"
-                onClick={() => requireAuth(() => onLike(story.id))}
+                onClick={() => isSample ? navigate("/auth") : requireAuth(() => onLike(story.id))}
               >
                 <Heart className={`h-5 w-5 ${isLiked ? "fill-destructive text-destructive" : ""}`} />
                 <span>{story.likes_count}</span>
@@ -192,19 +260,13 @@ export function PublicFeed() {
     );
   }
 
-  if (stories.length === 0) {
-    return (
-      <Card className="p-12 text-center">
-        <PawPrint className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-        <p className="text-lg font-semibold text-foreground">No stories yet</p>
-        <p className="text-sm text-muted-foreground mt-1">Be the first to share a pet story!</p>
-      </Card>
-    );
-  }
+  // Use real stories if available, otherwise show sample data
+  const displayStories = stories.length > 0 ? stories : SAMPLE_STORIES;
+  const isSampleData = stories.length === 0;
 
   return (
     <div className="space-y-6">
-      {stories.map((story) => (
+      {displayStories.map((story) => (
         <FeedCard
           key={story.id}
           story={story}
@@ -213,6 +275,7 @@ export function PublicFeed() {
           onFollow={(petId) => followMutation.mutate(petId)}
           onLike={(storyId) => likeMutation.mutate(storyId)}
           user={user}
+          isSample={isSampleData}
         />
       ))}
     </div>
