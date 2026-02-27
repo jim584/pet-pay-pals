@@ -151,6 +151,35 @@ export type Database = {
           },
         ]
       }
+      pet_follows: {
+        Row: {
+          created_at: string
+          id: string
+          pet_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          pet_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          pet_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pet_follows_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: false
+            referencedRelation: "pets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pet_stories: {
         Row: {
           author_id: string
@@ -203,6 +232,7 @@ export type Database = {
           age_years: number | null
           breed: string | null
           created_at: string
+          followers_count: number
           id: string
           name: string
           notes: string | null
@@ -216,6 +246,7 @@ export type Database = {
           age_years?: number | null
           breed?: string | null
           created_at?: string
+          followers_count?: number
           id?: string
           name: string
           notes?: string | null
@@ -229,6 +260,7 @@ export type Database = {
           age_years?: number | null
           breed?: string | null
           created_at?: string
+          followers_count?: number
           id?: string
           name?: string
           notes?: string | null
