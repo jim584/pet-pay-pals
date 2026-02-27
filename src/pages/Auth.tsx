@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/components/ui/sonner";
-import { PawPrint } from "lucide-react";
+import { ArrowLeft, PawPrint } from "lucide-react";
 
 export default function Auth() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -36,7 +36,10 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "var(--gradient-primary)" }}>
+    <div className="min-h-screen flex items-center justify-center px-4 relative" style={{ background: "var(--gradient-primary)" }}>
+      <Button variant="ghost" size="sm" className="absolute top-4 left-4 gap-1 text-primary-foreground hover:bg-white/20" asChild>
+        <Link to="/"><ArrowLeft className="h-4 w-4" /> Home</Link>
+      </Button>
       <Card className="w-full max-w-md shadow-2xl border-0">
         <CardHeader className="text-center space-y-2">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground">

@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/sonner";
-import { PawPrint, Stethoscope } from "lucide-react";
+import { ArrowLeft, PawPrint, Stethoscope } from "lucide-react";
 
 export default function SelectRole() {
   const [selected, setSelected] = useState<"pet_owner" | "vet" | null>(null);
@@ -42,7 +42,10 @@ export default function SelectRole() {
   ];
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-background">
+    <div className="min-h-screen flex items-center justify-center px-4 bg-background relative">
+      <Button variant="ghost" size="sm" className="absolute top-4 left-4 gap-1" asChild>
+        <Link to="/"><ArrowLeft className="h-4 w-4" /> Home</Link>
+      </Button>
       <div className="w-full max-w-lg space-y-6">
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold tracking-tight">Choose Your Role</h1>
