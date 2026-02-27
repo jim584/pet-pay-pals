@@ -28,7 +28,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto flex items-center justify-between h-14 px-4">
           <Link to="/" className="flex items-center gap-2">
             <PawPrint className="h-6 w-6 text-primary" />
-            <span className="text-lg font-bold font-display text-foreground hidden sm:inline">PetPals</span>
+            <span className="text-lg font-bold font-display text-foreground hidden sm:inline">Help A Pet</span>
           </Link>
           <div className="flex items-center gap-2">
             {user ? (
