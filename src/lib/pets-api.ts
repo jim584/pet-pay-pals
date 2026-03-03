@@ -106,6 +106,12 @@ export async function createEmergencyContact(contact: Omit<EmergencyContact, "id
   return data as EmergencyContact;
 }
 
+export async function updateEmergencyContact(id: string, updates: Partial<EmergencyContact>) {
+  const { data, error } = await supabase.from("emergency_contacts").update(updates).eq("id", id).select().single();
+  if (error) throw error;
+  return data as EmergencyContact;
+}
+
 export async function deleteEmergencyContact(id: string) {
   const { error } = await supabase.from("emergency_contacts").delete().eq("id", id);
   if (error) throw error;
