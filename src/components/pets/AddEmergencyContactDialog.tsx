@@ -1,36 +1,53 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/sonner";
-import { createEmergencyContact } from "@/lib/pets-api";
+import { createEmergencyContact, updateEmergencyContact, EmergencyContact } from "@/lib/pets-api";
 
 interface AddEmergencyContactDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   petId: string;
   onSuccess: () => void;
+  contact?: EmergencyContact | null;
 }
 
-export function AddEmergencyContactDialog({ open, onOpenChange, petId, onSuccess }: AddEmergencyContactDialogProps) {
+export function AddEmergencyContactDialog({ open, onOpenChange, petId, onSuccess, contact }: AddEmergencyContactDialogProps) {
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ contact_name: "", phone: "", relationship: "" });
+
+  useEffect(() => {
+    if (open) {
+      setForm({
+        contact_name: contact?.contact_name ?? "",
+        phone: contact?.phone ?? "",
+        relationship: contact?.relationship ?? "",
+      });
+    }
+  }, [open, contact]);
+
+  const isEditing = !!contact;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await createEmergencyContact({
-        pet_id: petId,
+      const payload = {
         contact_name: form.contact_name,
         phone: form.phone,
         relationship: form.relationship || null,
-      });
-      toast.success("Emergency contact added!");
+      };
+      if (isEditing) {
+        await updateEmergencyContact(contact.id, payload);
+        toast.success("Emergency contact updated!");
+      } else {
+        await createEmergencyContact({ ...payload, pet_id: petId });
+        toast.success("Emergency contact added!");
+      }
       onSuccess();
       onOpenChange(false);
-      setForm({ contact_name: "", phone: "", relationship: "" });
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -42,7 +59,7 @@ export function AddEmergencyContactDialog({ open, onOpenChange, petId, onSuccess
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add Emergency Contact</DialogTitle>
+          <DialogTitle>{isEditing ? "Edit Emergency Contact" : "Add Emergency Contact"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -58,7 +75,7 @@ export function AddEmergencyContactDialog({ open, onOpenChange, petId, onSuccess
             <Input value={form.relationship} onChange={(e) => setForm({ ...form, relationship: e.target.value })} placeholder="e.g. Neighbor, Family" />
           </div>
           <Button type="submit" className="w-full" disabled={submitting}>
-            {submitting ? "Saving..." : "Add Contact"}
+            {submitting ? "Saving..." : isEditing ? "Save Changes" : "Add Contact"}
           </Button>
         </form>
       </DialogContent>

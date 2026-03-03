@@ -22,6 +22,7 @@ export function PetDetail({ pet, onBack, onEdit }: PetDetailProps) {
   const [showAddRecord, setShowAddRecord] = useState(false);
   const [editRecord, setEditRecord] = useState<HealthRecord | null>(null);
   const [showAddContact, setShowAddContact] = useState(false);
+  const [editContact, setEditContact] = useState<EmergencyContact | null>(null);
 
   const loadRecords = () => fetchHealthRecords(pet.id).then(setRecords).catch(() => {});
   const loadContacts = () => fetchEmergencyContacts(pet.id).then(setContacts).catch(() => {});
@@ -159,7 +160,7 @@ export function PetDetail({ pet, onBack, onEdit }: PetDetailProps) {
           <h3 className="text-lg font-bold font-display flex items-center gap-2">
             <Phone className="h-5 w-5 text-accent" /> Emergency Contacts
           </h3>
-          <Button size="sm" onClick={() => setShowAddContact(true)} className="gap-1">
+          <Button size="sm" onClick={() => { setEditContact(null); setShowAddContact(true); }} className="gap-1">
             <Plus className="h-4 w-4" /> Add
           </Button>
         </div>
@@ -174,9 +175,14 @@ export function PetDetail({ pet, onBack, onEdit }: PetDetailProps) {
                     <p className="font-semibold">{c.contact_name}</p>
                     <p className="text-sm text-muted-foreground">{c.phone}{c.relationship ? ` · ${c.relationship}` : ""}</p>
                   </div>
-                  <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteContact(c.id)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="icon" onClick={() => { setEditContact(c); setShowAddContact(true); }}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteContact(c.id)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -185,7 +191,7 @@ export function PetDetail({ pet, onBack, onEdit }: PetDetailProps) {
       </div>
 
       <AddHealthRecordDialog open={showAddRecord} onOpenChange={(open) => { setShowAddRecord(open); if (!open) setEditRecord(null); }} petId={pet.id} onSuccess={loadRecords} record={editRecord} />
-      <AddEmergencyContactDialog open={showAddContact} onOpenChange={setShowAddContact} petId={pet.id} onSuccess={loadContacts} />
+      <AddEmergencyContactDialog open={showAddContact} onOpenChange={(open) => { setShowAddContact(open); if (!open) setEditContact(null); }} petId={pet.id} onSuccess={loadContacts} contact={editContact} />
     </div>
   );
 }
