@@ -11,7 +11,7 @@ export interface PetStory {
   comments_count: number;
   created_at: string;
   updated_at: string;
-  pets?: { name: string; species: string; breed: string | null };
+  pets?: { name: string; species: string; breed: string | null; photo_url: string | null };
   profiles?: { full_name: string; avatar_url: string | null };
 }
 
@@ -47,7 +47,7 @@ export interface WalletTransaction {
 export async function fetchStories() {
   const { data, error } = await supabase
     .from("pet_stories")
-    .select("*, pets(name, species, breed), profiles:author_id(full_name, avatar_url)")
+    .select("*, pets(name, species, breed, photo_url), profiles:author_id(full_name, avatar_url)")
     .order("created_at", { ascending: false });
   if (error) throw error;
   return data as unknown as PetStory[];
