@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import { toast } from "sonner";
 
 export default function ProfileSettingsPage() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -76,6 +78,8 @@ export default function ProfileSettingsPage() {
       if (updateError) throw updateError;
 
       setAvatarUrl(url);
+      queryClient.invalidateQueries({ queryKey: ["sidebarProfile"] });
+      queryClient.invalidateQueries({ queryKey: ["headerProfile"] });
       toast.success("Avatar updated!");
     } catch (err: any) {
       toast.error(err.message || "Failed to upload avatar");
