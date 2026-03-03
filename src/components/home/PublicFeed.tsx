@@ -9,8 +9,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { PetProfilePreview } from "./PetProfilePreview";
-import { Heart, MessageCircle, Share2, UserPlus, PawPrint, User } from "lucide-react";
+import { Heart, MessageCircle, Share2, UserPlus, PawPrint, User, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 const SAMPLE_STORIES: FeedStory[] = [
@@ -94,7 +95,7 @@ const SAMPLE_STORIES: FeedStory[] = [
   },
 ];
 
-function FeedCard({ story, isFollowing, isLiked, onFollow, onLike, user, isSample }: {
+function FeedCard({ story, isFollowing, isLiked, onFollow, onLike, user, isSample, onImageClick }: {
   story: FeedStory;
   isFollowing: boolean;
   isLiked: boolean;
@@ -102,6 +103,7 @@ function FeedCard({ story, isFollowing, isLiked, onFollow, onLike, user, isSampl
   onLike: (storyId: string) => void;
   user: any;
   isSample?: boolean;
+  onImageClick: (url: string, alt: string) => void;
 }) {
   const navigate = useNavigate();
   const requireAuth = (action: () => void) => {
@@ -164,8 +166,9 @@ function FeedCard({ story, isFollowing, isLiked, onFollow, onLike, user, isSampl
           <img
             src={story.photo_urls[0]}
             alt={story.title}
-            className="object-cover w-full h-full"
+            className="object-cover w-full h-full cursor-pointer transition-opacity hover:opacity-90"
             loading="lazy"
+            onClick={() => onImageClick(story.photo_urls![0], story.title)}
           />
         </AspectRatio>
       )}
@@ -275,6 +278,8 @@ export function PublicFeed() {
   const displayStories = stories.length > 0 ? stories : SAMPLE_STORIES;
   const isSampleData = stories.length === 0;
 
+  const [lightbox, setLightbox] = useState<{ url: string; alt: string } | null>(null);
+
   return (
     <div className="space-y-6">
       {displayStories.map((story) => (
@@ -287,8 +292,27 @@ export function PublicFeed() {
           onLike={(storyId) => likeMutation.mutate(storyId)}
           user={user}
           isSample={isSampleData}
+          onImageClick={(url, alt) => setLightbox({ url, alt })}
         />
       ))}
+
+      <Dialog open={!!lightbox} onOpenChange={() => setLightbox(null)}>
+        <DialogContent className="max-w-[90vw] max-h-[90vh] p-0 border-none bg-transparent shadow-none [&>button]:hidden">
+          <button
+            onClick={() => setLightbox(null)}
+            className="absolute top-2 right-2 z-50 rounded-full bg-background/80 p-1.5 backdrop-blur hover:bg-background transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          {lightbox && (
+            <img
+              src={lightbox.url}
+              alt={lightbox.alt}
+              className="w-full h-full max-h-[85vh] object-contain rounded-lg"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
