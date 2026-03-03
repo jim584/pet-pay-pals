@@ -1,4 +1,4 @@
-import { PawPrint, LayoutDashboard, LogOut, Users, Wallet, Stethoscope, Briefcase, Calendar } from "lucide-react";
+import { PawPrint, LayoutDashboard, LogOut, Users, Wallet, Stethoscope, Briefcase, Calendar, UserCog } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ const ownerNav = [
   { title: "My Pets", url: "/dashboard/pets", icon: PawPrint },
   { title: "Community", url: "/dashboard/community", icon: Users },
   { title: "Wallet", url: "/dashboard/wallet", icon: Wallet },
+  { title: "Profile", url: "/dashboard/profile", icon: UserCog },
 ];
 
 const vetNav = [
@@ -27,6 +28,7 @@ const vetNav = [
   { title: "Services", url: "/dashboard/vet-services", icon: Briefcase },
   { title: "Community", url: "/dashboard/community", icon: Users },
   { title: "Wallet", url: "/dashboard/wallet", icon: Wallet },
+  { title: "Profile", url: "/dashboard/profile", icon: UserCog },
 ];
 
 export function DashboardSidebar() {
