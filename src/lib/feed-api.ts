@@ -29,31 +29,31 @@ export async function fetchPublicFeed(): Promise<FeedStory[]> {
   try {
     const { data, error } = await supabase
       .from("pet_stories")
-      .select("*, pets(name, photo_url, species, breed, followers_count), profiles:author_id(full_name, avatar_url)")
+      .select("*, pets(name, photo_url, species, breed, followers_count)")
       .order("created_at", { ascending: false })
       .limit(20);
     if (error) throw error;
-    return data as unknown as FeedStory[];
+    return (data ?? []).map((d: any) => ({
+      ...d,
+      profiles: { full_name: "", avatar_url: null },
+    })) as FeedStory[];
   } catch {
     return [];
   }
 }
 
-export async function fetchSuggestedPets(userId?: string) {
-  let query = supabase
-    .from("pets")
-    .select("id, name, species, breed, photo_url, followers_count, owner_id, profiles:owner_id(full_name, avatar_url)")
-    .order("followers_count", { ascending: false })
-    .limit(10);
-
-  if (userId) {
-    // Exclude pets the user already follows — we'll filter client-side since we can't do NOT IN easily
-  }
-
+export async function fetchSuggestedPets(userId?: string): Promise<SuggestedPet[]> {
   try {
-    const { data, error } = await query;
+    const { data, error } = await supabase
+      .from("pets")
+      .select("id, name, species, breed, photo_url, followers_count, owner_id")
+      .order("followers_count", { ascending: false })
+      .limit(10);
     if (error) throw error;
-    return data as unknown as SuggestedPet[];
+    return (data ?? []).map((d: any) => ({
+      ...d,
+      profiles: { full_name: "", avatar_url: null },
+    })) as SuggestedPet[];
   } catch {
     return [];
   }
