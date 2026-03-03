@@ -11,7 +11,7 @@ import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { PetProfilePreview } from "./PetProfilePreview";
-import { Heart, MessageCircle, Share2, UserPlus, PawPrint, User, X } from "lucide-react";
+import { Heart, MessageCircle, Share2, UserPlus, PawPrint, User, X, RefreshCw } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 const SAMPLE_STORIES: FeedStory[] = [
@@ -227,6 +227,8 @@ export function PublicFeed() {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    isRefetching,
+    refetch,
   } = useInfiniteQuery({
     queryKey: ["publicFeed"],
     queryFn: ({ pageParam = 0 }) => fetchPublicFeed(pageParam),
@@ -236,6 +238,10 @@ export function PublicFeed() {
     retry: false,
     staleTime: 60_000,
   });
+
+  const handleRefresh = () => {
+    refetch();
+  };
 
   const stories: FeedStory[] = data?.pages.flat() ?? [];
 
@@ -292,6 +298,21 @@ export function PublicFeed() {
 
   return (
     <div className="space-y-6">
+      {/* Refresh bar */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Latest Stories</h2>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleRefresh}
+          disabled={isRefetching}
+          className="gap-1.5 text-xs text-muted-foreground"
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${isRefetching ? "animate-spin" : ""}`} />
+          {isRefetching ? "Refreshing..." : "Refresh"}
+        </Button>
+      </div>
+
       {displayStories.map((story) => (
         <FeedCard
           key={story.id}
