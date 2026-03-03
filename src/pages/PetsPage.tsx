@@ -6,6 +6,7 @@ import { PetFormDialog } from "@/components/pets/PetFormDialog";
 import { PetDetail } from "@/components/pets/PetDetail";
 import { toast } from "@/components/ui/sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Plus, PawPrint, Trash2 } from "lucide-react";
 
 export default function PetsPage() {
@@ -87,9 +88,12 @@ export default function PetsPage() {
               <CardContent className="p-5">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                      <PawPrint className="h-5 w-5" />
-                    </div>
+                    <Avatar className="h-11 w-11">
+                      <AvatarImage src={pet.photo_url ?? undefined} alt={pet.name} />
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        <PawPrint className="h-5 w-5" />
+                      </AvatarFallback>
+                    </Avatar>
                     <div>
                       <p className="font-bold font-display">{pet.name}</p>
                       <p className="text-sm text-muted-foreground capitalize">

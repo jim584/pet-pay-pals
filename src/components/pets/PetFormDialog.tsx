@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,8 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/components/ui/sonner";
 import { createPet, updatePet, Pet } from "@/lib/pets-api";
+import { supabase } from "@/integrations/supabase/client";
+import { Camera, PawPrint } from "lucide-react";
 
 interface PetFormDialogProps {
   open: boolean;
@@ -19,6 +22,9 @@ interface PetFormDialogProps {
 export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDialogProps) {
   const { user } = useAuth();
   const [submitting, setSubmitting] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(pet?.photo_url ?? null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     name: pet?.name ?? "",
     species: pet?.species ?? "dog",
@@ -27,6 +33,29 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
     weight_kg: pet?.weight_kg?.toString() ?? "",
     notes: pet?.notes ?? "",
   });
+
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be under 5MB");
+      return;
+    }
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
+  };
+
+  const uploadPhoto = async (petId: string): Promise<string | null> => {
+    if (!photoFile || !user) return pet?.photo_url ?? null;
+    const ext = photoFile.name.split(".").pop();
+    const path = `${user.id}/${petId}.${ext}`;
+    const { error } = await supabase.storage
+      .from("pet-photos")
+      .upload(path, photoFile, { upsert: true });
+    if (error) throw error;
+    const { data } = supabase.storage.from("pet-photos").getPublicUrl(path);
+    return `${data.publicUrl}?t=${Date.now()}`;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,13 +72,20 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
         owner_id: user.id,
         photo_url: pet?.photo_url ?? null,
       };
+      let savedPet: Pet;
       if (pet) {
-        await updatePet(pet.id, payload);
-        toast.success("Pet updated!");
+        savedPet = await updatePet(pet.id, payload);
       } else {
-        await createPet(payload);
-        toast.success("Pet added!");
+        savedPet = await createPet(payload);
       }
+      // Upload photo if selected
+      if (photoFile) {
+        const photoUrl = await uploadPhoto(savedPet.id);
+        if (photoUrl) {
+          await updatePet(savedPet.id, { photo_url: photoUrl });
+        }
+      }
+      toast.success(pet ? "Pet updated!" : "Pet added!");
       onSuccess();
       onOpenChange(false);
     } catch (err: any) {
@@ -66,6 +102,29 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
           <DialogTitle>{pet ? "Edit Pet" : "Add New Pet"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Avatar Upload */}
+          <div className="flex justify-center">
+            <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+              <Avatar className="h-20 w-20 border-2 border-primary/20">
+                <AvatarImage src={photoPreview ?? undefined} alt="Pet photo" />
+                <AvatarFallback className="bg-primary/10 text-primary">
+                  <PawPrint className="h-8 w-8" />
+                </AvatarFallback>
+              </Avatar>
+              <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Camera className="h-6 w-6 text-white" />
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handlePhotoSelect}
+              />
+            </div>
+          </div>
+          <p className="text-center text-xs text-muted-foreground -mt-2">Click to upload photo</p>
+
           <div className="space-y-2">
             <Label>Name *</Label>
             <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
