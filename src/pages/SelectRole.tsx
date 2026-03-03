@@ -49,7 +49,7 @@ export default function SelectRole() {
       <div className="w-full max-w-lg space-y-6">
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold tracking-tight">Choose Your Role</h1>
-          <p className="text-muted-foreground">Select how you'll use PetCare</p>
+          <p className="text-muted-foreground">Select how you'll use Help A Pet</p>
         </div>
         <div className="grid gap-4">
           {roles.map((r) => (
