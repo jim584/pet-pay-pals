@@ -7,6 +7,7 @@ import { toast } from "@/components/ui/sonner";
 import { Pet, HealthRecord, EmergencyContact, fetchHealthRecords, fetchEmergencyContacts, deleteHealthRecord, deleteEmergencyContact } from "@/lib/pets-api";
 import { AddHealthRecordDialog } from "./AddHealthRecordDialog";
 import { AddEmergencyContactDialog } from "./AddEmergencyContactDialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PawPrint, Plus, Trash2, Calendar, Stethoscope, Phone, ArrowLeft } from "lucide-react";
 
 interface PetDetailProps {
@@ -64,6 +65,12 @@ export function PetDetail({ pet, onBack, onEdit }: PetDetailProps) {
         <Button variant="ghost" size="icon" onClick={onBack}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
+        <Avatar className="h-14 w-14 border-2 border-primary/20">
+          <AvatarImage src={pet.photo_url ?? undefined} alt={pet.name} />
+          <AvatarFallback className="bg-primary/10 text-primary">
+            <PawPrint className="h-6 w-6" />
+          </AvatarFallback>
+        </Avatar>
         <div className="flex-1">
           <h2 className="text-2xl font-bold font-display">{pet.name}</h2>
           <p className="text-muted-foreground capitalize">{pet.species}{pet.breed ? ` · ${pet.breed}` : ""}</p>
