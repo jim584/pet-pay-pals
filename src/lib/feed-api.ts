@@ -25,13 +25,17 @@ export interface SuggestedPet {
   profiles: { full_name: string; avatar_url: string | null };
 }
 
-export async function fetchPublicFeed(): Promise<FeedStory[]> {
+export const FEED_PAGE_SIZE = 6;
+
+export async function fetchPublicFeed(page: number = 0): Promise<FeedStory[]> {
   try {
+    const from = page * FEED_PAGE_SIZE;
+    const to = from + FEED_PAGE_SIZE - 1;
     const { data, error } = await supabase
       .from("pet_stories")
       .select("*, pets(name, photo_url, species, breed, followers_count), profiles:author_id(full_name, avatar_url)")
       .order("created_at", { ascending: false })
-      .limit(20);
+      .range(from, to);
     if (error) throw error;
     return data as unknown as FeedStory[];
   } catch {
