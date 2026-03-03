@@ -41,7 +41,7 @@ export function SuggestedPets() {
     },
   });
 
-  const visiblePets = pets.filter((p) => !followedSet.has(p.id)).slice(0, 5);
+  const visiblePets = pets.filter((p) => !followedSet.has(p.id)).slice(0, 10);
 
   if (visiblePets.length === 0) return null;
 
