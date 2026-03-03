@@ -5,6 +5,7 @@ import { Pet, fetchPets, deletePet } from "@/lib/pets-api";
 import { PetFormDialog } from "@/components/pets/PetFormDialog";
 import { PetDetail } from "@/components/pets/PetDetail";
 import { toast } from "@/components/ui/sonner";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Plus, PawPrint, Trash2 } from "lucide-react";
 
 export default function PetsPage() {
@@ -13,6 +14,7 @@ export default function PetsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editPet, setEditPet] = useState<Pet | null>(null);
   const [selectedPet, setSelectedPet] = useState<Pet | null>(null);
+  const [petToDelete, setPetToDelete] = useState<Pet | null>(null);
 
   const loadPets = async () => {
     setLoading(true);
@@ -28,14 +30,17 @@ export default function PetsPage() {
 
   useEffect(() => { loadPets(); }, []);
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async () => {
+    if (!petToDelete) return;
     try {
-      await deletePet(id);
+      await deletePet(petToDelete.id);
       toast.success("Pet removed");
-      if (selectedPet?.id === id) setSelectedPet(null);
+      if (selectedPet?.id === petToDelete.id) setSelectedPet(null);
       loadPets();
     } catch (err: any) {
       toast.error(err.message);
+    } finally {
+      setPetToDelete(null);
     }
   };
 
@@ -96,7 +101,7 @@ export default function PetsPage() {
                     variant="ghost"
                     size="icon"
                     className="text-destructive/60 hover:text-destructive"
-                    onClick={(e) => { e.stopPropagation(); handleDelete(pet.id); }}
+                    onClick={(e) => { e.stopPropagation(); setPetToDelete(pet); }}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -122,6 +127,23 @@ export default function PetsPage() {
           }
         }}
       />
+
+      <AlertDialog open={!!petToDelete} onOpenChange={(open) => { if (!open) setPetToDelete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {petToDelete?.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove {petToDelete?.name} and all their health records and emergency contacts. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
