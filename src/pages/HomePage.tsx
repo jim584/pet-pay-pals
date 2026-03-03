@@ -6,7 +6,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { CompassMenu } from "@/components/home/CompassMenu";
 import { PublicFeed } from "@/components/home/PublicFeed";
 import { SuggestedPets } from "@/components/home/SuggestedPets";
-import { MobileBottomNav } from "@/components/home/MobileBottomNav";
 import { PawPrint, User } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useQuery } from "@tanstack/react-query";
@@ -113,9 +112,6 @@ export default function HomePage() {
           </aside>
         )}
       </div>
-
-      {/* Mobile Bottom Navigation */}
-      {isMobile && <MobileBottomNav />}
     </div>
   );
 }

@@ -4,6 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { MobileBottomNav } from "@/components/home/MobileBottomNav";
+import { useIsMobile } from "@/hooks/use-mobile";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import SelectRole from "./pages/SelectRole";
@@ -20,6 +22,40 @@ import PlaceholderSection from "./pages/PlaceholderSection";
 
 const queryClient = new QueryClient();
 
+function AppRoutes() {
+  const isMobile = useIsMobile();
+
+  return (
+    <>
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/auth" element={<Auth />} />
+        <Route path="/select-role" element={<SelectRole />} />
+        <Route path="/dashboard" element={<DashboardLayout />}>
+          <Route index element={<DashboardIndex />} />
+          <Route path="pets" element={<PetsPage />} />
+          <Route path="community" element={<CommunityPage />} />
+          <Route path="wallet" element={<WalletPage />} />
+          <Route path="vet-profile" element={<VetProfilePage />} />
+          <Route path="vet-services" element={<VetServicesPage />} />
+          <Route path="profile" element={<ProfileSettingsPage />} />
+        </Route>
+        {/* Compass menu placeholder routes */}
+        <Route path="/help-now" element={<PlaceholderSection title="Help A Pet Now™" />} />
+        <Route path="/help-forever" element={<PlaceholderSection title="Help A Pet Forever™" />} />
+        <Route path="/four-feet-under" element={<PlaceholderSection title="Four Feet Under™" />} />
+        <Route path="/fearfreed" element={<PlaceholderSection title="FearFreed™" />} />
+        <Route path="/help-overcome" element={<PlaceholderSection title="Help A Pet Overcome™" />} />
+        <Route path="/help-protect" element={<PlaceholderSection title="Help A Pet Protect™" />} />
+        <Route path="/help-behave" element={<PlaceholderSection title="Help A Pet Behave™" />} />
+        <Route path="/vetted" element={<PlaceholderSection title="Vetted™" />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+      {isMobile && <MobileBottomNav />}
+    </>
+  );
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -27,30 +63,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/select-role" element={<SelectRole />} />
-            <Route path="/dashboard" element={<DashboardLayout />}>
-              <Route index element={<DashboardIndex />} />
-              <Route path="pets" element={<PetsPage />} />
-              <Route path="community" element={<CommunityPage />} />
-              <Route path="wallet" element={<WalletPage />} />
-              <Route path="vet-profile" element={<VetProfilePage />} />
-              <Route path="vet-services" element={<VetServicesPage />} />
-              <Route path="profile" element={<ProfileSettingsPage />} />
-            </Route>
-            {/* Compass menu placeholder routes */}
-            <Route path="/help-now" element={<PlaceholderSection title="Help A Pet Now™" />} />
-            <Route path="/help-forever" element={<PlaceholderSection title="Help A Pet Forever™" />} />
-            <Route path="/four-feet-under" element={<PlaceholderSection title="Four Feet Under™" />} />
-            <Route path="/fearfreed" element={<PlaceholderSection title="FearFreed™" />} />
-            <Route path="/help-overcome" element={<PlaceholderSection title="Help A Pet Overcome™" />} />
-            <Route path="/help-protect" element={<PlaceholderSection title="Help A Pet Protect™" />} />
-            <Route path="/help-behave" element={<PlaceholderSection title="Help A Pet Behave™" />} />
-            <Route path="/vetted" element={<PlaceholderSection title="Vetted™" />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <AppRoutes />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
