@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +34,23 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
     weight_kg: pet?.weight_kg?.toString() ?? "",
     notes: pet?.notes ?? "",
   });
+
+  // Reset form state when dialog opens or pet prop changes
+  useEffect(() => {
+    if (open) {
+      setForm({
+        name: pet?.name ?? "",
+        species: pet?.species ?? "dog",
+        breed: pet?.breed ?? "",
+        age_years: pet?.age_years?.toString() ?? "",
+        weight_kg: pet?.weight_kg?.toString() ?? "",
+        notes: pet?.notes ?? "",
+      });
+      setPhotoPreview(pet?.photo_url ?? null);
+      setPhotoFile(null);
+      setRemovePhoto(false);
+    }
+  }, [open, pet]);
 
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
