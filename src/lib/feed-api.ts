@@ -29,14 +29,11 @@ export async function fetchPublicFeed(): Promise<FeedStory[]> {
   try {
     const { data, error } = await supabase
       .from("pet_stories")
-      .select("*, pets(name, photo_url, species, breed, followers_count)")
+      .select("*, pets(name, photo_url, species, breed, followers_count), profiles:author_id(full_name, avatar_url)")
       .order("created_at", { ascending: false })
       .limit(20);
     if (error) throw error;
-    return (data ?? []).map((d: any) => ({
-      ...d,
-      profiles: { full_name: "", avatar_url: null },
-    })) as FeedStory[];
+    return data as unknown as FeedStory[];
   } catch {
     return [];
   }
@@ -46,14 +43,11 @@ export async function fetchSuggestedPets(userId?: string): Promise<SuggestedPet[
   try {
     const { data, error } = await supabase
       .from("pets")
-      .select("id, name, species, breed, photo_url, followers_count, owner_id")
+      .select("id, name, species, breed, photo_url, followers_count, owner_id, profiles:owner_id(full_name, avatar_url)")
       .order("followers_count", { ascending: false })
       .limit(10);
     if (error) throw error;
-    return (data ?? []).map((d: any) => ({
-      ...d,
-      profiles: { full_name: "", avatar_url: null },
-    })) as SuggestedPet[];
+    return data as unknown as SuggestedPet[];
   } catch {
     return [];
   }
