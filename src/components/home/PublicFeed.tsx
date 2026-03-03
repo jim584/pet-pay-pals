@@ -213,9 +213,11 @@ export function PublicFeed() {
   const [followedSet, setFollowedSet] = useState<Set<string>>(new Set());
   const [likedSet, setLikedSet] = useState<Set<string>>(new Set());
 
-  const { data: stories = [], isLoading } = useQuery({
+  const { data: stories = [] } = useQuery({
     queryKey: ["publicFeed"],
     queryFn: fetchPublicFeed,
+    retry: false,
+    staleTime: 60_000,
   });
 
   // Check follows & likes for logged-in user
@@ -263,17 +265,7 @@ export function PublicFeed() {
     },
   });
 
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        {[1, 2, 3].map((i) => (
-          <Card key={i} className="h-80 animate-pulse bg-muted" />
-        ))}
-      </div>
-    );
-  }
-
-  // Use real stories if available, otherwise show sample data
+  // Use real stories if available, otherwise show sample data immediately
   const displayStories = stories.length > 0 ? stories : SAMPLE_STORIES;
   const isSampleData = stories.length === 0;
 
