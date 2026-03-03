@@ -2,11 +2,13 @@ import { useState } from "react";
 import { CommunityFeed } from "@/components/community/CommunityFeed";
 import { CreateStoryDialog } from "@/components/community/CreateStoryDialog";
 import { Button } from "@/components/ui/button";
-import { Plus, Users } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Plus, Users, Search } from "lucide-react";
 
 export default function CommunityPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [search, setSearch] = useState("");
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -29,7 +31,18 @@ export default function CommunityPage() {
         </div>
       </div>
 
-      <CommunityFeed key={refreshKey} />
+      {/* Search bar */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search by pet name, title, or keyword..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9 rounded-full bg-muted border-none h-10"
+        />
+      </div>
+
+      <CommunityFeed key={refreshKey} search={search} />
       <CreateStoryDialog open={showCreate} onOpenChange={setShowCreate} onSuccess={() => setRefreshKey((k) => k + 1)} />
     </div>
   );

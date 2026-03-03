@@ -29,7 +29,7 @@ function StorySkeleton() {
   );
 }
 
-export function CommunityFeed() {
+export function CommunityFeed({ search = "" }: { search?: string }) {
   const [stories, setStories] = useState<PetStory[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -44,6 +44,16 @@ export function CommunityFeed() {
 
   useEffect(() => { load(); }, []);
 
+  const q = search.toLowerCase().trim();
+  const filtered = q
+    ? stories.filter((s) =>
+        s.title.toLowerCase().includes(q) ||
+        s.content.toLowerCase().includes(q) ||
+        (s as any).pets?.name?.toLowerCase().includes(q) ||
+        (s as any).profiles?.full_name?.toLowerCase().includes(q)
+      )
+    : stories;
+
   if (loading) {
     return (
       <div className="space-y-5">
@@ -52,7 +62,7 @@ export function CommunityFeed() {
     );
   }
 
-  if (stories.length === 0) {
+  if (filtered.length === 0 && !q) {
     return (
       <Card className="rounded-2xl border-dashed border-2 border-border/60">
         <CardContent className="p-12 text-center space-y-4">
@@ -73,9 +83,22 @@ export function CommunityFeed() {
     );
   }
 
+  if (filtered.length === 0 && q) {
+    return (
+      <Card className="rounded-2xl border-border/60">
+        <CardContent className="p-10 text-center space-y-3">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+            <PawPrint className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <p className="text-sm text-muted-foreground">No stories match "<span className="font-medium text-foreground">{q}</span>"</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-5">
-      {stories.map((story) => (
+      {filtered.map((story) => (
         <StoryCard key={story.id} story={story} onRefresh={load} />
       ))}
     </div>
