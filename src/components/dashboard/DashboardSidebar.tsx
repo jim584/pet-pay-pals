@@ -2,6 +2,10 @@ import { PawPrint, LayoutDashboard, LogOut, Users, Wallet, Stethoscope, Briefcas
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Link } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
@@ -34,6 +38,20 @@ const vetNav = [
 export function DashboardSidebar() {
   const { signOut, user, role } = useAuth();
   const navItems = role === "vet" ? vetNav : ownerNav;
+
+  const { data: profile } = useQuery({
+    queryKey: ["sidebarProfile", user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("avatar_url, full_name")
+        .eq("user_id", user!.id)
+        .single();
+      return data;
+    },
+    enabled: !!user,
+    staleTime: 60_000,
+  });
 
   return (
     <Sidebar className="border-r-0">
@@ -75,7 +93,16 @@ export function DashboardSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <div className="mt-auto p-4 border-t border-sidebar-border">
-        <div className="text-xs text-sidebar-foreground/60 truncate mb-2">{user?.email}</div>
+        <Link to="/dashboard/profile" className="flex items-center gap-2.5 mb-3 group">
+          <Avatar className="h-8 w-8 ring-2 ring-sidebar-border group-hover:ring-primary/40 transition-all">
+            <AvatarImage src={profile?.avatar_url ?? undefined} />
+            <AvatarFallback className="text-xs">{profile?.full_name?.[0]?.toUpperCase() || "?"}</AvatarFallback>
+          </Avatar>
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-sidebar-foreground truncate">{profile?.full_name || "User"}</p>
+            <p className="text-xs text-sidebar-foreground/60 truncate">{user?.email}</p>
+          </div>
+        </Link>
         <Button
           variant="ghost"
           size="sm"
