@@ -14,6 +14,7 @@ import CommunityPage from "./pages/CommunityPage";
 import WalletPage from "./pages/WalletPage";
 import VetProfilePage from "./pages/VetProfilePage";
 import VetServicesPage from "./pages/VetServicesPage";
+import ProfileSettingsPage from "./pages/ProfileSettingsPage";
 import NotFound from "./pages/NotFound";
 import PlaceholderSection from "./pages/PlaceholderSection";
 
@@ -37,6 +38,7 @@ const App = () => (
               <Route path="wallet" element={<WalletPage />} />
               <Route path="vet-profile" element={<VetProfilePage />} />
               <Route path="vet-services" element={<VetServicesPage />} />
+              <Route path="profile" element={<ProfileSettingsPage />} />
             </Route>
             {/* Compass menu placeholder routes */}
             <Route path="/help-now" element={<PlaceholderSection title="Help A Pet Now™" />} />
