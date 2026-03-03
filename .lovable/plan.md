@@ -1,36 +1,37 @@
 
 
-## Problem
+## MX Records and Email Domain Setup
 
-The homepage is slow to load because:
+MX records are **not needed** for what you're setting up. Here's why:
 
-1. **Failed API calls cause delay**: The `fetchPublicFeed()` and `fetchSuggestedPets()` queries are returning 400 errors (foreign key relationships `author_id` and `owner_id` don't exist in the database schema). React Query retries these failed requests multiple times before giving up, adding significant delay before the sample/fallback data appears.
+### What Each Record Type Does
 
-2. **Large Unsplash images**: The 6 sample stories each load full-resolution images from Unsplash, which adds to perceived slowness.
+- **MX records** control where **incoming** emails are delivered (i.e., someone sends an email *to* you@yourdomain.com — MX tells the internet which mail server receives it)
+- **TXT records** (SPF, DKIM, domain verification) control **outgoing** email authentication — proving that emails *sent from* your domain are legitimate
+- **CNAME records** are used for DKIM signing of outgoing emails
 
-## Plan
+### Your Situation
 
-### 1. Fix the slow fallback — skip the failing API call gracefully
+You're setting up a **sender domain** so that authentication emails (verification, password reset) are sent **from** your domain (e.g., `noreply@yourdomain.com`). You are not setting up an inbox to **receive** emails at that domain.
 
-In `feed-api.ts`, wrap `fetchPublicFeed` and `fetchSuggestedPets` to catch errors and return empty arrays instead of throwing. This prevents React Query from retrying 3+ times on each failed request.
+**You only need:**
+- **TXT records** — for SPF, DKIM, and domain ownership verification
+- **CNAME records** — for DKIM signing
 
-Alternatively (and better), configure React Query in `PublicFeed` to use `retry: false` for these queries, and set a short `staleTime`.
+**You do NOT need:**
+- **MX records** — unless you also want to receive emails at that domain (separate concern, handled by your email provider like Gmail, Outlook, etc.)
+- **Nameserver changes** — never needed for this setup
 
-### 2. Show sample data immediately while API loads
+### If Your Registrar Shows MX Records
 
-In `PublicFeed.tsx`, change the loading state to show the sample stories right away instead of skeleton placeholders. The component already falls back to `SAMPLE_STORIES` when `stories.length === 0`, but currently shows pulsing cards during the loading + retry period.
+If the setup flow is showing MX records, it may be bundling full email setup (send + receive). You can safely **skip MX records** — they won't affect your ability to send branded auth emails from Lovable.
 
-- Set `retry: false` and `retryOnMount: false` on the `publicFeed` query
-- Use `placeholderData: []` so the fallback sample data renders instantly
-- Do the same for the suggested pets query in `SuggestedPets.tsx`
+### Summary
 
-### 3. Optimize sample images
-
-Add smaller dimensions to the Unsplash URLs (already using `w=800` which is reasonable, but add `q=75` for quality reduction).
-
-### Summary of file changes
-
-- **`src/components/home/PublicFeed.tsx`**: Add `retry: false` to the query config so failed DB queries don't cause multi-second delays. Show sample data during loading instead of skeletons.
-- **`src/components/home/SuggestedPets.tsx`**: Same `retry: false` fix.
-- **`src/lib/feed-api.ts`**: Catch errors and return `[]` instead of throwing, so fallback data kicks in immediately.
+| Record Type | Purpose | Needed for sending auth emails? |
+|---|---|---|
+| TXT | SPF, DKIM, verification | Yes |
+| CNAME | DKIM signing | Yes |
+| MX | Incoming mail routing | No |
+| NS (Nameservers) | Full DNS delegation | No |
 
