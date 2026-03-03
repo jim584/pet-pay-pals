@@ -189,7 +189,7 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
               <Input type="number" min="0" value={form.age_years} onChange={(e) => setForm({ ...form, age_years: e.target.value })} />
             </div>
             <div className="space-y-2">
-              <Label>Weight (kg)</Label>
+              <Label>Weight (lbs)</Label>
               <Input type="number" min="0" step="0.1" value={form.weight_kg} onChange={(e) => setForm({ ...form, weight_kg: e.target.value })} />
             </div>
           </div>

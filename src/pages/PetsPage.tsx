@@ -128,7 +128,7 @@ export default function PetsPage() {
                 </div>
                 <div className="mt-3 flex gap-4 text-xs text-muted-foreground">
                   {pet.age_years && <span>{pet.age_years} yr{pet.age_years > 1 ? "s" : ""}</span>}
-                  {pet.weight_kg && <span>{pet.weight_kg} kg</span>}
+                  {pet.weight_kg && <span>{pet.weight_kg} lbs</span>}
                 </div>
               </CardContent>
             </Card>

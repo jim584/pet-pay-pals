@@ -84,7 +84,7 @@ export function PetDetail({ pet, onBack, onEdit }: PetDetailProps) {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
           { label: "Age", value: pet.age_years ? `${pet.age_years} yr${pet.age_years > 1 ? "s" : ""}` : "—" },
-          { label: "Weight", value: pet.weight_kg ? `${pet.weight_kg} kg` : "—" },
+          { label: "Weight", value: pet.weight_kg ? `${pet.weight_kg} lbs` : "—" },
           { label: "Species", value: pet.species },
           { label: "Breed", value: pet.breed || "—" },
         ].map((item) => (
