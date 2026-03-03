@@ -61,7 +61,7 @@ export function DashboardSidebar() {
             <PawPrint className="h-5 w-5" />
           </div>
           <div className="min-w-0">
-            <p className="font-display font-bold text-sm truncate">PetCare</p>
+            <p className="font-display font-bold text-sm truncate">Help A Pet</p>
             <p className="text-xs text-sidebar-foreground/60 capitalize truncate">
               {role?.replace("_", " ")}
             </p>
