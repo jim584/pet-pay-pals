@@ -1,37 +1,44 @@
 
 
-## MX Records and Email Domain Setup
+## Community Section UI/UX Improvements
 
-MX records are **not needed** for what you're setting up. Here's why:
+After reviewing the code, I can identify several UI/UX issues with the current Community section:
 
-### What Each Record Type Does
+1. **Empty state is bland** -- just a paw icon and text in a plain card
+2. **Story cards lack visual polish** -- no rounded images, flat layout, cramped spacing
+3. **No max-width constraint** -- stories stretch full width on large screens, making them hard to read
+4. **Comments section feels unfinished** -- no empty state, no visual separation between comments
+5. **Donate dialog is minimal** -- could use better visual hierarchy
+6. **Loading state is just text** -- no skeleton placeholders
+7. **Page header lacks personality** -- plain text with no visual flair
 
-- **MX records** control where **incoming** emails are delivered (i.e., someone sends an email *to* you@yourdomain.com — MX tells the internet which mail server receives it)
-- **TXT records** (SPF, DKIM, domain verification) control **outgoing** email authentication — proving that emails *sent from* your domain are legitimate
-- **CNAME records** are used for DKIM signing of outgoing emails
+### Changes
 
-### Your Situation
+**1. CommunityPage.tsx -- Better header with gradient accent and max-width container**
+- Add a gradient accent banner or subtle background to the header area
+- Constrain content width with `max-w-2xl mx-auto` for a social-feed feel (like Instagram/Twitter)
+- Add a descriptive icon alongside the heading
 
-You're setting up a **sender domain** so that authentication emails (verification, password reset) are sent **from** your domain (e.g., `noreply@yourdomain.com`). You are not setting up an inbox to **receive** emails at that domain.
+**2. CommunityFeed.tsx -- Major visual overhaul of StoryCard**
+- Add `max-w-2xl mx-auto` wrapper for feed-style centering
+- **Loading state**: Replace text with 3 skeleton card placeholders (pulsing cards with fake image/text blocks)
+- **Empty state**: More engaging design with a larger illustration area, gradient text, and a CTA button
+- **Story cards**:
+  - Move author avatar/info above the image (social media pattern: avatar + name + timestamp on top)
+  - Round the card corners more, add subtle hover shadow
+  - Better photo grid: rounded corners inside card, proper aspect ratios
+  - Action bar: cleaner spacing, subtle background strip, rounded pill-style buttons for like/comment/donate
+  - Comments: add rounded bubble styling per comment, better empty-comments message, smooth expand animation
+  - Donate button: accent gradient styling to stand out
 
-**You only need:**
-- **TXT records** — for SPF, DKIM, and domain ownership verification
-- **CNAME records** — for DKIM signing
+**3. CreateStoryDialog.tsx -- Minor polish**
+- No major changes needed, already decent
 
-**You do NOT need:**
-- **MX records** — unless you also want to receive emails at that domain (separate concern, handled by your email provider like Gmail, Outlook, etc.)
-- **Nameserver changes** — never needed for this setup
+### Technical Details
 
-### If Your Registrar Shows MX Records
+All changes are purely CSS/Tailwind and minor JSX restructuring in two files:
+- `src/pages/CommunityPage.tsx` -- wrap content in max-width container, enhance header
+- `src/components/community/CommunityFeed.tsx` -- skeleton loading, improved card layout, better action bar styling, comment bubbles, enhanced empty state
 
-If the setup flow is showing MX records, it may be bundling full email setup (send + receive). You can safely **skip MX records** — they won't affect your ability to send branded auth emails from Lovable.
-
-### Summary
-
-| Record Type | Purpose | Needed for sending auth emails? |
-|---|---|---|
-| TXT | SPF, DKIM, verification | Yes |
-| CNAME | DKIM signing | Yes |
-| MX | Incoming mail routing | No |
-| NS (Nameservers) | Full DNS delegation | No |
+No database or API changes required.
 
