@@ -11,6 +11,7 @@ import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { PetProfilePreview } from "./PetProfilePreview";
+import { StoryComments } from "./StoryComments";
 import { Heart, MessageCircle, Share2, UserPlus, PawPrint, User, X, RefreshCw } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -106,6 +107,7 @@ function FeedCard({ story, isFollowing, isLiked, onFollow, onLike, user, isSampl
   onImageClick: (url: string, alt: string) => void;
 }) {
   const navigate = useNavigate();
+  const [commentsOpen, setCommentsOpen] = useState(false);
   const requireAuth = (action: () => void) => {
     if (!user) { navigate("/auth"); return; }
     action();
@@ -190,8 +192,11 @@ function FeedCard({ story, isFollowing, isLiked, onFollow, onLike, user, isSampl
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <button className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
-                <MessageCircle className="h-5 w-5" />
+              <button
+                className={`flex items-center gap-1 text-sm transition-colors hover:text-foreground ${commentsOpen ? "text-foreground" : "text-muted-foreground"}`}
+                onClick={() => isSample ? navigate("/auth") : setCommentsOpen((v) => !v)}
+              >
+                <MessageCircle className={`h-5 w-5 ${commentsOpen ? "fill-primary/20 text-primary" : ""}`} />
                 <span>{story.comments_count}</span>
               </button>
             </TooltipTrigger>
@@ -211,6 +216,8 @@ function FeedCard({ story, isFollowing, isLiked, onFollow, onLike, user, isSampl
         <p className="text-xs text-muted-foreground">
           {formatDistanceToNow(new Date(story.created_at), { addSuffix: true })}
         </p>
+
+        {!isSample && <StoryComments storyId={story.id} isOpen={commentsOpen} />}
       </CardContent>
     </Card>
   );
