@@ -44,11 +44,16 @@ export interface WalletTransaction {
   created_at: string;
 }
 
-export async function fetchStories() {
+export const STORIES_PAGE_SIZE = 6;
+
+export async function fetchStories(page = 0) {
+  const from = page * STORIES_PAGE_SIZE;
+  const to = from + STORIES_PAGE_SIZE - 1;
   const { data, error } = await supabase
     .from("pet_stories")
     .select("*, pets(name, species, breed, photo_url), profiles:author_id(full_name, avatar_url)")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .range(from, to);
   if (error) throw error;
   return data as unknown as PetStory[];
 }

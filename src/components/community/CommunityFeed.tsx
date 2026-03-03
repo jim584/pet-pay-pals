@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PawPrint, Sparkles } from "lucide-react";
-import { PetStory, fetchStories } from "@/lib/community-api";
+import { PawPrint, Sparkles, Loader2 } from "lucide-react";
+import { PetStory, fetchStories, STORIES_PAGE_SIZE } from "@/lib/community-api";
 import { StoryCard } from "./StoryCard";
 
 function StorySkeleton() {
@@ -32,17 +33,36 @@ function StorySkeleton() {
 export function CommunityFeed({ search = "" }: { search?: string }) {
   const [stories, setStories] = useState<PetStory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
 
-  const load = async () => {
+  const loadInitial = useCallback(async () => {
     setLoading(true);
     try {
-      setStories(await fetchStories());
+      const data = await fetchStories(0);
+      setStories(data);
+      setPage(0);
+      setHasMore(data.length >= STORIES_PAGE_SIZE);
     } catch { } finally {
       setLoading(false);
     }
+  }, []);
+
+  const loadMore = async () => {
+    const nextPage = page + 1;
+    setLoadingMore(true);
+    try {
+      const data = await fetchStories(nextPage);
+      setStories((prev) => [...prev, ...data]);
+      setPage(nextPage);
+      setHasMore(data.length >= STORIES_PAGE_SIZE);
+    } catch { } finally {
+      setLoadingMore(false);
+    }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { loadInitial(); }, [loadInitial]);
 
   const q = search.toLowerCase().trim();
   const filtered = q
@@ -99,8 +119,27 @@ export function CommunityFeed({ search = "" }: { search?: string }) {
   return (
     <div className="space-y-5">
       {filtered.map((story) => (
-        <StoryCard key={story.id} story={story} onRefresh={load} />
+        <StoryCard key={story.id} story={story} onRefresh={loadInitial} />
       ))}
+      {hasMore && !q && (
+        <div className="flex justify-center pt-2 pb-4">
+          <Button
+            variant="outline"
+            className="rounded-full gap-2"
+            onClick={loadMore}
+            disabled={loadingMore}
+          >
+            {loadingMore ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading...
+              </>
+            ) : (
+              "Load More"
+            )}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
