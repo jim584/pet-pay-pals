@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "@/components/ui/sonner";
 import { Pet, HealthRecord, EmergencyContact, fetchHealthRecords, fetchEmergencyContacts, deleteHealthRecord, deleteEmergencyContact } from "@/lib/pets-api";
 import { AddHealthRecordDialog } from "./AddHealthRecordDialog";
@@ -23,6 +24,8 @@ export function PetDetail({ pet, onBack, onEdit }: PetDetailProps) {
   const [editRecord, setEditRecord] = useState<HealthRecord | null>(null);
   const [showAddContact, setShowAddContact] = useState(false);
   const [editContact, setEditContact] = useState<EmergencyContact | null>(null);
+  const [recordToDelete, setRecordToDelete] = useState<string | null>(null);
+  const [contactToDelete, setContactToDelete] = useState<string | null>(null);
 
   const loadRecords = () => fetchHealthRecords(pet.id).then(setRecords).catch(() => {});
   const loadContacts = () => fetchEmergencyContacts(pet.id).then(setContacts).catch(() => {});
@@ -32,23 +35,29 @@ export function PetDetail({ pet, onBack, onEdit }: PetDetailProps) {
     loadContacts();
   }, [pet.id]);
 
-  const handleDeleteRecord = async (id: string) => {
+  const handleDeleteRecord = async () => {
+    if (!recordToDelete) return;
     try {
-      await deleteHealthRecord(id);
+      await deleteHealthRecord(recordToDelete);
       toast.success("Record deleted");
       loadRecords();
     } catch (err: any) {
       toast.error(err.message);
+    } finally {
+      setRecordToDelete(null);
     }
   };
 
-  const handleDeleteContact = async (id: string) => {
+  const handleDeleteContact = async () => {
+    if (!contactToDelete) return;
     try {
-      await deleteEmergencyContact(id);
+      await deleteEmergencyContact(contactToDelete);
       toast.success("Contact deleted");
       loadContacts();
     } catch (err: any) {
       toast.error(err.message);
+    } finally {
+      setContactToDelete(null);
     }
   };
 
@@ -141,7 +150,7 @@ export function PetDetail({ pet, onBack, onEdit }: PetDetailProps) {
                     <Button variant="ghost" size="icon" onClick={() => { setEditRecord(r); setShowAddRecord(true); }}>
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteRecord(r.id)}>
+                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setRecordToDelete(r.id)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -179,7 +188,7 @@ export function PetDetail({ pet, onBack, onEdit }: PetDetailProps) {
                     <Button variant="ghost" size="icon" onClick={() => { setEditContact(c); setShowAddContact(true); }}>
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteContact(c.id)}>
+                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setContactToDelete(c.id)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -192,6 +201,32 @@ export function PetDetail({ pet, onBack, onEdit }: PetDetailProps) {
 
       <AddHealthRecordDialog open={showAddRecord} onOpenChange={(open) => { setShowAddRecord(open); if (!open) setEditRecord(null); }} petId={pet.id} onSuccess={loadRecords} record={editRecord} />
       <AddEmergencyContactDialog open={showAddContact} onOpenChange={(open) => { setShowAddContact(open); if (!open) setEditContact(null); }} petId={pet.id} onSuccess={loadContacts} contact={editContact} />
+
+      <AlertDialog open={!!recordToDelete} onOpenChange={(open) => { if (!open) setRecordToDelete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete health record?</AlertDialogTitle>
+            <AlertDialogDescription>This will permanently remove this health record. This action cannot be undone.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteRecord} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!contactToDelete} onOpenChange={(open) => { if (!open) setContactToDelete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete emergency contact?</AlertDialogTitle>
+            <AlertDialogDescription>This will permanently remove this emergency contact. This action cannot be undone.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteContact} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
