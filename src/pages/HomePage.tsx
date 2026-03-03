@@ -8,10 +8,26 @@ import { PublicFeed } from "@/components/home/PublicFeed";
 import { SuggestedPets } from "@/components/home/SuggestedPets";
 import { PawPrint, User } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function HomePage() {
   const { user, loading } = useAuth();
   const isMobile = useIsMobile();
+
+  const { data: profile } = useQuery({
+    queryKey: ["headerProfile", user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("avatar_url, full_name")
+        .eq("user_id", user!.id)
+        .single();
+      return data;
+    },
+    enabled: !!user,
+    staleTime: 60_000,
+  });
 
   if (loading) {
     return (
@@ -36,9 +52,12 @@ export default function HomePage() {
                 <Button variant="ghost" size="sm" asChild>
                   <Link to="/dashboard">Dashboard</Link>
                 </Button>
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback><User className="h-4 w-4" /></AvatarFallback>
-                </Avatar>
+                <Link to="/dashboard/profile">
+                  <Avatar className="h-8 w-8 ring-2 ring-primary/20 cursor-pointer hover:ring-primary/40 transition-all">
+                    <AvatarImage src={profile?.avatar_url ?? undefined} />
+                    <AvatarFallback><User className="h-4 w-4" /></AvatarFallback>
+                  </Avatar>
+                </Link>
               </>
             ) : (
               <>
