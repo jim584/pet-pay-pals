@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/components/ui/sonner";
 import { createPet, updatePet, Pet } from "@/lib/pets-api";
 import { supabase } from "@/integrations/supabase/client";
-import { Camera, PawPrint } from "lucide-react";
+import { Camera, PawPrint, X } from "lucide-react";
 
 interface PetFormDialogProps {
   open: boolean;
@@ -24,6 +24,7 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
   const [submitting, setSubmitting] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string | null>(pet?.photo_url ?? null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [removePhoto, setRemovePhoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     name: pet?.name ?? "",
@@ -43,6 +44,14 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
     }
     setPhotoFile(file);
     setPhotoPreview(URL.createObjectURL(file));
+    setRemovePhoto(false);
+  };
+
+  const handleRemovePhoto = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setPhotoFile(null);
+    setPhotoPreview(null);
+    setRemovePhoto(true);
   };
 
   const uploadPhoto = async (petId: string): Promise<string | null> => {
@@ -70,7 +79,7 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
         weight_kg: form.weight_kg ? parseFloat(form.weight_kg) : null,
         notes: form.notes || null,
         owner_id: user.id,
-        photo_url: pet?.photo_url ?? null,
+        photo_url: removePhoto ? null : (pet?.photo_url ?? null),
       };
       let savedPet: Pet;
       if (pet) {
@@ -103,7 +112,7 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Avatar Upload */}
-          <div className="flex justify-center">
+          <div className="flex flex-col items-center gap-1">
             <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
               <Avatar className="h-20 w-20 border-2 border-primary/20">
                 <AvatarImage src={photoPreview ?? undefined} alt="Pet photo" />
@@ -114,6 +123,15 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
               <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
                 <Camera className="h-6 w-6 text-white" />
               </div>
+              {photoPreview && (
+                <button
+                  type="button"
+                  onClick={handleRemovePhoto}
+                  className="absolute -top-1 -right-1 h-6 w-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-sm hover:bg-destructive/90 transition-colors"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
               <input
                 ref={fileInputRef}
                 type="file"
@@ -122,8 +140,8 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
                 onChange={handlePhotoSelect}
               />
             </div>
+            <p className="text-xs text-muted-foreground">Click to upload photo</p>
           </div>
-          <p className="text-center text-xs text-muted-foreground -mt-2">Click to upload photo</p>
 
           <div className="space-y-2">
             <Label>Name *</Label>
