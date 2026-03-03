@@ -1,5 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchPublicFeed, followPet, unfollowPet, checkFollowing, type FeedStory } from "@/lib/feed-api";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { fetchPublicFeed, followPet, unfollowPet, checkFollowing, FEED_PAGE_SIZE, type FeedStory } from "@/lib/feed-api";
 import { toggleLike, checkUserLiked } from "@/lib/community-api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -222,12 +222,22 @@ export function PublicFeed() {
   const [followedSet, setFollowedSet] = useState<Set<string>>(new Set());
   const [likedSet, setLikedSet] = useState<Set<string>>(new Set());
 
-  const { data: stories = [] } = useQuery({
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: ["publicFeed"],
-    queryFn: fetchPublicFeed,
+    queryFn: ({ pageParam = 0 }) => fetchPublicFeed(pageParam),
+    getNextPageParam: (lastPage, allPages) =>
+      lastPage.length === FEED_PAGE_SIZE ? allPages.length : undefined,
+    initialPageParam: 0,
     retry: false,
     staleTime: 60_000,
   });
+
+  const stories: FeedStory[] = data?.pages.flat() ?? [];
 
   // Check follows & likes for logged-in user
   useEffect(() => {
@@ -295,6 +305,28 @@ export function PublicFeed() {
           onImageClick={(url, alt) => setLightbox({ url, alt })}
         />
       ))}
+
+      {/* Load More button */}
+      {!isSampleData && hasNextPage && (
+        <div className="flex justify-center pt-2 pb-4">
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={() => fetchNextPage()}
+            disabled={isFetchingNextPage}
+            className="w-full max-w-xs"
+          >
+            {isFetchingNextPage ? (
+              <span className="flex items-center gap-2">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                Loading...
+              </span>
+            ) : (
+              "Load More Stories"
+            )}
+          </Button>
+        </div>
+      )}
 
       <Dialog open={!!lightbox} onOpenChange={() => setLightbox(null)}>
         <DialogContent className="max-w-[90vw] max-h-[90vh] p-0 border-none bg-transparent shadow-none [&>button]:hidden">
