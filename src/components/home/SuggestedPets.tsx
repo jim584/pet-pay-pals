@@ -18,6 +18,8 @@ export function SuggestedPets() {
   const { data: pets = [] } = useQuery({
     queryKey: ["suggestedPets"],
     queryFn: () => fetchSuggestedPets(user?.id),
+    retry: false,
+    staleTime: 60_000,
   });
 
   useEffect(() => {

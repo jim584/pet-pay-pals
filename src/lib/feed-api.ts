@@ -25,14 +25,18 @@ export interface SuggestedPet {
   profiles: { full_name: string; avatar_url: string | null };
 }
 
-export async function fetchPublicFeed() {
-  const { data, error } = await supabase
-    .from("pet_stories")
-    .select("*, pets(name, photo_url, species, breed, followers_count), profiles:author_id(full_name, avatar_url)")
-    .order("created_at", { ascending: false })
-    .limit(20);
-  if (error) throw error;
-  return data as unknown as FeedStory[];
+export async function fetchPublicFeed(): Promise<FeedStory[]> {
+  try {
+    const { data, error } = await supabase
+      .from("pet_stories")
+      .select("*, pets(name, photo_url, species, breed, followers_count), profiles:author_id(full_name, avatar_url)")
+      .order("created_at", { ascending: false })
+      .limit(20);
+    if (error) throw error;
+    return data as unknown as FeedStory[];
+  } catch {
+    return [];
+  }
 }
 
 export async function fetchSuggestedPets(userId?: string) {
@@ -46,9 +50,13 @@ export async function fetchSuggestedPets(userId?: string) {
     // Exclude pets the user already follows — we'll filter client-side since we can't do NOT IN easily
   }
 
-  const { data, error } = await query;
-  if (error) throw error;
-  return data as unknown as SuggestedPet[];
+  try {
+    const { data, error } = await query;
+    if (error) throw error;
+    return data as unknown as SuggestedPet[];
+  } catch {
+    return [];
+  }
 }
 
 export async function followPet(petId: string, userId: string) {
