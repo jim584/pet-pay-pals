@@ -49,7 +49,7 @@ export default function Auth() {
             {isSignUp ? "Create Account" : "Welcome Back"}
           </CardTitle>
           <CardDescription>
-            {isSignUp ? "Join PetCare and take care of your furry friends" : "Sign in to your PetCare account"}
+            {isSignUp ? "Join Help A Pet and take care of your furry friends" : "Sign in to your Help A Pet account"}
           </CardDescription>
         </CardHeader>
         <CardContent>
