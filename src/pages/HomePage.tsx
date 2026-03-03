@@ -6,6 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { CompassMenu } from "@/components/home/CompassMenu";
 import { PublicFeed } from "@/components/home/PublicFeed";
 import { SuggestedPets } from "@/components/home/SuggestedPets";
+import { MobileBottomNav } from "@/components/home/MobileBottomNav";
 import { PawPrint, User } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useQuery } from "@tanstack/react-query";
@@ -44,14 +45,16 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto flex items-center justify-between h-14 px-4">
           <Link to="/" className="flex items-center gap-2">
             <PawPrint className="h-6 w-6 text-primary" />
-            <span className="text-lg font-bold font-display text-foreground hidden sm:inline">Help A Pet</span>
+            <span className="text-lg font-bold font-display text-foreground">Help A Pet</span>
           </Link>
           <div className="flex items-center gap-2">
             {user ? (
               <>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link to="/dashboard">Dashboard</Link>
-                </Button>
+                {!isMobile && (
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link to="/dashboard">Dashboard</Link>
+                  </Button>
+                )}
                 <Link to="/dashboard/profile">
                   <Avatar className="h-8 w-8 ring-2 ring-primary/20 cursor-pointer hover:ring-primary/40 transition-all">
                     <AvatarImage src={profile?.avatar_url ?? undefined} />
@@ -61,9 +64,11 @@ export default function HomePage() {
               </>
             ) : (
               <>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link to="/auth">Log In</Link>
-                </Button>
+                {!isMobile && (
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link to="/auth">Log In</Link>
+                  </Button>
+                )}
                 <Button size="sm" asChild>
                   <Link to="/auth">Sign Up</Link>
                 </Button>
@@ -85,9 +90,9 @@ export default function HomePage() {
         )}
 
         {/* Center Feed */}
-        <main className="flex-1 min-w-0 border-x px-4 py-6 sm:px-6">
+        <main className={`flex-1 min-w-0 ${isMobile ? 'px-2 py-3 pb-20' : 'border-x px-6 py-6'}`}>
           {!user && (
-            <div className="mb-6 rounded-lg bg-primary/5 border border-primary/20 p-4 text-center">
+            <div className="mb-4 sm:mb-6 rounded-lg bg-primary/5 border border-primary/20 p-3 sm:p-4 text-center">
               <p className="text-sm text-foreground font-medium">
                 🐾 Sign up to follow your favorite pets, like posts, and join the community!
               </p>
@@ -108,6 +113,9 @@ export default function HomePage() {
           </aside>
         )}
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      {isMobile && <MobileBottomNav />}
     </div>
   );
 }
