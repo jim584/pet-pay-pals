@@ -160,7 +160,7 @@ function FeedCard({ story, isFollowing, isLiked, onFollow, onLike, user, isSampl
       </CardHeader>
 
       {story.photo_urls && story.photo_urls.length > 0 && (
-        <AspectRatio ratio={1}>
+        <AspectRatio ratio={4 / 3}>
           <img
             src={story.photo_urls[0]}
             alt={story.title}
