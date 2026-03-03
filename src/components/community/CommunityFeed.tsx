@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/components/ui/sonner";
 import { Heart, MessageCircle, DollarSign, Trash2, Send, PawPrint, User } from "lucide-react";
 import {
@@ -72,6 +73,7 @@ function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: () => voi
   const isAuthor = user?.id === story.author_id;
   const petName = (story as any).pets?.name || "Unknown Pet";
   const authorName = (story as any).profiles?.full_name || "Anonymous";
+  const authorAvatar = (story as any).profiles?.avatar_url || null;
 
   return (
     <Card className="overflow-hidden">
@@ -88,9 +90,10 @@ function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: () => voi
         <div className="flex items-start justify-between">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <PawPrint className="h-4 w-4" />
-              </div>
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={authorAvatar ?? undefined} />
+                <AvatarFallback><PawPrint className="h-4 w-4" /></AvatarFallback>
+              </Avatar>
               <div>
                 <p className="font-bold font-display text-base">{story.title}</p>
                 <p className="text-xs text-muted-foreground">
@@ -132,9 +135,10 @@ function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: () => voi
           <div className="space-y-3 pt-2 border-t">
             {comments.map((c) => (
               <div key={c.id} className="flex gap-2 text-sm">
-                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                  <User className="h-3 w-3" />
-                </div>
+                <Avatar className="h-6 w-6 shrink-0">
+                  <AvatarImage src={(c as any).profiles?.avatar_url ?? undefined} />
+                  <AvatarFallback><User className="h-3 w-3" /></AvatarFallback>
+                </Avatar>
                 <div className="flex-1">
                   <span className="font-semibold text-xs">{(c as any).profiles?.full_name || "Anonymous"}</span>
                   <p className="text-muted-foreground">{c.content}</p>

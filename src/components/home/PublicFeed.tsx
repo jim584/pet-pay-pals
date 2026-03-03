@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { PetProfilePreview } from "./PetProfilePreview";
-import { Heart, MessageCircle, Share2, UserPlus, PawPrint } from "lucide-react";
+import { Heart, MessageCircle, Share2, UserPlus, PawPrint, User } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 const SAMPLE_STORIES: FeedStory[] = [
@@ -126,7 +126,13 @@ function FeedCard({ story, isFollowing, isLiked, onFollow, onLike, user, isSampl
             </Avatar>
             <div className="text-left">
               <p className="text-sm font-semibold text-foreground leading-none">{story.pets.name}</p>
-              <p className="text-xs text-muted-foreground">{story.profiles.full_name}</p>
+              <div className="flex items-center gap-1 mt-0.5">
+                <Avatar className="h-4 w-4">
+                  <AvatarImage src={story.profiles.avatar_url ?? undefined} />
+                  <AvatarFallback className="text-[8px]"><User className="h-2.5 w-2.5" /></AvatarFallback>
+                </Avatar>
+                <p className="text-xs text-muted-foreground">{story.profiles.full_name}</p>
+              </div>
             </div>
           </button>
         </PetProfilePreview>
