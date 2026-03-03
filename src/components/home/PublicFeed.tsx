@@ -297,7 +297,7 @@ export function PublicFeed() {
   const [lightbox, setLightbox] = useState<{ url: string; alt: string } | null>(null);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Refresh bar */}
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Latest Stories</h2>
