@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -6,16 +6,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/sonner";
-import { createHealthRecord } from "@/lib/pets-api";
+import { createHealthRecord, updateHealthRecord, HealthRecord } from "@/lib/pets-api";
 
 interface AddHealthRecordDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   petId: string;
   onSuccess: () => void;
+  record?: HealthRecord | null;
 }
 
-export function AddHealthRecordDialog({ open, onOpenChange, petId, onSuccess }: AddHealthRecordDialogProps) {
+export function AddHealthRecordDialog({ open, onOpenChange, petId, onSuccess, record }: AddHealthRecordDialogProps) {
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
     title: "",
@@ -25,22 +26,40 @@ export function AddHealthRecordDialog({ open, onOpenChange, petId, onSuccess }: 
     vet_name: "",
   });
 
+  useEffect(() => {
+    if (open) {
+      setForm({
+        title: record?.title ?? "",
+        record_type: record?.record_type ?? "general",
+        description: record?.description ?? "",
+        record_date: record?.record_date ?? new Date().toISOString().split("T")[0],
+        vet_name: record?.vet_name ?? "",
+      });
+    }
+  }, [open, record]);
+
+  const isEditing = !!record;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await createHealthRecord({
-        pet_id: petId,
+      const payload = {
         title: form.title,
         record_type: form.record_type,
         description: form.description || null,
         record_date: form.record_date,
         vet_name: form.vet_name || null,
-      });
-      toast.success("Health record added!");
+      };
+      if (isEditing) {
+        await updateHealthRecord(record.id, payload);
+        toast.success("Health record updated!");
+      } else {
+        await createHealthRecord({ ...payload, pet_id: petId });
+        toast.success("Health record added!");
+      }
       onSuccess();
       onOpenChange(false);
-      setForm({ title: "", record_type: "general", description: "", record_date: new Date().toISOString().split("T")[0], vet_name: "" });
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -52,7 +71,7 @@ export function AddHealthRecordDialog({ open, onOpenChange, petId, onSuccess }: 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add Health Record</DialogTitle>
+          <DialogTitle>{isEditing ? "Edit Health Record" : "Add Health Record"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -88,7 +107,7 @@ export function AddHealthRecordDialog({ open, onOpenChange, petId, onSuccess }: 
             <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} />
           </div>
           <Button type="submit" className="w-full" disabled={submitting}>
-            {submitting ? "Saving..." : "Add Record"}
+            {submitting ? "Saving..." : isEditing ? "Save Changes" : "Add Record"}
           </Button>
         </form>
       </DialogContent>

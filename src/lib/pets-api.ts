@@ -79,6 +79,12 @@ export async function createHealthRecord(record: Omit<HealthRecord, "id" | "crea
   return data as HealthRecord;
 }
 
+export async function updateHealthRecord(id: string, updates: Partial<HealthRecord>) {
+  const { data, error } = await supabase.from("health_records").update(updates).eq("id", id).select().single();
+  if (error) throw error;
+  return data as HealthRecord;
+}
+
 export async function deleteHealthRecord(id: string) {
   const { error } = await supabase.from("health_records").delete().eq("id", id);
   if (error) throw error;
