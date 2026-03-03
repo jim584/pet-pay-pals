@@ -35,9 +35,12 @@ export interface EmergencyContact {
 }
 
 export async function fetchPets() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
   const { data, error } = await supabase
     .from("pets")
     .select("*")
+    .eq("owner_id", user.id)
     .order("created_at", { ascending: false });
   if (error) throw error;
   return data as Pet[];
