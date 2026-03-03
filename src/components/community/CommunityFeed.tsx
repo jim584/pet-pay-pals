@@ -72,6 +72,7 @@ function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: () => voi
 
   const isAuthor = user?.id === story.author_id;
   const petName = (story as any).pets?.name || "Unknown Pet";
+  const petPhoto = (story as any).pets?.photo_url || null;
   const authorName = (story as any).profiles?.full_name || "Anonymous";
   const authorAvatar = (story as any).profiles?.avatar_url || null;
 
@@ -90,9 +91,9 @@ function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: () => voi
         <div className="flex items-start justify-between">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={authorAvatar ?? undefined} />
-                <AvatarFallback><PawPrint className="h-4 w-4" /></AvatarFallback>
+              <Avatar className="h-8 w-8 ring-2 ring-primary/20">
+                <AvatarImage src={petPhoto ?? undefined} />
+                <AvatarFallback className="bg-primary/10 text-primary"><PawPrint className="h-4 w-4" /></AvatarFallback>
               </Avatar>
               <div>
                 <p className="font-bold font-display text-base">{story.title}</p>
