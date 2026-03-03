@@ -47,11 +47,27 @@ export default function PetsPage() {
 
   if (selectedPet) {
     return (
-      <PetDetail
-        pet={selectedPet}
-        onBack={() => setSelectedPet(null)}
-        onEdit={() => { setEditPet(selectedPet); setShowForm(true); }}
-      />
+      <>
+        <PetDetail
+          pet={selectedPet}
+          onBack={() => setSelectedPet(null)}
+          onEdit={() => { setEditPet(selectedPet); setShowForm(true); }}
+        />
+        <PetFormDialog
+          open={showForm}
+          onOpenChange={(open) => { setShowForm(open); if (!open) setEditPet(null); }}
+          pet={editPet}
+          onSuccess={() => {
+            loadPets();
+            if (editPet) {
+              fetchPets().then((p) => {
+                const updated = p.find((x) => x.id === editPet.id) ?? null;
+                setSelectedPet(updated);
+              });
+            }
+          }}
+        />
+      </>
     );
   }
 
