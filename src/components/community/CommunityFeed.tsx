@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PawPrint, Sparkles, Loader2 } from "lucide-react";
-import { PetStory, fetchStories, STORIES_PAGE_SIZE } from "@/lib/community-api";
+import { PetStory, fetchStories, STORIES_PAGE_SIZE, StoryCategory } from "@/lib/community-api";
 import { StoryCard } from "./StoryCard";
 
 function StorySkeleton() {
