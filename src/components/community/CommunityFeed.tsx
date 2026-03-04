@@ -87,7 +87,7 @@ export function CommunityFeed({ search = "", category = "" }: { search?: string;
     );
   }
 
-  if (filtered.length === 0 && !q) {
+  if (filtered.length === 0 && !isFiltering) {
     return (
       <Card className="rounded-2xl border-dashed border-2 border-border/60">
         <CardContent className="p-12 text-center space-y-4">
