@@ -65,14 +65,19 @@ export function CommunityFeed({ search = "", category = "" }: { search?: string;
   useEffect(() => { loadInitial(); }, [loadInitial]);
 
   const q = search.toLowerCase().trim();
-  const filtered = q
-    ? stories.filter((s) =>
+  const filtered = stories.filter((s) => {
+    if (category && s.category !== category) return false;
+    if (q) {
+      return (
         s.title.toLowerCase().includes(q) ||
         s.content.toLowerCase().includes(q) ||
         (s as any).pets?.name?.toLowerCase().includes(q) ||
         (s as any).profiles?.full_name?.toLowerCase().includes(q)
-      )
-    : stories;
+      );
+    }
+    return true;
+  });
+  const isFiltering = !!q || !!category;
 
   if (loading) {
     return (
