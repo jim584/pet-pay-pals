@@ -183,6 +183,7 @@ export type Database = {
       pet_stories: {
         Row: {
           author_id: string
+          category: string
           comments_count: number
           content: string
           created_at: string
@@ -195,6 +196,7 @@ export type Database = {
         }
         Insert: {
           author_id: string
+          category?: string
           comments_count?: number
           content: string
           created_at?: string
@@ -207,6 +209,7 @@ export type Database = {
         }
         Update: {
           author_id?: string
+          category?: string
           comments_count?: number
           content?: string
           created_at?: string
