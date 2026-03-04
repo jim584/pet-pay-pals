@@ -30,14 +30,24 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
 
   const handleLike = async () => {
     if (!user) return;
-    const nowLiked = await toggleLike(story.id, user.id);
-    setLiked(nowLiked);
-    setLikesCount((c) => (nowLiked ? c + 1 : Math.max(c - 1, 0)));
+    try {
+      const nowLiked = await toggleLike(story.id, user.id);
+      setLiked(nowLiked);
+      setLikesCount((c) => (nowLiked ? c + 1 : Math.max(c - 1, 0)));
+    } catch (err: any) {
+      console.error("Like error:", err);
+      toast.error("Couldn't process like. Please try again.");
+    }
   };
 
   const loadComments = async () => {
-    const data = await fetchComments(story.id);
-    setComments(data);
+    try {
+      const data = await fetchComments(story.id);
+      setComments(data);
+    } catch (err: any) {
+      console.error("Comments error:", err);
+      toast.error("Couldn't load comments.");
+    }
   };
 
   const handleToggleComments = () => {
@@ -47,9 +57,14 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
 
   const handleAddComment = async () => {
     if (!user || !newComment.trim()) return;
-    await addComment(story.id, user.id, newComment.trim());
-    setNewComment("");
-    loadComments();
+    try {
+      await addComment(story.id, user.id, newComment.trim());
+      setNewComment("");
+      loadComments();
+    } catch (err: any) {
+      console.error("Add comment error:", err);
+      toast.error("Couldn't post comment.");
+    }
   };
 
   const handleDonate = async () => {

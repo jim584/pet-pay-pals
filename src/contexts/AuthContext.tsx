@@ -35,14 +35,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let initialLoadDone = false;
+    let mounted = true;
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
+        if (!mounted) return;
+
+        // Don't clear session on token refresh failures — let Supabase retry
+        if (event === 'TOKEN_REFRESHED' && !session) {
+          console.warn('Token refresh returned no session — keeping current state');
+          return;
+        }
+
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
           // Use setTimeout to avoid Supabase auth deadlock
-          setTimeout(() => fetchRole(session.user.id), 0);
+          setTimeout(() => {
+            if (mounted) fetchRole(session.user.id);
+          }, 0);
         } else {
           setRole(null);
         }
@@ -54,11 +65,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchRole(session.user.id).finally(() => {
-          if (!initialLoadDone) {
+          if (!initialLoadDone && mounted) {
             initialLoadDone = true;
             setLoading(false);
           }
@@ -71,7 +83,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string) => {
