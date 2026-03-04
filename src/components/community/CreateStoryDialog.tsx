@@ -10,6 +10,7 @@ import { toast } from "@/components/ui/sonner";
 import { fetchPets, Pet } from "@/lib/pets-api";
 import { createStory, uploadStoryPhoto, STORY_CATEGORIES } from "@/lib/community-api";
 import { ImagePlus, X } from "lucide-react";
+import { isValidImageFile, ACCEPTED_IMAGE_TYPES } from "@/lib/utils";
 
 interface CreateStoryDialogProps {
   open: boolean;
