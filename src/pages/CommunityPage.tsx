@@ -4,6 +4,7 @@ import { CreateStoryDialog } from "@/components/community/CreateStoryDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Users, Search } from "lucide-react";
+import { STORY_CATEGORIES } from "@/lib/community-api";
 
 export default function CommunityPage() {
   const [showCreate, setShowCreate] = useState(false);
