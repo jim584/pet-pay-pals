@@ -110,6 +110,14 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
 
       <CardContent className="px-4 pb-4 pt-1 space-y-3">
         <div>
+          {story.category && story.category !== "general" && (() => {
+            const cat = STORY_CATEGORIES.find((c) => c.value === story.category);
+            return cat ? (
+              <Badge variant="secondary" className={`mb-2 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full border-none ${cat.color}`}>
+                {cat.label}
+              </Badge>
+            ) : null;
+          })()}
           <p className="font-bold font-display text-base mb-1">{story.title}</p>
           <p className="text-sm text-foreground/80 leading-relaxed">{story.content}</p>
         </div>

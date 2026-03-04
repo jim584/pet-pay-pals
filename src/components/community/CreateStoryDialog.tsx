@@ -96,6 +96,17 @@ export function CreateStoryDialog({ open, onOpenChange, onSuccess }: CreateStory
             </Select>
           </div>
           <div className="space-y-2">
+            <Label>Category</Label>
+            <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
+              <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+              <SelectContent>
+                {STORY_CATEGORIES.map((c) => (
+                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
             <Label>Title *</Label>
             <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required placeholder="Max's surgery recovery" />
           </div>

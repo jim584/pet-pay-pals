@@ -126,7 +126,7 @@ export function CommunityFeed({ search = "", category = "" }: { search?: string;
       {filtered.map((story) => (
         <StoryCard key={story.id} story={story} onRefresh={loadInitial} />
       ))}
-      {hasMore && !q && (
+      {hasMore && !isFiltering && (
         <div className="flex justify-center pt-2 pb-4">
           <Button
             variant="outline"

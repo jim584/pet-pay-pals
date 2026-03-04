@@ -44,7 +44,30 @@ export default function CommunityPage() {
         />
       </div>
 
-      <CommunityFeed key={refreshKey} search={search} />
+      {/* Category filter chips */}
+      <div className="flex gap-2 flex-wrap">
+        <Button
+          variant={category === "" ? "default" : "outline"}
+          size="sm"
+          className="rounded-full text-xs h-8"
+          onClick={() => setCategory("")}
+        >
+          All
+        </Button>
+        {STORY_CATEGORIES.filter((c) => c.value !== "general").map((c) => (
+          <Button
+            key={c.value}
+            variant={category === c.value ? "default" : "outline"}
+            size="sm"
+            className="rounded-full text-xs h-8"
+            onClick={() => setCategory(category === c.value ? "" : c.value)}
+          >
+            {c.label}
+          </Button>
+        ))}
+      </div>
+
+      <CommunityFeed key={refreshKey} search={search} category={category} />
       <CreateStoryDialog open={showCreate} onOpenChange={setShowCreate} onSuccess={() => setRefreshKey((k) => k + 1)} />
     </div>
   );
