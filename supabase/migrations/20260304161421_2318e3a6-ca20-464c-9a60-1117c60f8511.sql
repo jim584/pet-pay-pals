@@ -1,0 +1,1 @@
+ALTER TABLE public.pet_stories ADD COLUMN category text NOT NULL DEFAULT 'general';

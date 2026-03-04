@@ -4,11 +4,13 @@ import { CreateStoryDialog } from "@/components/community/CreateStoryDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Users, Search } from "lucide-react";
+import { STORY_CATEGORIES } from "@/lib/community-api";
 
 export default function CommunityPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("");
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -42,7 +44,30 @@ export default function CommunityPage() {
         />
       </div>
 
-      <CommunityFeed key={refreshKey} search={search} />
+      {/* Category filter chips */}
+      <div className="flex gap-2 flex-wrap">
+        <Button
+          variant={category === "" ? "default" : "outline"}
+          size="sm"
+          className="rounded-full text-xs h-8"
+          onClick={() => setCategory("")}
+        >
+          All
+        </Button>
+        {STORY_CATEGORIES.filter((c) => c.value !== "general").map((c) => (
+          <Button
+            key={c.value}
+            variant={category === c.value ? "default" : "outline"}
+            size="sm"
+            className="rounded-full text-xs h-8"
+            onClick={() => setCategory(category === c.value ? "" : c.value)}
+          >
+            {c.label}
+          </Button>
+        ))}
+      </div>
+
+      <CommunityFeed key={refreshKey} search={search} category={category} />
       <CreateStoryDialog open={showCreate} onOpenChange={setShowCreate} onSuccess={() => setRefreshKey((k) => k + 1)} />
     </div>
   );

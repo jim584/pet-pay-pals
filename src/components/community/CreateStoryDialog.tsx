@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/sonner";
 import { fetchPets, Pet } from "@/lib/pets-api";
-import { createStory, uploadStoryPhoto } from "@/lib/community-api";
+import { createStory, uploadStoryPhoto, STORY_CATEGORIES } from "@/lib/community-api";
 import { ImagePlus, X } from "lucide-react";
 
 interface CreateStoryDialogProps {
@@ -24,7 +24,7 @@ export function CreateStoryDialog({ open, onOpenChange, onSuccess }: CreateStory
   const [photos, setPhotos] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
-  const [form, setForm] = useState({ pet_id: "", title: "", content: "" });
+  const [form, setForm] = useState({ pet_id: "", title: "", content: "", category: "general" });
 
   useEffect(() => {
     if (open) fetchPets().then(setPets).catch(() => {});
@@ -62,11 +62,12 @@ export function CreateStoryDialog({ open, onOpenChange, onSuccess }: CreateStory
         title: form.title,
         content: form.content,
         photo_urls: photoUrls,
+        category: form.category,
       });
       toast.success("Story shared!");
       onSuccess();
       onOpenChange(false);
-      setForm({ pet_id: "", title: "", content: "" });
+      setForm({ pet_id: "", title: "", content: "", category: "general" });
       setPhotos([]);
       setPreviews([]);
     } catch (err: any) {
@@ -90,6 +91,17 @@ export function CreateStoryDialog({ open, onOpenChange, onSuccess }: CreateStory
               <SelectContent>
                 {pets.map((p) => (
                   <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Category</Label>
+            <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
+              <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+              <SelectContent>
+                {STORY_CATEGORIES.map((c) => (
+                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PawPrint, Sparkles, Loader2 } from "lucide-react";
-import { PetStory, fetchStories, STORIES_PAGE_SIZE } from "@/lib/community-api";
+import { PetStory, fetchStories, STORIES_PAGE_SIZE, StoryCategory } from "@/lib/community-api";
 import { StoryCard } from "./StoryCard";
 
 function StorySkeleton() {
@@ -30,7 +30,7 @@ function StorySkeleton() {
   );
 }
 
-export function CommunityFeed({ search = "" }: { search?: string }) {
+export function CommunityFeed({ search = "", category = "" }: { search?: string; category?: string }) {
   const [stories, setStories] = useState<PetStory[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -65,14 +65,19 @@ export function CommunityFeed({ search = "" }: { search?: string }) {
   useEffect(() => { loadInitial(); }, [loadInitial]);
 
   const q = search.toLowerCase().trim();
-  const filtered = q
-    ? stories.filter((s) =>
+  const filtered = stories.filter((s) => {
+    if (category && s.category !== category) return false;
+    if (q) {
+      return (
         s.title.toLowerCase().includes(q) ||
         s.content.toLowerCase().includes(q) ||
         (s as any).pets?.name?.toLowerCase().includes(q) ||
         (s as any).profiles?.full_name?.toLowerCase().includes(q)
-      )
-    : stories;
+      );
+    }
+    return true;
+  });
+  const isFiltering = !!q || !!category;
 
   if (loading) {
     return (
@@ -82,7 +87,7 @@ export function CommunityFeed({ search = "" }: { search?: string }) {
     );
   }
 
-  if (filtered.length === 0 && !q) {
+  if (filtered.length === 0 && !isFiltering) {
     return (
       <Card className="rounded-2xl border-dashed border-2 border-border/60">
         <CardContent className="p-12 text-center space-y-4">
@@ -103,14 +108,14 @@ export function CommunityFeed({ search = "" }: { search?: string }) {
     );
   }
 
-  if (filtered.length === 0 && q) {
+  if (filtered.length === 0 && isFiltering) {
     return (
       <Card className="rounded-2xl border-border/60">
         <CardContent className="p-10 text-center space-y-3">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-muted">
             <PawPrint className="h-8 w-8 text-muted-foreground" />
           </div>
-          <p className="text-sm text-muted-foreground">No stories match "<span className="font-medium text-foreground">{q}</span>"</p>
+          <p className="text-sm text-muted-foreground">No stories match your filters</p>
         </CardContent>
       </Card>
     );
@@ -121,7 +126,7 @@ export function CommunityFeed({ search = "" }: { search?: string }) {
       {filtered.map((story) => (
         <StoryCard key={story.id} story={story} onRefresh={loadInitial} />
       ))}
-      {hasMore && !q && (
+      {hasMore && !isFiltering && (
         <div className="flex justify-center pt-2 pb-4">
           <Button
             variant="outline"
