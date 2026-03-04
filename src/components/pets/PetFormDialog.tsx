@@ -56,6 +56,10 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!isValidImageFile(file)) {
+      toast.error("Unsupported format. Use JPG, PNG, WebP, or GIF.");
+      return;
+    }
     if (file.size > 5 * 1024 * 1024) {
       toast.error("Image must be under 5MB");
       return;
