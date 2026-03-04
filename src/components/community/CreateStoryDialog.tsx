@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/sonner";
 import { fetchPets, Pet } from "@/lib/pets-api";
-import { createStory, uploadStoryPhoto } from "@/lib/community-api";
+import { createStory, uploadStoryPhoto, STORY_CATEGORIES } from "@/lib/community-api";
 import { ImagePlus, X } from "lucide-react";
 
 interface CreateStoryDialogProps {
