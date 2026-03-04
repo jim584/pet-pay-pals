@@ -33,7 +33,15 @@ export function CreateStoryDialog({ open, onOpenChange, onSuccess }: CreateStory
 
   const handlePhotos = (files: FileList | null) => {
     if (!files) return;
-    const newFiles = Array.from(files).slice(0, 4 - photos.length);
+    const newFiles = Array.from(files)
+      .filter((f) => {
+        if (!isValidImageFile(f)) {
+          toast.error(`"${f.name}" is not a supported format. Use JPG, PNG, WebP, or GIF.`);
+          return false;
+        }
+        return true;
+      })
+      .slice(0, 4 - photos.length);
     setPhotos((prev) => [...prev, ...newFiles]);
     newFiles.forEach((f) => {
       const reader = new FileReader();
