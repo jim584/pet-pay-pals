@@ -144,7 +144,7 @@ export function CreateStoryDialog({ open, onOpenChange, onSuccess }: CreateStory
                 </button>
               )}
             </div>
-            <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => handlePhotos(e.target.files)} />
+            <input ref={fileRef} type="file" accept={ACCEPTED_IMAGE_TYPES} multiple className="hidden" onChange={(e) => handlePhotos(e.target.files)} />
           </div>
           <Button type="submit" className="w-full" disabled={submitting || !form.pet_id}>
             {submitting ? "Sharing..." : "Share Story"}

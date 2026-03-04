@@ -144,7 +144,7 @@ export default function ProfileSettingsPage() {
             <input
               ref={fileRef}
               type="file"
-              accept="image/*"
+              accept={ACCEPTED_IMAGE_TYPES}
               className="hidden"
               onChange={handleAvatarUpload}
             />

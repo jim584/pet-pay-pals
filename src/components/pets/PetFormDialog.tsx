@@ -157,7 +157,7 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept={ACCEPTED_IMAGE_TYPES}
                 className="hidden"
                 onChange={handlePhotoSelect}
               />
