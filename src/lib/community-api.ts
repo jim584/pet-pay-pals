@@ -1,11 +1,23 @@
 import { supabase } from "@/integrations/supabase/client";
 
+export const STORY_CATEGORIES = [
+  { value: "general", label: "General", color: "bg-muted text-muted-foreground" },
+  { value: "recovery", label: "Recovery", color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300" },
+  { value: "adoption", label: "Adoption", color: "bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300" },
+  { value: "milestone", label: "Milestone", color: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300" },
+  { value: "rescue", label: "Rescue", color: "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300" },
+  { value: "memorial", label: "Memorial", color: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300" },
+] as const;
+
+export type StoryCategory = typeof STORY_CATEGORIES[number]["value"];
+
 export interface PetStory {
   id: string;
   pet_id: string;
   author_id: string;
   title: string;
   content: string;
+  category: StoryCategory;
   photo_urls: string[];
   likes_count: number;
   comments_count: number;
