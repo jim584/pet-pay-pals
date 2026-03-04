@@ -10,6 +10,7 @@ export default function CommunityPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("");
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
