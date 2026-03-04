@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/components/ui/sonner";
 import { createPet, updatePet, Pet } from "@/lib/pets-api";
 import { supabase } from "@/integrations/supabase/client";
+import { isValidImageFile, ACCEPTED_IMAGE_TYPES } from "@/lib/utils";
 import { Camera, PawPrint, X } from "lucide-react";
 
 interface PetFormDialogProps {
