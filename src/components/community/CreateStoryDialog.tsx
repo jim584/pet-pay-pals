@@ -62,6 +62,7 @@ export function CreateStoryDialog({ open, onOpenChange, onSuccess }: CreateStory
         title: form.title,
         content: form.content,
         photo_urls: photoUrls,
+        category: form.category,
       });
       toast.success("Story shared!");
       onSuccess();
