@@ -115,7 +115,7 @@ export function CommunityFeed({ search = "", category = "" }: { search?: string;
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-muted">
             <PawPrint className="h-8 w-8 text-muted-foreground" />
           </div>
-          <p className="text-sm text-muted-foreground">No stories match "<span className="font-medium text-foreground">{q}</span>"</p>
+          <p className="text-sm text-muted-foreground">No stories match your filters</p>
         </CardContent>
       </Card>
     );
