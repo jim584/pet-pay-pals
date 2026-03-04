@@ -108,7 +108,7 @@ export function CommunityFeed({ search = "", category = "" }: { search?: string;
     );
   }
 
-  if (filtered.length === 0 && q) {
+  if (filtered.length === 0 && isFiltering) {
     return (
       <Card className="rounded-2xl border-border/60">
         <CardContent className="p-10 text-center space-y-3">
