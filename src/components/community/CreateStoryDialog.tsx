@@ -24,7 +24,7 @@ export function CreateStoryDialog({ open, onOpenChange, onSuccess }: CreateStory
   const [photos, setPhotos] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
-  const [form, setForm] = useState({ pet_id: "", title: "", content: "" });
+  const [form, setForm] = useState({ pet_id: "", title: "", content: "", category: "general" });
 
   useEffect(() => {
     if (open) fetchPets().then(setPets).catch(() => {});
