@@ -10,6 +10,7 @@ import { toast } from "@/components/ui/sonner";
 import { fetchPets, Pet } from "@/lib/pets-api";
 import { createStory, uploadStoryPhoto, STORY_CATEGORIES } from "@/lib/community-api";
 import { ImagePlus, X } from "lucide-react";
+import { isValidImageFile, ACCEPTED_IMAGE_TYPES } from "@/lib/utils";
 
 interface CreateStoryDialogProps {
   open: boolean;
@@ -32,7 +33,15 @@ export function CreateStoryDialog({ open, onOpenChange, onSuccess }: CreateStory
 
   const handlePhotos = (files: FileList | null) => {
     if (!files) return;
-    const newFiles = Array.from(files).slice(0, 4 - photos.length);
+    const newFiles = Array.from(files)
+      .filter((f) => {
+        if (!isValidImageFile(f)) {
+          toast.error(`"${f.name}" is not a supported format. Use JPG, PNG, WebP, or GIF.`);
+          return false;
+        }
+        return true;
+      })
+      .slice(0, 4 - photos.length);
     setPhotos((prev) => [...prev, ...newFiles]);
     newFiles.forEach((f) => {
       const reader = new FileReader();
@@ -135,7 +144,7 @@ export function CreateStoryDialog({ open, onOpenChange, onSuccess }: CreateStory
                 </button>
               )}
             </div>
-            <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => handlePhotos(e.target.files)} />
+            <input ref={fileRef} type="file" accept={ACCEPTED_IMAGE_TYPES} multiple className="hidden" onChange={(e) => handlePhotos(e.target.files)} />
           </div>
           <Button type="submit" className="w-full" disabled={submitting || !form.pet_id}>
             {submitting ? "Sharing..." : "Share Story"}

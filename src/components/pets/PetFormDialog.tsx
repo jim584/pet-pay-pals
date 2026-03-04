@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/components/ui/sonner";
 import { createPet, updatePet, Pet } from "@/lib/pets-api";
 import { supabase } from "@/integrations/supabase/client";
+import { isValidImageFile, ACCEPTED_IMAGE_TYPES } from "@/lib/utils";
 import { Camera, PawPrint, X } from "lucide-react";
 
 interface PetFormDialogProps {
@@ -55,6 +56,10 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!isValidImageFile(file)) {
+      toast.error("Unsupported format. Use JPG, PNG, WebP, or GIF.");
+      return;
+    }
     if (file.size > 5 * 1024 * 1024) {
       toast.error("Image must be under 5MB");
       return;
@@ -152,7 +157,7 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept={ACCEPTED_IMAGE_TYPES}
                 className="hidden"
                 onChange={handlePhotoSelect}
               />

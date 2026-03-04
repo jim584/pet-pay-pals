@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Camera, Loader2, User } from "lucide-react";
 import { toast } from "sonner";
+import { ACCEPTED_IMAGE_TYPES } from "@/lib/utils";
 
 export default function ProfileSettingsPage() {
   const { user } = useAuth();
@@ -144,7 +145,7 @@ export default function ProfileSettingsPage() {
             <input
               ref={fileRef}
               type="file"
-              accept="image/*"
+              accept={ACCEPTED_IMAGE_TYPES}
               className="hidden"
               onChange={handleAvatarUpload}
             />
