@@ -30,7 +30,7 @@ function StorySkeleton() {
   );
 }
 
-export function CommunityFeed({ search = "" }: { search?: string }) {
+export function CommunityFeed({ search = "", category = "" }: { search?: string; category?: string }) {
   const [stories, setStories] = useState<PetStory[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
