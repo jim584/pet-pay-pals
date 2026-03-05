@@ -8,7 +8,7 @@ import { toast } from "@/components/ui/sonner";
 import { Heart, MessageCircle, DollarSign, Trash2, Send, PawPrint, User, Reply, X } from "lucide-react";
 import {
   PetStory, StoryComment, toggleLike, checkUserLiked,
-  fetchComments, addComment, deleteComment, sendDonation, deleteStory, STORY_CATEGORIES
+  fetchComments, addComment, deleteComment, toggleCommentLike, batchCheckCommentLiked, sendDonation, deleteStory, STORY_CATEGORIES
 } from "@/lib/community-api";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
