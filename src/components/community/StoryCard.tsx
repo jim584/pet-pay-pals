@@ -24,6 +24,7 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
   const [donateAmount, setDonateAmount] = useState("");
   const [donating, setDonating] = useState(false);
   const [replyingTo, setReplyingTo] = useState<StoryComment | null>(null);
+  const [commentLikedSet, setCommentLikedSet] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (user) checkUserLiked(story.id, user.id).then(setLiked);
