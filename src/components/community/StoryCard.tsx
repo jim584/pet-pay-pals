@@ -71,6 +71,7 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
     const parentId = replyingTo?.id;
     setNewComment("");
     setReplyingTo(null);
+    const now = new Date().toISOString();
     const tempComment: StoryComment = {
       id: `temp-${Date.now()}`,
       story_id: story.id,
@@ -78,7 +79,8 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
       content: commentText,
       parent_comment_id: parentId || null,
       likes_count: 0,
-      created_at: new Date().toISOString(),
+      created_at: now,
+      updated_at: now,
       profiles: { full_name: user.user_metadata?.full_name || "You", avatar_url: user.user_metadata?.avatar_url || null },
     };
     setComments((prev) => [...prev, tempComment]);
