@@ -30,11 +30,15 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
 
   const handleLike = async () => {
     if (!user) return;
+    // Optimistic update
+    setLiked((prev) => !prev);
+    setLikesCount((c) => (liked ? Math.max(c - 1, 0) : c + 1));
     try {
-      const nowLiked = await toggleLike(story.id, user.id);
-      setLiked(nowLiked);
-      setLikesCount((c) => (nowLiked ? c + 1 : Math.max(c - 1, 0)));
+      await toggleLike(story.id, user.id);
     } catch (err: any) {
+      // Revert on error
+      setLiked((prev) => !prev);
+      setLikesCount((c) => (liked ? c + 1 : Math.max(c - 1, 0)));
       console.error("Like error:", err);
       toast.error("Couldn't process like. Please try again.");
     }
