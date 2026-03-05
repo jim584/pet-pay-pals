@@ -35,6 +35,7 @@ export interface StoryComment {
   parent_comment_id: string | null;
   likes_count: number;
   created_at: string;
+  updated_at: string;
   profiles?: { full_name: string; avatar_url: string | null };
 }
 
