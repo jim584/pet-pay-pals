@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/components/ui/sonner";
-import { Heart, MessageCircle, DollarSign, Trash2, Send, PawPrint, User } from "lucide-react";
+import { Heart, MessageCircle, DollarSign, Trash2, Send, PawPrint, User, Reply, X } from "lucide-react";
 import {
   PetStory, StoryComment, toggleLike, checkUserLiked,
   fetchComments, addComment, deleteComment, sendDonation, deleteStory, STORY_CATEGORIES
