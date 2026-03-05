@@ -258,7 +258,7 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
   );
 }
 
-function CommentBubble({ c, user, onDelete, onReply }: { c: StoryComment; user: any; onDelete: () => void; onReply: () => void }) {
+function CommentBubble({ c, user, liked, onLike, onDelete, onReply }: { c: StoryComment; user: any; liked: boolean; onLike: () => void; onDelete: () => void; onReply: () => void }) {
   return (
     <div className="flex gap-2.5 group">
       <Avatar className="h-7 w-7 shrink-0 mt-0.5">
@@ -270,11 +270,20 @@ function CommentBubble({ c, user, onDelete, onReply }: { c: StoryComment; user: 
           <span className="font-semibold text-xs">{(c as any).profiles?.full_name || "Anonymous"}</span>
           <p className="text-sm text-foreground/80">{c.content}</p>
         </div>
-        {user && (
-          <button onClick={onReply} className="text-[10px] font-medium text-muted-foreground hover:text-foreground ml-2 mt-0.5">
-            Reply
+        <div className="flex items-center gap-2.5 ml-2 mt-0.5">
+          <button
+            onClick={onLike}
+            className={`flex items-center gap-0.5 text-[10px] font-medium transition-colors ${liked ? "text-destructive" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            <Heart className={`h-2.5 w-2.5 ${liked ? "fill-current" : ""}`} />
+            {c.likes_count > 0 && <span>{c.likes_count}</span>}
           </button>
-        )}
+          {user && (
+            <button onClick={onReply} className="text-[10px] font-medium text-muted-foreground hover:text-foreground">
+              Reply
+            </button>
+          )}
+        </div>
       </div>
       {user?.id === c.user_id && (
         <button onClick={onDelete} className="opacity-0 group-hover:opacity-100 transition-opacity p-1 self-center text-destructive/40 hover:text-destructive">
