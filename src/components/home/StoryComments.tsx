@@ -251,6 +251,9 @@ function CommentRow({
         <div className="flex items-center gap-2.5 mt-0.5">
           <p className="text-[10px] text-muted-foreground">
             {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
+            {comment.updated_at !== comment.created_at && (
+              <span className="ml-1 italic">(edited)</span>
+            )}
           </p>
           <button
             onClick={onLike}

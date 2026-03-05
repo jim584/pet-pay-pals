@@ -404,6 +404,7 @@ export type Database = {
           likes_count: number
           parent_comment_id: string | null
           story_id: string
+          updated_at: string
           user_id: string
         }
         Insert: {
@@ -413,6 +414,7 @@ export type Database = {
           likes_count?: number
           parent_comment_id?: string | null
           story_id: string
+          updated_at?: string
           user_id: string
         }
         Update: {
@@ -422,6 +424,7 @@ export type Database = {
           likes_count?: number
           parent_comment_id?: string | null
           story_id?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: [
