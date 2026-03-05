@@ -32,6 +32,7 @@ export interface StoryComment {
   story_id: string;
   user_id: string;
   content: string;
+  parent_comment_id: string | null;
   created_at: string;
   profiles?: { full_name: string; avatar_url: string | null };
 }
@@ -129,10 +130,10 @@ export async function fetchComments(storyId: string) {
   return data as unknown as StoryComment[];
 }
 
-export async function addComment(storyId: string, userId: string, content: string) {
+export async function addComment(storyId: string, userId: string, content: string, parentCommentId?: string) {
   const { data, error } = await supabase
     .from("story_comments")
-    .insert({ story_id: storyId, user_id: userId, content })
+    .insert({ story_id: storyId, user_id: userId, content, parent_comment_id: parentCommentId || null })
     .select()
     .single();
   if (error) throw error;

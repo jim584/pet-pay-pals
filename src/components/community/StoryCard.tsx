@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/components/ui/sonner";
-import { Heart, MessageCircle, DollarSign, Trash2, Send, PawPrint, User } from "lucide-react";
+import { Heart, MessageCircle, DollarSign, Trash2, Send, PawPrint, User, Reply, X } from "lucide-react";
 import {
   PetStory, StoryComment, toggleLike, checkUserLiked,
   fetchComments, addComment, deleteComment, sendDonation, deleteStory, STORY_CATEGORIES
@@ -23,6 +23,7 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
   const [showDonate, setShowDonate] = useState(false);
   const [donateAmount, setDonateAmount] = useState("");
   const [donating, setDonating] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<StoryComment | null>(null);
 
   useEffect(() => {
     if (user) checkUserLiked(story.id, user.id).then(setLiked);
@@ -62,20 +63,22 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
   const handleAddComment = async () => {
     if (!user || !newComment.trim()) return;
     const commentText = newComment.trim();
+    const parentId = replyingTo?.id;
     setNewComment("");
-    // Optimistic: add a temporary comment immediately
+    setReplyingTo(null);
     const tempComment: StoryComment = {
       id: `temp-${Date.now()}`,
       story_id: story.id,
       user_id: user.id,
       content: commentText,
+      parent_comment_id: parentId || null,
       created_at: new Date().toISOString(),
       profiles: { full_name: user.user_metadata?.full_name || "You", avatar_url: user.user_metadata?.avatar_url || null },
     };
     setComments((prev) => [...prev, tempComment]);
     try {
-      await addComment(story.id, user.id, commentText);
-      await loadComments(); // Refresh with real data
+      await addComment(story.id, user.id, commentText, parentId);
+      await loadComments();
     } catch (err: any) {
       console.error("Add comment error:", err);
       toast.error("Couldn't post comment.");
@@ -181,26 +184,37 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
             {comments.length === 0 && (
               <p className="text-xs text-muted-foreground text-center py-3">No comments yet — be the first!</p>
             )}
-            {comments.map((c) => (
-              <div key={c.id} className="flex gap-2.5">
-                <Avatar className="h-7 w-7 shrink-0 mt-0.5">
-                  <AvatarImage src={(c as any).profiles?.avatar_url ?? undefined} />
-                  <AvatarFallback className="text-[10px]"><User className="h-3 w-3" /></AvatarFallback>
-                </Avatar>
-                <div className="flex-1 bg-muted rounded-2xl rounded-tl-sm px-3 py-2">
-                  <span className="font-semibold text-xs">{(c as any).profiles?.full_name || "Anonymous"}</span>
-                  <p className="text-sm text-foreground/80">{c.content}</p>
+            {(() => {
+              const topLevel = comments.filter((c) => !c.parent_comment_id);
+              const byParent = new Map<string, StoryComment[]>();
+              for (const c of comments) {
+                if (c.parent_comment_id) {
+                  const arr = byParent.get(c.parent_comment_id) || [];
+                  arr.push(c);
+                  byParent.set(c.parent_comment_id, arr);
+                }
+              }
+              return topLevel.map((c) => (
+                <div key={c.id}>
+                  <CommentBubble c={c} user={user} onDelete={() => { deleteComment(c.id); loadComments(); }} onReply={() => setReplyingTo(c)} />
+                  {byParent.get(c.id)?.map((reply) => (
+                    <div key={reply.id} className="pl-8 mt-1.5">
+                      <CommentBubble c={reply} user={user} onDelete={() => { deleteComment(reply.id); loadComments(); }} onReply={() => setReplyingTo(reply)} />
+                    </div>
+                  ))}
                 </div>
-                {user?.id === c.user_id && (
-                  <Button variant="ghost" size="icon" className="h-6 w-6 self-center text-destructive/40 hover:text-destructive" onClick={async () => { await deleteComment(c.id); loadComments(); }}>
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                )}
+              ));
+            })()}
+            {replyingTo && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-1.5">
+                <Reply className="h-3 w-3" />
+                <span>Replying to <span className="font-semibold text-foreground">{(replyingTo as any).profiles?.full_name || "User"}</span></span>
+                <button onClick={() => setReplyingTo(null)} className="ml-auto hover:text-foreground"><X className="h-3 w-3" /></button>
               </div>
-            ))}
+            )}
             <div className="flex gap-2 pt-1">
               <Input
-                placeholder="Write a comment..."
+                placeholder={replyingTo ? "Write a reply..." : "Write a comment..."}
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleAddComment()}
@@ -235,5 +249,32 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
         </DialogContent>
       </Dialog>
     </Card>
+  );
+}
+
+function CommentBubble({ c, user, onDelete, onReply }: { c: StoryComment; user: any; onDelete: () => void; onReply: () => void }) {
+  return (
+    <div className="flex gap-2.5 group">
+      <Avatar className="h-7 w-7 shrink-0 mt-0.5">
+        <AvatarImage src={(c as any).profiles?.avatar_url ?? undefined} />
+        <AvatarFallback className="text-[10px]"><User className="h-3 w-3" /></AvatarFallback>
+      </Avatar>
+      <div className="flex-1">
+        <div className="bg-muted rounded-2xl rounded-tl-sm px-3 py-2">
+          <span className="font-semibold text-xs">{(c as any).profiles?.full_name || "Anonymous"}</span>
+          <p className="text-sm text-foreground/80">{c.content}</p>
+        </div>
+        {user && (
+          <button onClick={onReply} className="text-[10px] font-medium text-muted-foreground hover:text-foreground ml-2 mt-0.5">
+            Reply
+          </button>
+        )}
+      </div>
+      {user?.id === c.user_id && (
+        <button onClick={onDelete} className="opacity-0 group-hover:opacity-100 transition-opacity p-1 self-center text-destructive/40 hover:text-destructive">
+          <Trash2 className="h-3 w-3" />
+        </button>
+      )}
+    </div>
   );
 }

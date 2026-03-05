@@ -1,38 +1,44 @@
 
 
-## Threaded Comment Replies
+## Community Section UI/UX Improvements
 
-Add the ability for users to reply to specific comments, displayed in a nested/indented style.
+After reviewing the code, I can identify several UI/UX issues with the current Community section:
 
-### 1. Database Migration
+1. **Empty state is bland** -- just a paw icon and text in a plain card
+2. **Story cards lack visual polish** -- no rounded images, flat layout, cramped spacing
+3. **No max-width constraint** -- stories stretch full width on large screens, making them hard to read
+4. **Comments section feels unfinished** -- no empty state, no visual separation between comments
+5. **Donate dialog is minimal** -- could use better visual hierarchy
+6. **Loading state is just text** -- no skeleton placeholders
+7. **Page header lacks personality** -- plain text with no visual flair
 
-Add a nullable `parent_comment_id` column to `story_comments` with a self-referencing foreign key. When a parent comment is deleted, cascade-delete its replies.
+### Changes
 
-```sql
-ALTER TABLE public.story_comments
-ADD COLUMN parent_comment_id uuid REFERENCES public.story_comments(id) ON DELETE CASCADE DEFAULT NULL;
-```
+**1. CommunityPage.tsx -- Better header with gradient accent and max-width container**
+- Add a gradient accent banner or subtle background to the header area
+- Constrain content width with `max-w-2xl mx-auto` for a social-feed feel (like Instagram/Twitter)
+- Add a descriptive icon alongside the heading
 
-### 2. API Layer (`src/lib/community-api.ts`)
+**2. CommunityFeed.tsx -- Major visual overhaul of StoryCard**
+- Add `max-w-2xl mx-auto` wrapper for feed-style centering
+- **Loading state**: Replace text with 3 skeleton card placeholders (pulsing cards with fake image/text blocks)
+- **Empty state**: More engaging design with a larger illustration area, gradient text, and a CTA button
+- **Story cards**:
+  - Move author avatar/info above the image (social media pattern: avatar + name + timestamp on top)
+  - Round the card corners more, add subtle hover shadow
+  - Better photo grid: rounded corners inside card, proper aspect ratios
+  - Action bar: cleaner spacing, subtle background strip, rounded pill-style buttons for like/comment/donate
+  - Comments: add rounded bubble styling per comment, better empty-comments message, smooth expand animation
+  - Donate button: accent gradient styling to stand out
 
-- Update the `StoryComment` interface to include `parent_comment_id: string | null`.
-- Update `addComment` to accept an optional `parentCommentId` parameter.
-- Update `fetchComments` query to also select `parent_comment_id`.
+**3. CreateStoryDialog.tsx -- Minor polish**
+- No major changes needed, already decent
 
-### 3. Comment UI (`src/components/home/StoryComments.tsx`)
+### Technical Details
 
-- Add a "Reply" button on each comment row.
-- Track `replyingTo` state (the comment being replied to).
-- When replying, show a small indicator above the input ("Replying to [name]" with a cancel button) and pass `parent_comment_id` to `addComment`.
-- Nest the comment list: render top-level comments (where `parent_comment_id` is null), then indent replies beneath their parent with left padding (`pl-8`).
+All changes are purely CSS/Tailwind and minor JSX restructuring in two files:
+- `src/pages/CommunityPage.tsx` -- wrap content in max-width container, enhance header
+- `src/components/community/CommunityFeed.tsx` -- skeleton loading, improved card layout, better action bar styling, comment bubbles, enhanced empty state
 
-### 4. Community StoryCard (`src/components/community/StoryCard.tsx`)
-
-- Apply the same threading logic to the comment section inside `StoryCard` (Reply button, nesting, reply-to indicator).
-
-### Summary of files changed
-- **1 migration** -- add `parent_comment_id` column
-- `src/lib/community-api.ts` -- update interface + `addComment` signature
-- `src/components/home/StoryComments.tsx` -- reply UI + nesting
-- `src/components/community/StoryCard.tsx` -- reply UI + nesting
+No database or API changes required.
 
