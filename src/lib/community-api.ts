@@ -148,7 +148,7 @@ export async function deleteComment(id: string) {
 }
 
 export async function editComment(id: string, content: string) {
-  const { error } = await supabase.from("story_comments").update({ content }).eq("id", id);
+  const { error } = await supabase.from("story_comments").update({ content, updated_at: new Date().toISOString() }).eq("id", id);
   if (error) throw error;
 }
 
