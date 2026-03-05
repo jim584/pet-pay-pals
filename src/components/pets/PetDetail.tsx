@@ -146,11 +146,11 @@ export function PetDetail({ pet, onBack, onEdit }: PetDetailProps) {
                     </div>
                     {r.description && <p className="text-sm text-muted-foreground mt-1">{r.description}</p>}
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => { setEditRecord(r); setShowAddRecord(true); }}>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button variant="ghost" size="sm" className="h-9 w-9 p-0" onClick={(e) => { e.stopPropagation(); setEditRecord(r); setShowAddRecord(true); }}>
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setRecordToDelete(r.id)}>
+                    <Button variant="ghost" size="sm" className="h-9 w-9 p-0 text-destructive" onClick={(e) => { e.stopPropagation(); setRecordToDelete(r.id); }}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -184,11 +184,11 @@ export function PetDetail({ pet, onBack, onEdit }: PetDetailProps) {
                     <p className="font-semibold">{c.contact_name}</p>
                     <p className="text-sm text-muted-foreground">{c.phone}{c.relationship ? ` · ${c.relationship}` : ""}</p>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => { setEditContact(c); setShowAddContact(true); }}>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button variant="ghost" size="sm" className="h-9 w-9 p-0" onClick={(e) => { e.stopPropagation(); setEditContact(c); setShowAddContact(true); }}>
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setContactToDelete(c.id)}>
+                    <Button variant="ghost" size="sm" className="h-9 w-9 p-0 text-destructive" onClick={(e) => { e.stopPropagation(); setContactToDelete(c.id); }}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
