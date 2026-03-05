@@ -306,6 +306,9 @@ function CommentBubble({ c, user, liked, onLike, onDelete, onEdit, onReply }: { 
           </div>
         )}
         <div className="flex items-center gap-2.5 ml-2 mt-0.5">
+          {c.updated_at !== c.created_at && (
+            <span className="text-[10px] italic text-muted-foreground">(edited)</span>
+          )}
           <button
             onClick={onLike}
             className={`flex items-center gap-0.5 text-[10px] font-medium transition-colors ${liked ? "text-destructive" : "text-muted-foreground hover:text-foreground"}`}
