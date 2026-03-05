@@ -397,6 +397,13 @@ export type Database = {
             referencedRelation: "pet_stories"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "story_comments_user_profile_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       story_likes: {
