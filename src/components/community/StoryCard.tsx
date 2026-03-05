@@ -184,26 +184,37 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
             {comments.length === 0 && (
               <p className="text-xs text-muted-foreground text-center py-3">No comments yet — be the first!</p>
             )}
-            {comments.map((c) => (
-              <div key={c.id} className="flex gap-2.5">
-                <Avatar className="h-7 w-7 shrink-0 mt-0.5">
-                  <AvatarImage src={(c as any).profiles?.avatar_url ?? undefined} />
-                  <AvatarFallback className="text-[10px]"><User className="h-3 w-3" /></AvatarFallback>
-                </Avatar>
-                <div className="flex-1 bg-muted rounded-2xl rounded-tl-sm px-3 py-2">
-                  <span className="font-semibold text-xs">{(c as any).profiles?.full_name || "Anonymous"}</span>
-                  <p className="text-sm text-foreground/80">{c.content}</p>
+            {(() => {
+              const topLevel = comments.filter((c) => !c.parent_comment_id);
+              const byParent = new Map<string, StoryComment[]>();
+              for (const c of comments) {
+                if (c.parent_comment_id) {
+                  const arr = byParent.get(c.parent_comment_id) || [];
+                  arr.push(c);
+                  byParent.set(c.parent_comment_id, arr);
+                }
+              }
+              return topLevel.map((c) => (
+                <div key={c.id}>
+                  <CommentBubble c={c} user={user} onDelete={() => { deleteComment(c.id); loadComments(); }} onReply={() => setReplyingTo(c)} />
+                  {byParent.get(c.id)?.map((reply) => (
+                    <div key={reply.id} className="pl-8 mt-1.5">
+                      <CommentBubble c={reply} user={user} onDelete={() => { deleteComment(reply.id); loadComments(); }} onReply={() => setReplyingTo(reply)} />
+                    </div>
+                  ))}
                 </div>
-                {user?.id === c.user_id && (
-                  <Button variant="ghost" size="icon" className="h-6 w-6 self-center text-destructive/40 hover:text-destructive" onClick={async () => { await deleteComment(c.id); loadComments(); }}>
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                )}
+              ));
+            })()}
+            {replyingTo && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-1.5">
+                <Reply className="h-3 w-3" />
+                <span>Replying to <span className="font-semibold text-foreground">{(replyingTo as any).profiles?.full_name || "User"}</span></span>
+                <button onClick={() => setReplyingTo(null)} className="ml-auto hover:text-foreground"><X className="h-3 w-3" /></button>
               </div>
-            ))}
+            )}
             <div className="flex gap-2 pt-1">
               <Input
-                placeholder="Write a comment..."
+                placeholder={replyingTo ? "Write a reply..." : "Write a comment..."}
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleAddComment()}
