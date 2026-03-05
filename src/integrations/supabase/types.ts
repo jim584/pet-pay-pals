@@ -372,6 +372,7 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          parent_comment_id: string | null
           story_id: string
           user_id: string
         }
@@ -379,6 +380,7 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          parent_comment_id?: string | null
           story_id: string
           user_id: string
         }
@@ -386,10 +388,18 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          parent_comment_id?: string | null
           story_id?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "story_comments_parent_comment_id_fkey"
+            columns: ["parent_comment_id"]
+            isOneToOne: false
+            referencedRelation: "story_comments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "story_comments_story_id_fkey"
             columns: ["story_id"]
