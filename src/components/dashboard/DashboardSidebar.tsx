@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/sidebar";
 
 const ownerNav = [
+  { title: "Home", url: "/", icon: Home },
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "My Pets", url: "/dashboard/pets", icon: PawPrint },
   { title: "Community", url: "/dashboard/community", icon: Users },
