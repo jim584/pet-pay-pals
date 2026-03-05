@@ -251,3 +251,30 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
     </Card>
   );
 }
+
+function CommentBubble({ c, user, onDelete, onReply }: { c: StoryComment; user: any; onDelete: () => void; onReply: () => void }) {
+  return (
+    <div className="flex gap-2.5 group">
+      <Avatar className="h-7 w-7 shrink-0 mt-0.5">
+        <AvatarImage src={(c as any).profiles?.avatar_url ?? undefined} />
+        <AvatarFallback className="text-[10px]"><User className="h-3 w-3" /></AvatarFallback>
+      </Avatar>
+      <div className="flex-1">
+        <div className="bg-muted rounded-2xl rounded-tl-sm px-3 py-2">
+          <span className="font-semibold text-xs">{(c as any).profiles?.full_name || "Anonymous"}</span>
+          <p className="text-sm text-foreground/80">{c.content}</p>
+        </div>
+        {user && (
+          <button onClick={onReply} className="text-[10px] font-medium text-muted-foreground hover:text-foreground ml-2 mt-0.5">
+            Reply
+          </button>
+        )}
+      </div>
+      {user?.id === c.user_id && (
+        <button onClick={onDelete} className="opacity-0 group-hover:opacity-100 transition-opacity p-1 self-center text-destructive/40 hover:text-destructive">
+          <Trash2 className="h-3 w-3" />
+        </button>
+      )}
+    </div>
+  );
+}
