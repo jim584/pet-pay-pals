@@ -202,10 +202,10 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
               }
               return topLevel.map((c) => (
                 <div key={c.id}>
-                  <CommentBubble c={c} user={user} liked={commentLikedSet.has(c.id)} onLike={async () => { if (!user) return; await toggleCommentLike(c.id, user.id); loadComments(); }} onDelete={() => { deleteComment(c.id); loadComments(); }} onReply={() => setReplyingTo(c)} />
+                  <CommentBubble c={c} user={user} liked={commentLikedSet.has(c.id)} onLike={async () => { if (!user) return; await toggleCommentLike(c.id, user.id); loadComments(); }} onDelete={() => { deleteComment(c.id); loadComments(); }} onEdit={async (content) => { await editComment(c.id, content); loadComments(); }} onReply={() => setReplyingTo(c)} />
                   {byParent.get(c.id)?.map((reply) => (
                     <div key={reply.id} className="pl-8 mt-1.5">
-                      <CommentBubble c={reply} user={user} liked={commentLikedSet.has(reply.id)} onLike={async () => { if (!user) return; await toggleCommentLike(reply.id, user.id); loadComments(); }} onDelete={() => { deleteComment(reply.id); loadComments(); }} onReply={() => setReplyingTo(reply)} />
+                      <CommentBubble c={reply} user={user} liked={commentLikedSet.has(reply.id)} onLike={async () => { if (!user) return; await toggleCommentLike(reply.id, user.id); loadComments(); }} onDelete={() => { deleteComment(reply.id); loadComments(); }} onEdit={async (content) => { await editComment(reply.id, content); loadComments(); }} onReply={() => setReplyingTo(reply)} />
                     </div>
                   ))}
                 </div>
