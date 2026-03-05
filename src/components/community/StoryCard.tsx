@@ -61,13 +61,25 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
 
   const handleAddComment = async () => {
     if (!user || !newComment.trim()) return;
+    const commentText = newComment.trim();
+    setNewComment("");
+    // Optimistic: add a temporary comment immediately
+    const tempComment: StoryComment = {
+      id: `temp-${Date.now()}`,
+      story_id: story.id,
+      user_id: user.id,
+      content: commentText,
+      created_at: new Date().toISOString(),
+      profiles: { full_name: user.user_metadata?.full_name || "You", avatar_url: user.user_metadata?.avatar_url || null },
+    };
+    setComments((prev) => [...prev, tempComment]);
     try {
-      await addComment(story.id, user.id, newComment.trim());
-      setNewComment("");
-      loadComments();
+      await addComment(story.id, user.id, commentText);
+      await loadComments(); // Refresh with real data
     } catch (err: any) {
       console.error("Add comment error:", err);
       toast.error("Couldn't post comment.");
+      setComments((prev) => prev.filter((c) => c.id !== tempComment.id));
     }
   };
 
