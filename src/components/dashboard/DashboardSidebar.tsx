@@ -28,6 +28,7 @@ const ownerNav = [
 ];
 
 const vetNav = [
+  { title: "Home", url: "/", icon: Home },
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "My Profile", url: "/dashboard/vet-profile", icon: Stethoscope },
   { title: "Services", url: "/dashboard/vet-services", icon: Briefcase },
