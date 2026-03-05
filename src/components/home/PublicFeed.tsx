@@ -285,15 +285,17 @@ export function PublicFeed() {
   const likeMutation = useMutation({
     mutationFn: async (storyId: string) => {
       if (!user) return;
+      // Optimistic toggle
+      setLikedSet((prev) => {
+        const next = new Set(prev);
+        if (next.has(storyId)) next.delete(storyId);
+        else next.add(storyId);
+        return next;
+      });
       await toggleLike(storyId, user.id);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["publicFeed"] });
-      if (user) {
-        Promise.all(stories.map((s) => checkUserLiked(s.id, user.id).then((liked) => ({ id: s.id, liked })))).then(
-          (results) => setLikedSet(new Set(results.filter((r) => r.liked).map((r) => r.id)))
-        );
-      }
     },
   });
 
