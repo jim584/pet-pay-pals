@@ -109,6 +109,16 @@ export async function checkUserLiked(storyId: string, userId: string) {
   return !!data;
 }
 
+export async function batchCheckLiked(storyIds: string[], userId: string): Promise<Set<string>> {
+  if (storyIds.length === 0) return new Set();
+  const { data } = await supabase
+    .from("story_likes")
+    .select("story_id")
+    .eq("user_id", userId)
+    .in("story_id", storyIds);
+  return new Set((data || []).map((r: any) => r.story_id));
+}
+
 export async function fetchComments(storyId: string) {
   const { data, error } = await supabase
     .from("story_comments")

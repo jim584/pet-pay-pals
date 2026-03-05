@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchPublicFeed, followPet, unfollowPet, checkFollowing, FEED_PAGE_SIZE, type FeedStory } from "@/lib/feed-api";
-import { toggleLike, checkUserLiked } from "@/lib/community-api";
+import { toggleLike, batchCheckLiked } from "@/lib/community-api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -251,6 +251,8 @@ export function PublicFeed() {
   };
 
   const stories: FeedStory[] = data?.pages.flat() ?? [];
+  // Stable key to avoid infinite re-renders
+  const storyIds = stories.map((s) => s.id).join(",");
 
   // Check follows & likes for logged-in user
   useEffect(() => {
@@ -258,10 +260,8 @@ export function PublicFeed() {
     const petIds = [...new Set(stories.map((s) => s.pet_id))];
     checkFollowing(petIds, user.id).then(setFollowedSet);
 
-    Promise.all(stories.map((s) => checkUserLiked(s.id, user.id).then((liked) => ({ id: s.id, liked })))).then(
-      (results) => setLikedSet(new Set(results.filter((r) => r.liked).map((r) => r.id)))
-    );
-  }, [user, stories]);
+    batchCheckLiked(stories.map((s) => s.id), user.id).then(setLikedSet);
+  }, [user, storyIds]);
 
   const followMutation = useMutation({
     mutationFn: async (petId: string) => {
@@ -285,15 +285,17 @@ export function PublicFeed() {
   const likeMutation = useMutation({
     mutationFn: async (storyId: string) => {
       if (!user) return;
+      // Optimistic toggle
+      setLikedSet((prev) => {
+        const next = new Set(prev);
+        if (next.has(storyId)) next.delete(storyId);
+        else next.add(storyId);
+        return next;
+      });
       await toggleLike(storyId, user.id);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["publicFeed"] });
-      if (user) {
-        Promise.all(stories.map((s) => checkUserLiked(s.id, user.id).then((liked) => ({ id: s.id, liked })))).then(
-          (results) => setLikedSet(new Set(results.filter((r) => r.liked).map((r) => r.id)))
-        );
-      }
     },
   });
 

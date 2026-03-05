@@ -30,11 +30,15 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
 
   const handleLike = async () => {
     if (!user) return;
+    // Optimistic update
+    setLiked((prev) => !prev);
+    setLikesCount((c) => (liked ? Math.max(c - 1, 0) : c + 1));
     try {
-      const nowLiked = await toggleLike(story.id, user.id);
-      setLiked(nowLiked);
-      setLikesCount((c) => (nowLiked ? c + 1 : Math.max(c - 1, 0)));
+      await toggleLike(story.id, user.id);
     } catch (err: any) {
+      // Revert on error
+      setLiked((prev) => !prev);
+      setLikesCount((c) => (liked ? c + 1 : Math.max(c - 1, 0)));
       console.error("Like error:", err);
       toast.error("Couldn't process like. Please try again.");
     }
@@ -57,13 +61,25 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
 
   const handleAddComment = async () => {
     if (!user || !newComment.trim()) return;
+    const commentText = newComment.trim();
+    setNewComment("");
+    // Optimistic: add a temporary comment immediately
+    const tempComment: StoryComment = {
+      id: `temp-${Date.now()}`,
+      story_id: story.id,
+      user_id: user.id,
+      content: commentText,
+      created_at: new Date().toISOString(),
+      profiles: { full_name: user.user_metadata?.full_name || "You", avatar_url: user.user_metadata?.avatar_url || null },
+    };
+    setComments((prev) => [...prev, tempComment]);
     try {
-      await addComment(story.id, user.id, newComment.trim());
-      setNewComment("");
-      loadComments();
+      await addComment(story.id, user.id, commentText);
+      await loadComments(); // Refresh with real data
     } catch (err: any) {
       console.error("Add comment error:", err);
       toast.error("Couldn't post comment.");
+      setComments((prev) => prev.filter((c) => c.id !== tempComment.id));
     }
   };
 
