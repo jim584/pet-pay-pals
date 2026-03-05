@@ -1,0 +1,1 @@
+ALTER TABLE public.story_comments ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
