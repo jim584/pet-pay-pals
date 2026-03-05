@@ -75,6 +75,35 @@ export type Database = {
           },
         ]
       }
+      comment_likes: {
+        Row: {
+          comment_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          comment_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          comment_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comment_likes_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "story_comments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       emergency_contacts: {
         Row: {
           contact_name: string
@@ -372,6 +401,7 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          likes_count: number
           parent_comment_id: string | null
           story_id: string
           user_id: string
@@ -380,6 +410,7 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          likes_count?: number
           parent_comment_id?: string | null
           story_id: string
           user_id: string
@@ -388,6 +419,7 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          likes_count?: number
           parent_comment_id?: string | null
           story_id?: string
           user_id?: string
