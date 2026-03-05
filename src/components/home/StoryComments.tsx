@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchComments, addComment, deleteComment, toggleCommentLike, batchCheckCommentLiked, type StoryComment } from "@/lib/community-api";
+import { fetchComments, addComment, deleteComment, editComment, toggleCommentLike, batchCheckCommentLiked, type StoryComment } from "@/lib/community-api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { User, Trash2, Send, Loader2, Reply, X, Heart } from "lucide-react";
+import { User, Trash2, Send, Loader2, Reply, X, Heart, Pencil, Check } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useNavigate } from "react-router-dom";
 
@@ -42,7 +42,6 @@ export function StoryComments({ storyId, isOpen }: Props) {
     staleTime: 30_000,
   });
 
-  // Batch check which comments the user has liked
   useEffect(() => {
     if (!user || comments.length === 0) return;
     batchCheckCommentLiked(comments.map((c) => c.id), user.id).then(setLikedSet);
@@ -66,10 +65,16 @@ export function StoryComments({ storyId, isOpen }: Props) {
     },
   });
 
+  const editMutation = useMutation({
+    mutationFn: ({ id, content }: { id: string; content: string }) => editComment(id, content),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["storyComments", storyId] });
+    },
+  });
+
   const handleLikeComment = async (commentId: string) => {
     if (!user) { navigate("/auth"); return; }
     const wasLiked = likedSet.has(commentId);
-    // Optimistic update
     setLikedSet((prev) => {
       const next = new Set(prev);
       wasLiked ? next.delete(commentId) : next.add(commentId);
@@ -79,7 +84,6 @@ export function StoryComments({ storyId, isOpen }: Props) {
       await toggleCommentLike(commentId, user.id);
       qc.invalidateQueries({ queryKey: ["storyComments", storyId] });
     } catch {
-      // Revert
       setLikedSet((prev) => {
         const next = new Set(prev);
         wasLiked ? next.add(commentId) : next.delete(commentId);
@@ -117,6 +121,7 @@ export function StoryComments({ storyId, isOpen }: Props) {
                 liked={likedSet.has(comment.id)}
                 onLike={() => handleLikeComment(comment.id)}
                 onDelete={() => deleteMutation.mutate(comment.id)}
+                onEdit={(content) => editMutation.mutate({ id: comment.id, content })}
                 onReply={() => setReplyingTo(comment)}
                 isDeleting={deleteMutation.isPending}
                 isAuthenticated={!!user}
@@ -129,6 +134,7 @@ export function StoryComments({ storyId, isOpen }: Props) {
                     liked={likedSet.has(reply.id)}
                     onLike={() => handleLikeComment(reply.id)}
                     onDelete={() => deleteMutation.mutate(reply.id)}
+                    onEdit={(content) => editMutation.mutate({ id: reply.id, content })}
                     onReply={() => setReplyingTo(reply)}
                     isDeleting={deleteMutation.isPending}
                     isAuthenticated={!!user}
@@ -181,6 +187,7 @@ function CommentRow({
   liked,
   onLike,
   onDelete,
+  onEdit,
   onReply,
   isDeleting,
   isAuthenticated,
@@ -190,10 +197,25 @@ function CommentRow({
   liked: boolean;
   onLike: () => void;
   onDelete: () => void;
+  onEdit: (content: string) => void;
   onReply: () => void;
   isDeleting: boolean;
   isAuthenticated: boolean;
 }) {
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState(comment.content);
+
+  const handleSaveEdit = () => {
+    const trimmed = editText.trim();
+    if (!trimmed || trimmed === comment.content) {
+      setEditing(false);
+      setEditText(comment.content);
+      return;
+    }
+    onEdit(trimmed);
+    setEditing(false);
+  };
+
   return (
     <div className="flex items-start gap-2 group">
       <Avatar className="h-6 w-6 mt-0.5 shrink-0">
@@ -203,10 +225,29 @@ function CommentRow({
         </AvatarFallback>
       </Avatar>
       <div className="flex-1 min-w-0">
-        <p className="text-sm leading-snug">
-          <span className="font-semibold">{comment.profiles?.full_name || "User"}</span>{" "}
-          <span className="text-muted-foreground">{comment.content}</span>
-        </p>
+        {editing ? (
+          <div className="flex items-center gap-1.5">
+            <Input
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") handleSaveEdit(); if (e.key === "Escape") { setEditing(false); setEditText(comment.content); } }}
+              maxLength={500}
+              className="text-sm h-7 flex-1"
+              autoFocus
+            />
+            <button onClick={handleSaveEdit} className="p-1 text-primary hover:text-primary/80" title="Save">
+              <Check className="h-3.5 w-3.5" />
+            </button>
+            <button onClick={() => { setEditing(false); setEditText(comment.content); }} className="p-1 text-muted-foreground hover:text-foreground" title="Cancel">
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ) : (
+          <p className="text-sm leading-snug">
+            <span className="font-semibold">{comment.profiles?.full_name || "User"}</span>{" "}
+            <span className="text-muted-foreground">{comment.content}</span>
+          </p>
+        )}
         <div className="flex items-center gap-2.5 mt-0.5">
           <p className="text-[10px] text-muted-foreground">
             {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
@@ -226,9 +267,17 @@ function CommentRow({
               Reply
             </button>
           )}
+          {isOwn && !editing && (
+            <button
+              onClick={() => setEditing(true)}
+              className="text-[10px] font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Edit
+            </button>
+          )}
         </div>
       </div>
-      {isOwn && (
+      {isOwn && !editing && (
         <button
           onClick={onDelete}
           disabled={isDeleting}
