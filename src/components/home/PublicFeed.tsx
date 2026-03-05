@@ -251,6 +251,8 @@ export function PublicFeed() {
   };
 
   const stories: FeedStory[] = data?.pages.flat() ?? [];
+  // Stable key to avoid infinite re-renders
+  const storyIds = stories.map((s) => s.id).join(",");
 
   // Check follows & likes for logged-in user
   useEffect(() => {
@@ -258,10 +260,8 @@ export function PublicFeed() {
     const petIds = [...new Set(stories.map((s) => s.pet_id))];
     checkFollowing(petIds, user.id).then(setFollowedSet);
 
-    Promise.all(stories.map((s) => checkUserLiked(s.id, user.id).then((liked) => ({ id: s.id, liked })))).then(
-      (results) => setLikedSet(new Set(results.filter((r) => r.liked).map((r) => r.id)))
-    );
-  }, [user, stories]);
+    batchCheckLiked(stories.map((s) => s.id), user.id).then(setLikedSet);
+  }, [user, storyIds]);
 
   const followMutation = useMutation({
     mutationFn: async (petId: string) => {
