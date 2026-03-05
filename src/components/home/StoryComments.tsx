@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchComments, addComment, deleteComment, type StoryComment } from "@/lib/community-api";
+import { fetchComments, addComment, deleteComment, toggleCommentLike, batchCheckCommentLiked, type StoryComment } from "@/lib/community-api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { User, Trash2, Send, Loader2, Reply, X } from "lucide-react";
+import { User, Trash2, Send, Loader2, Reply, X, Heart } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useNavigate } from "react-router-dom";
 
@@ -33,6 +33,7 @@ export function StoryComments({ storyId, isOpen }: Props) {
   const qc = useQueryClient();
   const [text, setText] = useState("");
   const [replyingTo, setReplyingTo] = useState<StoryComment | null>(null);
+  const [likedSet, setLikedSet] = useState<Set<string>>(new Set());
 
   const { data: comments = [], isLoading } = useQuery({
     queryKey: ["storyComments", storyId],
@@ -40,6 +41,12 @@ export function StoryComments({ storyId, isOpen }: Props) {
     enabled: isOpen,
     staleTime: 30_000,
   });
+
+  // Batch check which comments the user has liked
+  useEffect(() => {
+    if (!user || comments.length === 0) return;
+    batchCheckCommentLiked(comments.map((c) => c.id), user.id).then(setLikedSet);
+  }, [comments, user]);
 
   const addMutation = useMutation({
     mutationFn: () => addComment(storyId, user!.id, text.trim(), replyingTo?.id),
@@ -59,12 +66,31 @@ export function StoryComments({ storyId, isOpen }: Props) {
     },
   });
 
+  const handleLikeComment = async (commentId: string) => {
+    if (!user) { navigate("/auth"); return; }
+    const wasLiked = likedSet.has(commentId);
+    // Optimistic update
+    setLikedSet((prev) => {
+      const next = new Set(prev);
+      wasLiked ? next.delete(commentId) : next.add(commentId);
+      return next;
+    });
+    try {
+      await toggleCommentLike(commentId, user.id);
+      qc.invalidateQueries({ queryKey: ["storyComments", storyId] });
+    } catch {
+      // Revert
+      setLikedSet((prev) => {
+        const next = new Set(prev);
+        wasLiked ? next.add(commentId) : next.delete(commentId);
+        return next;
+      });
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) {
-      navigate("/auth");
-      return;
-    }
+    if (!user) { navigate("/auth"); return; }
     if (!text.trim()) return;
     addMutation.mutate();
   };
@@ -88,6 +114,8 @@ export function StoryComments({ storyId, isOpen }: Props) {
               <CommentRow
                 comment={comment}
                 isOwn={user?.id === comment.user_id}
+                liked={likedSet.has(comment.id)}
+                onLike={() => handleLikeComment(comment.id)}
                 onDelete={() => deleteMutation.mutate(comment.id)}
                 onReply={() => setReplyingTo(comment)}
                 isDeleting={deleteMutation.isPending}
@@ -98,6 +126,8 @@ export function StoryComments({ storyId, isOpen }: Props) {
                   <CommentRow
                     comment={reply}
                     isOwn={user?.id === reply.user_id}
+                    liked={likedSet.has(reply.id)}
+                    onLike={() => handleLikeComment(reply.id)}
                     onDelete={() => deleteMutation.mutate(reply.id)}
                     onReply={() => setReplyingTo(reply)}
                     isDeleting={deleteMutation.isPending}
@@ -110,7 +140,6 @@ export function StoryComments({ storyId, isOpen }: Props) {
         </div>
       )}
 
-      {/* Reply indicator */}
       {replyingTo && (
         <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-1.5">
           <Reply className="h-3 w-3" />
@@ -119,7 +148,6 @@ export function StoryComments({ storyId, isOpen }: Props) {
         </div>
       )}
 
-      {/* Input */}
       <form onSubmit={handleSubmit} className="flex items-center gap-2">
         <Input
           value={text}
@@ -150,6 +178,8 @@ export function StoryComments({ storyId, isOpen }: Props) {
 function CommentRow({
   comment,
   isOwn,
+  liked,
+  onLike,
   onDelete,
   onReply,
   isDeleting,
@@ -157,6 +187,8 @@ function CommentRow({
 }: {
   comment: StoryComment;
   isOwn: boolean;
+  liked: boolean;
+  onLike: () => void;
   onDelete: () => void;
   onReply: () => void;
   isDeleting: boolean;
@@ -175,10 +207,17 @@ function CommentRow({
           <span className="font-semibold">{comment.profiles?.full_name || "User"}</span>{" "}
           <span className="text-muted-foreground">{comment.content}</span>
         </p>
-        <div className="flex items-center gap-2 mt-0.5">
+        <div className="flex items-center gap-2.5 mt-0.5">
           <p className="text-[10px] text-muted-foreground">
             {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
           </p>
+          <button
+            onClick={onLike}
+            className={`flex items-center gap-0.5 text-[10px] font-medium transition-colors ${liked ? "text-destructive" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            <Heart className={`h-2.5 w-2.5 ${liked ? "fill-current" : ""}`} />
+            {comment.likes_count > 0 && <span>{comment.likes_count}</span>}
+          </button>
           {isAuthenticated && (
             <button
               onClick={onReply}

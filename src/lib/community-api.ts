@@ -33,6 +33,7 @@ export interface StoryComment {
   user_id: string;
   content: string;
   parent_comment_id: string | null;
+  likes_count: number;
   created_at: string;
   profiles?: { full_name: string; avatar_url: string | null };
 }
@@ -143,6 +144,33 @@ export async function addComment(storyId: string, userId: string, content: strin
 export async function deleteComment(id: string) {
   const { error } = await supabase.from("story_comments").delete().eq("id", id);
   if (error) throw error;
+}
+
+export async function toggleCommentLike(commentId: string, userId: string) {
+  const { data: existing } = await supabase
+    .from("comment_likes")
+    .select("id")
+    .eq("comment_id", commentId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (existing) {
+    await supabase.from("comment_likes").delete().eq("id", existing.id);
+    return false;
+  } else {
+    await supabase.from("comment_likes").insert({ comment_id: commentId, user_id: userId });
+    return true;
+  }
+}
+
+export async function batchCheckCommentLiked(commentIds: string[], userId: string): Promise<Set<string>> {
+  if (commentIds.length === 0) return new Set();
+  const { data } = await supabase
+    .from("comment_likes")
+    .select("comment_id")
+    .eq("user_id", userId)
+    .in("comment_id", commentIds);
+  return new Set((data || []).map((r: any) => r.comment_id));
 }
 
 export async function fetchWallet(userId: string) {

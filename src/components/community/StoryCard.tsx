@@ -8,7 +8,7 @@ import { toast } from "@/components/ui/sonner";
 import { Heart, MessageCircle, DollarSign, Trash2, Send, PawPrint, User, Reply, X } from "lucide-react";
 import {
   PetStory, StoryComment, toggleLike, checkUserLiked,
-  fetchComments, addComment, deleteComment, sendDonation, deleteStory, STORY_CATEGORIES
+  fetchComments, addComment, deleteComment, toggleCommentLike, batchCheckCommentLiked, sendDonation, deleteStory, STORY_CATEGORIES
 } from "@/lib/community-api";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -24,6 +24,7 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
   const [donateAmount, setDonateAmount] = useState("");
   const [donating, setDonating] = useState(false);
   const [replyingTo, setReplyingTo] = useState<StoryComment | null>(null);
+  const [commentLikedSet, setCommentLikedSet] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (user) checkUserLiked(story.id, user.id).then(setLiked);
@@ -49,6 +50,10 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
     try {
       const data = await fetchComments(story.id);
       setComments(data);
+      if (user) {
+        const liked = await batchCheckCommentLiked(data.map((c) => c.id), user.id);
+        setCommentLikedSet(liked);
+      }
     } catch (err: any) {
       console.error("Comments error:", err);
       toast.error("Couldn't load comments.");
@@ -72,6 +77,7 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
       user_id: user.id,
       content: commentText,
       parent_comment_id: parentId || null,
+      likes_count: 0,
       created_at: new Date().toISOString(),
       profiles: { full_name: user.user_metadata?.full_name || "You", avatar_url: user.user_metadata?.avatar_url || null },
     };
@@ -196,10 +202,10 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
               }
               return topLevel.map((c) => (
                 <div key={c.id}>
-                  <CommentBubble c={c} user={user} onDelete={() => { deleteComment(c.id); loadComments(); }} onReply={() => setReplyingTo(c)} />
+                  <CommentBubble c={c} user={user} liked={commentLikedSet.has(c.id)} onLike={async () => { if (!user) return; await toggleCommentLike(c.id, user.id); loadComments(); }} onDelete={() => { deleteComment(c.id); loadComments(); }} onReply={() => setReplyingTo(c)} />
                   {byParent.get(c.id)?.map((reply) => (
                     <div key={reply.id} className="pl-8 mt-1.5">
-                      <CommentBubble c={reply} user={user} onDelete={() => { deleteComment(reply.id); loadComments(); }} onReply={() => setReplyingTo(reply)} />
+                      <CommentBubble c={reply} user={user} liked={commentLikedSet.has(reply.id)} onLike={async () => { if (!user) return; await toggleCommentLike(reply.id, user.id); loadComments(); }} onDelete={() => { deleteComment(reply.id); loadComments(); }} onReply={() => setReplyingTo(reply)} />
                     </div>
                   ))}
                 </div>
@@ -252,7 +258,7 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
   );
 }
 
-function CommentBubble({ c, user, onDelete, onReply }: { c: StoryComment; user: any; onDelete: () => void; onReply: () => void }) {
+function CommentBubble({ c, user, liked, onLike, onDelete, onReply }: { c: StoryComment; user: any; liked: boolean; onLike: () => void; onDelete: () => void; onReply: () => void }) {
   return (
     <div className="flex gap-2.5 group">
       <Avatar className="h-7 w-7 shrink-0 mt-0.5">
@@ -264,11 +270,20 @@ function CommentBubble({ c, user, onDelete, onReply }: { c: StoryComment; user: 
           <span className="font-semibold text-xs">{(c as any).profiles?.full_name || "Anonymous"}</span>
           <p className="text-sm text-foreground/80">{c.content}</p>
         </div>
-        {user && (
-          <button onClick={onReply} className="text-[10px] font-medium text-muted-foreground hover:text-foreground ml-2 mt-0.5">
-            Reply
+        <div className="flex items-center gap-2.5 ml-2 mt-0.5">
+          <button
+            onClick={onLike}
+            className={`flex items-center gap-0.5 text-[10px] font-medium transition-colors ${liked ? "text-destructive" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            <Heart className={`h-2.5 w-2.5 ${liked ? "fill-current" : ""}`} />
+            {c.likes_count > 0 && <span>{c.likes_count}</span>}
           </button>
-        )}
+          {user && (
+            <button onClick={onReply} className="text-[10px] font-medium text-muted-foreground hover:text-foreground">
+              Reply
+            </button>
+          )}
+        </div>
       </div>
       {user?.id === c.user_id && (
         <button onClick={onDelete} className="opacity-0 group-hover:opacity-100 transition-opacity p-1 self-center text-destructive/40 hover:text-destructive">
