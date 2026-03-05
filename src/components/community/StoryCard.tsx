@@ -73,6 +73,7 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
       user_id: user.id,
       content: commentText,
       parent_comment_id: parentId || null,
+      likes_count: 0,
       created_at: new Date().toISOString(),
       profiles: { full_name: user.user_metadata?.full_name || "You", avatar_url: user.user_metadata?.avatar_url || null },
     };
