@@ -50,6 +50,10 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
     try {
       const data = await fetchComments(story.id);
       setComments(data);
+      if (user) {
+        const liked = await batchCheckCommentLiked(data.map((c) => c.id), user.id);
+        setCommentLikedSet(liked);
+      }
     } catch (err: any) {
       console.error("Comments error:", err);
       toast.error("Couldn't load comments.");
