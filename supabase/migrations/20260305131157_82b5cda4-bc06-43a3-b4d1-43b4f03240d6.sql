@@ -1,0 +1,1 @@
+CREATE POLICY "Users can update own comments" ON public.story_comments FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
