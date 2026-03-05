@@ -1,4 +1,4 @@
-import { PawPrint, LayoutDashboard, LogOut, Users, Wallet, Stethoscope, Briefcase, Calendar, UserCog } from "lucide-react";
+import { PawPrint, LayoutDashboard, LogOut, Users, Wallet, Stethoscope, Briefcase, Calendar, UserCog, Home } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
