@@ -58,8 +58,8 @@ export function DashboardSidebar() {
   return (
     <Sidebar className="border-r-0">
       <SidebarHeader className="p-4 border-b border-sidebar-border">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sidebar-primary text-sidebar-primary-foreground">
+        <Link to="/" className="flex items-center gap-3 group">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sidebar-primary text-sidebar-primary-foreground group-hover:scale-105 transition-transform">
             <PawPrint className="h-5 w-5" />
           </div>
           <div className="min-w-0">
@@ -68,7 +68,7 @@ export function DashboardSidebar() {
               {role?.replace("_", " ")}
             </p>
           </div>
-        </div>
+        </Link>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
