@@ -63,20 +63,22 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
   const handleAddComment = async () => {
     if (!user || !newComment.trim()) return;
     const commentText = newComment.trim();
+    const parentId = replyingTo?.id;
     setNewComment("");
-    // Optimistic: add a temporary comment immediately
+    setReplyingTo(null);
     const tempComment: StoryComment = {
       id: `temp-${Date.now()}`,
       story_id: story.id,
       user_id: user.id,
       content: commentText,
+      parent_comment_id: parentId || null,
       created_at: new Date().toISOString(),
       profiles: { full_name: user.user_metadata?.full_name || "You", avatar_url: user.user_metadata?.avatar_url || null },
     };
     setComments((prev) => [...prev, tempComment]);
     try {
-      await addComment(story.id, user.id, commentText);
-      await loadComments(); // Refresh with real data
+      await addComment(story.id, user.id, commentText, parentId);
+      await loadComments();
     } catch (err: any) {
       console.error("Add comment error:", err);
       toast.error("Couldn't post comment.");
