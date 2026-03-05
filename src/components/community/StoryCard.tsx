@@ -5,10 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/components/ui/sonner";
-import { Heart, MessageCircle, DollarSign, Trash2, Send, PawPrint, User, Reply, X } from "lucide-react";
+import { Heart, MessageCircle, DollarSign, Trash2, Send, PawPrint, User, Reply, X, Pencil, Check } from "lucide-react";
 import {
   PetStory, StoryComment, toggleLike, checkUserLiked,
-  fetchComments, addComment, deleteComment, toggleCommentLike, batchCheckCommentLiked, sendDonation, deleteStory, STORY_CATEGORIES
+  fetchComments, addComment, deleteComment, editComment, toggleCommentLike, batchCheckCommentLiked, sendDonation, deleteStory, STORY_CATEGORIES
 } from "@/lib/community-api";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -202,10 +202,10 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
               }
               return topLevel.map((c) => (
                 <div key={c.id}>
-                  <CommentBubble c={c} user={user} liked={commentLikedSet.has(c.id)} onLike={async () => { if (!user) return; await toggleCommentLike(c.id, user.id); loadComments(); }} onDelete={() => { deleteComment(c.id); loadComments(); }} onReply={() => setReplyingTo(c)} />
+                  <CommentBubble c={c} user={user} liked={commentLikedSet.has(c.id)} onLike={async () => { if (!user) return; await toggleCommentLike(c.id, user.id); loadComments(); }} onDelete={() => { deleteComment(c.id); loadComments(); }} onEdit={async (content) => { await editComment(c.id, content); loadComments(); }} onReply={() => setReplyingTo(c)} />
                   {byParent.get(c.id)?.map((reply) => (
                     <div key={reply.id} className="pl-8 mt-1.5">
-                      <CommentBubble c={reply} user={user} liked={commentLikedSet.has(reply.id)} onLike={async () => { if (!user) return; await toggleCommentLike(reply.id, user.id); loadComments(); }} onDelete={() => { deleteComment(reply.id); loadComments(); }} onReply={() => setReplyingTo(reply)} />
+                      <CommentBubble c={reply} user={user} liked={commentLikedSet.has(reply.id)} onLike={async () => { if (!user) return; await toggleCommentLike(reply.id, user.id); loadComments(); }} onDelete={() => { deleteComment(reply.id); loadComments(); }} onEdit={async (content) => { await editComment(reply.id, content); loadComments(); }} onReply={() => setReplyingTo(reply)} />
                     </div>
                   ))}
                 </div>
@@ -258,7 +258,21 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
   );
 }
 
-function CommentBubble({ c, user, liked, onLike, onDelete, onReply }: { c: StoryComment; user: any; liked: boolean; onLike: () => void; onDelete: () => void; onReply: () => void }) {
+function CommentBubble({ c, user, liked, onLike, onDelete, onEdit, onReply }: { c: StoryComment; user: any; liked: boolean; onLike: () => void; onDelete: () => void; onEdit: (content: string) => void; onReply: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState(c.content);
+
+  const handleSaveEdit = () => {
+    const trimmed = editText.trim();
+    if (!trimmed || trimmed === c.content) {
+      setEditing(false);
+      setEditText(c.content);
+      return;
+    }
+    onEdit(trimmed);
+    setEditing(false);
+  };
+
   return (
     <div className="flex gap-2.5 group">
       <Avatar className="h-7 w-7 shrink-0 mt-0.5">
@@ -266,10 +280,29 @@ function CommentBubble({ c, user, liked, onLike, onDelete, onReply }: { c: Story
         <AvatarFallback className="text-[10px]"><User className="h-3 w-3" /></AvatarFallback>
       </Avatar>
       <div className="flex-1">
-        <div className="bg-muted rounded-2xl rounded-tl-sm px-3 py-2">
-          <span className="font-semibold text-xs">{(c as any).profiles?.full_name || "Anonymous"}</span>
-          <p className="text-sm text-foreground/80">{c.content}</p>
-        </div>
+        {editing ? (
+          <div className="flex items-center gap-1.5">
+            <Input
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") handleSaveEdit(); if (e.key === "Escape") { setEditing(false); setEditText(c.content); } }}
+              maxLength={500}
+              className="text-sm h-7 flex-1 rounded-full bg-muted border-none"
+              autoFocus
+            />
+            <button onClick={handleSaveEdit} className="p-1 text-primary hover:text-primary/80" title="Save">
+              <Check className="h-3.5 w-3.5" />
+            </button>
+            <button onClick={() => { setEditing(false); setEditText(c.content); }} className="p-1 text-muted-foreground hover:text-foreground" title="Cancel">
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ) : (
+          <div className="bg-muted rounded-2xl rounded-tl-sm px-3 py-2">
+            <span className="font-semibold text-xs">{(c as any).profiles?.full_name || "Anonymous"}</span>
+            <p className="text-sm text-foreground/80">{c.content}</p>
+          </div>
+        )}
         <div className="flex items-center gap-2.5 ml-2 mt-0.5">
           <button
             onClick={onLike}
@@ -283,9 +316,14 @@ function CommentBubble({ c, user, liked, onLike, onDelete, onReply }: { c: Story
               Reply
             </button>
           )}
+          {user?.id === c.user_id && !editing && (
+            <button onClick={() => setEditing(true)} className="text-[10px] font-medium text-muted-foreground hover:text-foreground">
+              Edit
+            </button>
+          )}
         </div>
       </div>
-      {user?.id === c.user_id && (
+      {user?.id === c.user_id && !editing && (
         <button onClick={onDelete} className="opacity-0 group-hover:opacity-100 transition-opacity p-1 self-center text-destructive/40 hover:text-destructive">
           <Trash2 className="h-3 w-3" />
         </button>

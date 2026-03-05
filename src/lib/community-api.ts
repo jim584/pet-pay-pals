@@ -146,6 +146,11 @@ export async function deleteComment(id: string) {
   if (error) throw error;
 }
 
+export async function editComment(id: string, content: string) {
+  const { error } = await supabase.from("story_comments").update({ content }).eq("id", id);
+  if (error) throw error;
+}
+
 export async function toggleCommentLike(commentId: string, userId: string) {
   const { data: existing } = await supabase
     .from("comment_likes")
