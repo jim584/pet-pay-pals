@@ -68,7 +68,7 @@ export function CreateAdoptionDialog() {
         pet_name: form.pet_name,
         species: form.species,
         breed: form.breed || null,
-        age_text: form.age_text || null,
+        age_text: dob ? computedAgeText : (form.age_text || null),
         gender: form.gender || null,
         description: form.description || null,
         photo_urls,
