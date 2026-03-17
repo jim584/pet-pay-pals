@@ -128,8 +128,37 @@ export function CreateAdoptionDialog() {
               <Input value={form.breed} onChange={(e) => set("breed", e.target.value)} placeholder="e.g. Golden Retriever" />
             </div>
             <div className="space-y-1.5">
-              <Label>Age</Label>
-              <Input value={form.age_text} onChange={(e) => set("age_text", e.target.value)} placeholder="e.g. 2 years" />
+              <Label>Date of Birth</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !dob && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dob ? format(dob, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={dob}
+                    onSelect={setDob}
+                    disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+              {dob && (
+                <p className="text-xs text-muted-foreground">Age: {computedAgeText}</p>
+              )}
+              {!dob && (
+                <Input value={form.age_text} onChange={(e) => set("age_text", e.target.value)} placeholder="Or type e.g. 2 years" className="mt-1.5" />
+              )}
             </div>
             <div className="space-y-1.5 col-span-2">
               <Label>Gender</Label>
