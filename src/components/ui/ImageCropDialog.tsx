@@ -75,7 +75,7 @@ export function ImageCropDialog({
               image={imageSrc}
               crop={crop}
               zoom={zoom}
-              aspect={aspectRatio}
+              aspect={activeAspect}
               onCropChange={setCrop}
               onZoomChange={setZoom}
               onCropComplete={onCropComplete}
