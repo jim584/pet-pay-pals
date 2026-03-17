@@ -224,7 +224,7 @@ function FeedCard({ story, isFollowing, isLiked, onFollow, onLike, user, isSampl
   );
 }
 
-export function PublicFeed() {
+export function PublicFeed({ search, category }: { search?: string; category?: string }) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [followedSet, setFollowedSet] = useState<Set<string>>(new Set());
