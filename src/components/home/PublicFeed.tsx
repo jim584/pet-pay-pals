@@ -12,7 +12,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { PetProfilePreview } from "./PetProfilePreview";
 import { StoryComments } from "./StoryComments";
-import { MessageCircle, Share2, UserPlus, PawPrint, User, X, RefreshCw } from "lucide-react";
+import { MessageCircle, Share2, UserPlus, PawPrint, User, X, RefreshCw, Search } from "lucide-react";
 import { PrayingHands } from "@/components/icons/PrayingHands";
 import { formatDistanceToNow } from "date-fns";
 
@@ -337,7 +337,13 @@ export function PublicFeed({ search, category }: { search?: string; category?: s
         </Button>
       </div>
 
-      {displayStories.map((story) => (
+      {displayStories.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <Search className="h-10 w-10 text-muted-foreground/40 mb-3" />
+          <p className="text-sm font-medium text-foreground">No stories found</p>
+          <p className="text-xs text-muted-foreground mt-1">Try a different search term or category</p>
+        </div>
+      ) : displayStories.map((story) => (
         <FeedCard
           key={story.id}
           story={story}
@@ -350,6 +356,7 @@ export function PublicFeed({ search, category }: { search?: string; category?: s
           onImageClick={(url, alt) => setLightbox({ url, alt })}
         />
       ))}
+      
 
       {/* Load More button */}
       {!isSampleData && hasNextPage && (
