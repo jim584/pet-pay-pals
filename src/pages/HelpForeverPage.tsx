@@ -6,9 +6,10 @@ import { fetchAdoptionListings } from "@/lib/adoption-api";
 import { AdoptionCard } from "@/components/adoption/AdoptionCard";
 import { CreateAdoptionDialog } from "@/components/adoption/CreateAdoptionDialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PawPrint, ArrowLeft, Heart } from "lucide-react";
+import { PawPrint, ArrowLeft, Heart, Search } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const SPECIES_TABS = [
@@ -22,6 +23,16 @@ export default function HelpForeverPage() {
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const [species, setSpecies] = useState("all");
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  // Debounce search input
+  const searchTimeout = useState<ReturnType<typeof setTimeout> | null>(null);
+  const handleSearch = (value: string) => {
+    setSearch(value);
+    if (searchTimeout[0]) clearTimeout(searchTimeout[0]);
+    searchTimeout[0] = setTimeout(() => setDebouncedSearch(value), 400);
+  };
 
   const {
     data,
@@ -30,8 +41,8 @@ export default function HelpForeverPage() {
     isFetchingNextPage,
     isLoading,
   } = useInfiniteQuery({
-    queryKey: ["adoption-listings", species],
-    queryFn: ({ pageParam = 0 }) => fetchAdoptionListings(pageParam, species),
+    queryKey: ["adoption-listings", species, debouncedSearch],
+    queryFn: ({ pageParam = 0 }) => fetchAdoptionListings(pageParam, species, debouncedSearch),
     getNextPageParam: (lastPage, allPages) =>
       lastPage.length === 8 ? allPages.length : undefined,
     initialPageParam: 0,
@@ -66,7 +77,18 @@ export default function HelpForeverPage() {
           </p>
         </div>
 
-        {/* Filter tabs */}
+        {/* Search bar */}
+        <div className="relative mb-4">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by pet name, breed, or location..."
+            value={search}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+
+
         <Tabs value={species} onValueChange={setSpecies} className="mb-6">
           <TabsList className="w-full justify-start">
             {SPECIES_TABS.map((tab) => (
