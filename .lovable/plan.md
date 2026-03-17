@@ -1,44 +1,21 @@
 
 
-## Community Section UI/UX Improvements
+## Plan: Replace Heart "Like" Icon with Praying Hands Emoji
 
-After reviewing the code, I can identify several UI/UX issues with the current Community section:
-
-1. **Empty state is bland** -- just a paw icon and text in a plain card
-2. **Story cards lack visual polish** -- no rounded images, flat layout, cramped spacing
-3. **No max-width constraint** -- stories stretch full width on large screens, making them hard to read
-4. **Comments section feels unfinished** -- no empty state, no visual separation between comments
-5. **Donate dialog is minimal** -- could use better visual hierarchy
-6. **Loading state is just text** -- no skeleton placeholders
-7. **Page header lacks personality** -- plain text with no visual flair
+The Heart icon used for likes across the app will be replaced with a custom praying-hands SVG icon that matches the uploaded reference image. Since Lucide doesn't have a praying hands icon, I'll create a reusable SVG component.
 
 ### Changes
 
-**1. CommunityPage.tsx -- Better header with gradient accent and max-width container**
-- Add a gradient accent banner or subtle background to the header area
-- Constrain content width with `max-w-2xl mx-auto` for a social-feed feel (like Instagram/Twitter)
-- Add a descriptive icon alongside the heading
+**1. Create `src/components/icons/PrayingHands.tsx`**
+- A custom SVG component mimicking the uploaded praying-hands icon
+- Accepts `className` and standard SVG props (like Lucide icons do)
+- Supports `fill-current` for the "liked" filled state
 
-**2. CommunityFeed.tsx -- Major visual overhaul of StoryCard**
-- Add `max-w-2xl mx-auto` wrapper for feed-style centering
-- **Loading state**: Replace text with 3 skeleton card placeholders (pulsing cards with fake image/text blocks)
-- **Empty state**: More engaging design with a larger illustration area, gradient text, and a CTA button
-- **Story cards**:
-  - Move author avatar/info above the image (social media pattern: avatar + name + timestamp on top)
-  - Round the card corners more, add subtle hover shadow
-  - Better photo grid: rounded corners inside card, proper aspect ratios
-  - Action bar: cleaner spacing, subtle background strip, rounded pill-style buttons for like/comment/donate
-  - Comments: add rounded bubble styling per comment, better empty-comments message, smooth expand animation
-  - Donate button: accent gradient styling to stand out
+**2. Update 3 files to swap Heart → PrayingHands:**
 
-**3. CreateStoryDialog.tsx -- Minor polish**
-- No major changes needed, already decent
+- **`src/components/community/StoryCard.tsx`** — Story like button (line 170) and comment like button (line 316)
+- **`src/components/home/PublicFeed.tsx`** — Public feed like button (line 186)
+- **`src/components/home/StoryComments.tsx`** — Comment like button (line 262)
 
-### Technical Details
-
-All changes are purely CSS/Tailwind and minor JSX restructuring in two files:
-- `src/pages/CommunityPage.tsx` -- wrap content in max-width container, enhance header
-- `src/components/community/CommunityFeed.tsx` -- skeleton loading, improved card layout, better action bar styling, comment bubbles, enhanced empty state
-
-No database or API changes required.
+In each location, replace `<Heart>` with `<PrayingHands>` and update the color scheme from `text-destructive` (red) to a more fitting color like `text-amber-500` or `text-primary` for the "liked" state (praying hands look better in gold/amber than red). The outlined/filled toggle behavior stays identical.
 
