@@ -84,6 +84,7 @@ export function CreateAdoptionDialog() {
       queryClient.invalidateQueries({ queryKey: ["adoption-listings"] });
       setOpen(false);
       setForm({ pet_name: "", species: "dog", breed: "", age_text: "", gender: "", description: "", shelter_name: "", shelter_location: "", contact_phone: "", contact_email: "", contact_website: "" });
+      setDob(undefined);
       setPhotos([]);
     } catch (err: any) {
       toast({ title: "Error posting listing", description: err.message, variant: "destructive" });
