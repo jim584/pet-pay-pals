@@ -11,7 +11,7 @@ import {
 import { Link } from "react-router-dom";
 
 const menuItems = [
-  { label: "Help A Pet Now™", icon: Heart, direction: "N", to: "/help-now", color: "text-destructive" },
+  { label: "Help A Pet Now™", icon: Heart, direction: "N", to: "/", color: "text-destructive" },
   { label: "Help A Pet Forever™", icon: Infinity, direction: "S", to: "/help-forever", color: "text-primary" },
   { label: "Four Feet Under™", icon: Skull, direction: "E", to: "/four-feet-under", color: "text-muted-foreground" },
   { label: "FearFreed™", icon: ShieldOff, direction: "W", to: "/fearfreed", color: "text-accent" },
