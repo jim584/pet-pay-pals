@@ -37,7 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let initialLoadDone = false;
     let mounted = true;
-    let isExplicitSignOut = false;
+    
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
