@@ -36,23 +36,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let initialLoadDone = false;
     let mounted = true;
+    let isExplicitSignOut = false;
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (event, newSession) => {
         if (!mounted) return;
 
         // Don't clear session on token refresh failures — let Supabase retry
-        if (event === 'TOKEN_REFRESHED' && !session) {
+        if (event === 'TOKEN_REFRESHED' && !newSession) {
           console.warn('Token refresh returned no session — keeping current state');
           return;
         }
 
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          // Use setTimeout to avoid Supabase auth deadlock
+        // Only clear state on explicit sign-out, not on refresh failures
+        if (event === 'SIGNED_OUT') {
+          if (isExplicitSignOut) {
+            setSession(null);
+            setUser(null);
+            setRole(null);
+            isExplicitSignOut = false;
+          } else {
+            // Might be a stale-tab token expiry — try to recover
+            console.warn('Unexpected SIGNED_OUT event — attempting session recovery');
+            const { data } = await supabase.auth.getSession();
+            if (data.session) {
+              setSession(data.session);
+              setUser(data.session.user);
+              setTimeout(() => {
+                if (mounted) fetchRole(data.session!.user.id);
+              }, 0);
+            } else {
+              // Truly signed out
+              setSession(null);
+              setUser(null);
+              setRole(null);
+            }
+          }
+          if (!initialLoadDone) {
+            initialLoadDone = true;
+            setLoading(false);
+          }
+          return;
+        }
+
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
+        if (newSession?.user) {
           setTimeout(() => {
-            if (mounted) fetchRole(session.user.id);
+            if (mounted) fetchRole(newSession.user.id);
           }, 0);
         } else {
           setRole(null);
@@ -64,12 +95,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
       if (!mounted) return;
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchRole(session.user.id).finally(() => {
+      setSession(s);
+      setUser(s?.user ?? null);
+      if (s?.user) {
+        fetchRole(s.user.id).finally(() => {
           if (!initialLoadDone && mounted) {
             initialLoadDone = true;
             setLoading(false);
@@ -83,9 +114,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
+    // Proactively refresh session when tab becomes visible after idle
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        supabase.auth.getSession().then(({ data: { session: s } }) => {
+          if (!mounted) return;
+          if (s) {
+            setSession(s);
+            setUser(s.user);
+          }
+        });
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Store reference to detect explicit sign-outs
+    const origSignOut = signOutRef;
+
     return () => {
       mounted = false;
       subscription.unsubscribe();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
 
