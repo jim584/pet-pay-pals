@@ -1,11 +1,10 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/components/ui/sonner";
-import { MessageCircle, DollarSign, Trash2, Send, PawPrint, User, Reply, X, Pencil, Check, AlertTriangle } from "lucide-react";
+import { MessageCircle, DollarSign, Trash2, Send, PawPrint, User, Reply, X, Check, AlertTriangle, Bookmark, MoreHorizontal } from "lucide-react";
 import { PrayingHands } from "@/components/icons/PrayingHands";
 import {
   PetStory, StoryComment, toggleLike, checkUserLiked,
@@ -13,6 +12,7 @@ import {
 } from "@/lib/community-api";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { formatDistanceToNow } from "date-fns";
 
 export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: () => void }) {
   const { user } = useAuth();
