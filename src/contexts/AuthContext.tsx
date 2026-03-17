@@ -87,16 +87,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(s?.user ?? null);
       if (s?.user) {
         fetchRole(s.user.id).finally(() => {
-          if (!initialLoadDone && mounted) {
-            initialLoadDone = true;
-            setLoading(false);
-          }
+          if (mounted) setLoading(false);
         });
       } else {
-        if (!initialLoadDone) {
-          initialLoadDone = true;
-          setLoading(false);
-        }
+        setLoading(false);
       }
     });
 
