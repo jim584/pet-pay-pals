@@ -128,9 +128,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    // Store reference to detect explicit sign-outs
-    const origSignOut = signOutRef;
-
     return () => {
       mounted = false;
       subscription.unsubscribe();
