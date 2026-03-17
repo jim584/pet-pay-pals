@@ -77,7 +77,7 @@ export function CreateStoryDialog({ open, onOpenChange, onSuccess, defaultCatego
       toast.success("Story shared!");
       onSuccess();
       onOpenChange(false);
-      setForm({ pet_id: "", title: "", content: "", category: "general" });
+      setForm({ pet_id: "", title: "", content: "", category: defaultCategory || "general" });
       setPhotos([]);
       setPreviews([]);
     } catch (err: any) {

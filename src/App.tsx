@@ -48,7 +48,7 @@ function AppRoutes() {
         <Route path="/four-feet-under" element={<PlaceholderSection title="Four Feet Under™" />} />
         <Route path="/fearfreed" element={<PlaceholderSection title="FearFreed™" />} />
         <Route path="/help-overcome" element={<PlaceholderSection title="Help A Pet Overcome™" />} />
-        <Route path="/help-protect" element={<PlaceholderSection title="Help A Pet Protect™" />} />
+        <Route path="/help-protect" element={<HelpProtectPage />} />
         <Route path="/help-behave" element={<PlaceholderSection title="Help A Pet Behave™" />} />
         <Route path="/vetted" element={<PlaceholderSection title="Vetted™" />} />
         <Route path="*" element={<NotFound />} />
