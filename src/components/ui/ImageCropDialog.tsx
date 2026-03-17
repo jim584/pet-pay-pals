@@ -13,6 +13,14 @@ const ASPECT_OPTIONS = [
   { label: "16:9", value: 16 / 9, icon: Monitor },
 ] as const;
 
+const FILTER_PRESETS: { label: string; filters: ImageFilters }[] = [
+  { label: "Original", filters: { brightness: 100, contrast: 100, saturation: 100 } },
+  { label: "Vivid", filters: { brightness: 105, contrast: 115, saturation: 140 } },
+  { label: "Warm", filters: { brightness: 108, contrast: 105, saturation: 120 } },
+  { label: "Cool", filters: { brightness: 100, contrast: 110, saturation: 80 } },
+  { label: "B&W", filters: { brightness: 105, contrast: 120, saturation: 0 } },
+];
+
 const FILTER_CONTROLS = [
   { key: "brightness" as const, label: "Brightness", icon: Sun },
   { key: "contrast" as const, label: "Contrast", icon: Contrast },
