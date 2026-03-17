@@ -4,12 +4,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { getCroppedImage } from "@/lib/crop-utils";
-import { ZoomIn } from "lucide-react";
+import { ZoomIn, Square, RectangleHorizontal, Monitor } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+const ASPECT_OPTIONS = [
+  { label: "1:1", value: 1, icon: Square },
+  { label: "4:3", value: 4 / 3, icon: RectangleHorizontal },
+  { label: "16:9", value: 16 / 9, icon: Monitor },
+] as const;
 
 interface ImageCropDialogProps {
   open: boolean;
   imageSrc: string;
   aspectRatio?: number;
+  showAspectOptions?: boolean;
   onConfirm: (croppedFile: File, previewUrl: string) => void;
   onCancel: () => void;
 }
@@ -18,11 +26,13 @@ export function ImageCropDialog({
   open,
   imageSrc,
   aspectRatio = 4 / 3,
+  showAspectOptions = true,
   onConfirm,
   onCancel,
 }: ImageCropDialogProps) {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
+  const [activeAspect, setActiveAspect] = useState(aspectRatio);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const [processing, setProcessing] = useState(false);
 
@@ -49,6 +59,7 @@ export function ImageCropDialog({
   const handleCancel = () => {
     setCrop({ x: 0, y: 0 });
     setZoom(1);
+    setActiveAspect(aspectRatio);
     onCancel();
   };
 
@@ -64,13 +75,33 @@ export function ImageCropDialog({
               image={imageSrc}
               crop={crop}
               zoom={zoom}
-              aspect={aspectRatio}
+              aspect={activeAspect}
               onCropChange={setCrop}
               onZoomChange={setZoom}
               onCropComplete={onCropComplete}
             />
           )}
         </div>
+        {showAspectOptions && (
+          <div className="px-4 pt-2 flex items-center justify-center gap-1.5">
+            {ASPECT_OPTIONS.map((opt) => (
+              <button
+                key={opt.label}
+                type="button"
+                onClick={() => setActiveAspect(opt.value)}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors",
+                  activeAspect === opt.value
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-accent"
+                )}
+              >
+                <opt.icon className="h-3.5 w-3.5" />
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="px-4 py-3 flex items-center gap-3">
           <ZoomIn className="h-4 w-4 text-muted-foreground shrink-0" />
           <Slider
