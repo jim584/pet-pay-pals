@@ -5,7 +5,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { User, Trash2, Send, Loader2, Reply, X, Heart, Pencil, Check } from "lucide-react";
+import { User, Trash2, Send, Loader2, Reply, X, Pencil, Check } from "lucide-react";
+import { PrayingHands } from "@/components/icons/PrayingHands";
 import { formatDistanceToNow } from "date-fns";
 import { useNavigate } from "react-router-dom";
 
@@ -257,9 +258,9 @@ function CommentRow({
           </p>
           <button
             onClick={onLike}
-            className={`flex items-center gap-0.5 text-[10px] font-medium transition-colors ${liked ? "text-destructive" : "text-muted-foreground hover:text-foreground"}`}
+            className={`flex items-center gap-0.5 text-[10px] font-medium transition-colors ${liked ? "text-amber-500" : "text-muted-foreground hover:text-foreground"}`}
           >
-            <Heart className={`h-2.5 w-2.5 ${liked ? "fill-current" : ""}`} />
+            <PrayingHands className={`h-2.5 w-2.5 ${liked ? "fill-current" : ""}`} />
             {comment.likes_count > 0 && <span>{comment.likes_count}</span>}
           </button>
           {isAuthenticated && (

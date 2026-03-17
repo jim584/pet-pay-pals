@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/components/ui/sonner";
-import { Heart, MessageCircle, DollarSign, Trash2, Send, PawPrint, User, Reply, X, Pencil, Check } from "lucide-react";
+import { MessageCircle, DollarSign, Trash2, Send, PawPrint, User, Reply, X, Pencil, Check } from "lucide-react";
+import { PrayingHands } from "@/components/icons/PrayingHands";
 import {
   PetStory, StoryComment, toggleLike, checkUserLiked,
   fetchComments, addComment, deleteComment, editComment, toggleCommentLike, batchCheckCommentLiked, sendDonation, deleteStory, STORY_CATEGORIES
@@ -166,8 +167,8 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
 
         {/* Action bar */}
         <div className="flex items-center gap-2 pt-2 border-t border-border/50">
-          <Button variant="ghost" size="sm" className={`gap-1.5 rounded-full text-xs ${liked ? "text-destructive bg-destructive/10" : ""}`} onClick={handleLike}>
-            <Heart className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />
+          <Button variant="ghost" size="sm" className={`gap-1.5 rounded-full text-xs ${liked ? "text-amber-500 bg-amber-500/10" : ""}`} onClick={handleLike}>
+            <PrayingHands className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />
             {likesCount}
           </Button>
           <Button variant="ghost" size="sm" className="gap-1.5 rounded-full text-xs" onClick={handleToggleComments}>
@@ -311,9 +312,9 @@ function CommentBubble({ c, user, liked, onLike, onDelete, onEdit, onReply }: { 
           )}
           <button
             onClick={onLike}
-            className={`flex items-center gap-0.5 text-[10px] font-medium transition-colors ${liked ? "text-destructive" : "text-muted-foreground hover:text-foreground"}`}
+            className={`flex items-center gap-0.5 text-[10px] font-medium transition-colors ${liked ? "text-amber-500" : "text-muted-foreground hover:text-foreground"}`}
           >
-            <Heart className={`h-2.5 w-2.5 ${liked ? "fill-current" : ""}`} />
+            <PrayingHands className={`h-2.5 w-2.5 ${liked ? "fill-current" : ""}`} />
             {c.likes_count > 0 && <span>{c.likes_count}</span>}
           </button>
           {user && (
