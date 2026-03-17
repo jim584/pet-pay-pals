@@ -5,11 +5,16 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Upload, Loader2 } from "lucide-react";
+import { Plus, Upload, Loader2, CalendarIcon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { createAdoptionListing, uploadAdoptionPhoto } from "@/lib/adoption-api";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { calculateAge } from "@/lib/pets-api";
 
 export function CreateAdoptionDialog() {
   const { user } = useAuth();
