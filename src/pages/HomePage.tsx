@@ -107,7 +107,42 @@ export default function HomePage() {
             </div>
           )}
           {isMobile && <MobileSuggestedPets />}
-          <PublicFeed />
+
+          {/* Search & Category Filters */}
+          <div className="space-y-3 mb-4 sm:mb-6">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search stories..."
+                className="pl-9 rounded-full"
+              />
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+              <Button
+                size="sm"
+                variant={category === "all" ? "default" : "outline"}
+                className="rounded-full text-xs shrink-0"
+                onClick={() => setCategory("all")}
+              >
+                All
+              </Button>
+              {STORY_CATEGORIES.filter((c) => c.value !== "general").map((c) => (
+                <Button
+                  key={c.value}
+                  size="sm"
+                  variant={category === c.value ? "default" : "outline"}
+                  className="rounded-full text-xs shrink-0"
+                  onClick={() => setCategory(c.value)}
+                >
+                  {c.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          <PublicFeed search={search} category={category} />
         </main>
 
         {/* Right Sidebar — Suggested Pets */}

@@ -301,8 +301,16 @@ export function PublicFeed({ search, category }: { search?: string; category?: s
   });
 
   // Use real stories if available, otherwise show sample data immediately
-  const displayStories = stories.length > 0 ? stories : SAMPLE_STORIES;
+  const allStories = stories.length > 0 ? stories : SAMPLE_STORIES;
   const isSampleData = stories.length === 0;
+
+  const displayStories = allStories.filter((story) => {
+    const matchesCategory = !category || category === "all" || (story as any).category === category;
+    const q = search?.toLowerCase().trim();
+    const matchesSearch = !q || [story.title, story.content, story.pets.name, story.profiles.full_name]
+      .some((f) => f?.toLowerCase().includes(q));
+    return matchesCategory && matchesSearch;
+  });
 
   const [lightbox, setLightbox] = useState<{ url: string; alt: string } | null>(null);
 

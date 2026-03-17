@@ -34,7 +34,7 @@ export async function fetchPublicFeed(page: number = 0): Promise<FeedStory[]> {
     const to = from + FEED_PAGE_SIZE - 1;
     const { data, error } = await supabase
       .from("pet_stories")
-      .select("*, pets(name, photo_url, species, breed, followers_count), profiles:author_id(full_name, avatar_url)")
+      .select("*, pets(name, photo_url, species, breed, followers_count), profiles:author_id(full_name, avatar_url), category")
       .order("created_at", { ascending: false })
       .range(from, to);
     if (error) throw error;
