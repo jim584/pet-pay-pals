@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "@/components/ui/sonner";
-import { Pet, HealthRecord, EmergencyContact, fetchHealthRecords, fetchEmergencyContacts, deleteHealthRecord, deleteEmergencyContact } from "@/lib/pets-api";
+import { Pet, HealthRecord, EmergencyContact, fetchHealthRecords, fetchEmergencyContacts, deleteHealthRecord, deleteEmergencyContact, formatAge } from "@/lib/pets-api";
 import { AddHealthRecordDialog } from "./AddHealthRecordDialog";
 import { AddEmergencyContactDialog } from "./AddEmergencyContactDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
