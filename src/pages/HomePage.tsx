@@ -1,20 +1,25 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CompassMenu } from "@/components/home/CompassMenu";
 import { PublicFeed } from "@/components/home/PublicFeed";
 import { SuggestedPets } from "@/components/home/SuggestedPets";
 import { MobileSuggestedPets } from "@/components/home/MobileSuggestedPets";
-import { PawPrint, User } from "lucide-react";
+import { PawPrint, User, Search } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { STORY_CATEGORIES } from "@/lib/community-api";
 
 export default function HomePage() {
   const { user, loading } = useAuth();
   const isMobile = useIsMobile();
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("all");
 
   const { data: profile } = useQuery({
     queryKey: ["headerProfile", user?.id],
@@ -102,7 +107,42 @@ export default function HomePage() {
             </div>
           )}
           {isMobile && <MobileSuggestedPets />}
-          <PublicFeed />
+
+          {/* Search & Category Filters */}
+          <div className="space-y-3 mb-4 sm:mb-6">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search stories..."
+                className="pl-9 rounded-full"
+              />
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+              <Button
+                size="sm"
+                variant={category === "all" ? "default" : "outline"}
+                className="rounded-full text-xs shrink-0"
+                onClick={() => setCategory("all")}
+              >
+                All
+              </Button>
+              {STORY_CATEGORIES.filter((c) => c.value !== "general").map((c) => (
+                <Button
+                  key={c.value}
+                  size="sm"
+                  variant={category === c.value ? "default" : "outline"}
+                  className="rounded-full text-xs shrink-0"
+                  onClick={() => setCategory(c.value)}
+                >
+                  {c.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          <PublicFeed search={search} category={category} />
         </main>
 
         {/* Right Sidebar — Suggested Pets */}

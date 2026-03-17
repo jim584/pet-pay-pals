@@ -23,6 +23,7 @@ const SAMPLE_STORIES: FeedStory[] = [
     author_id: "sample-author-1",
     title: "had the best day at the park! 🌳",
     content: "We spent the whole afternoon chasing squirrels and making new friends. Max even learned to catch a frisbee mid-air! So proud of this little guy.",
+    category: "milestone",
     photo_urls: ["https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=800&h=600&fit=crop"],
     likes_count: 24,
     comments_count: 5,
@@ -36,6 +37,7 @@ const SAMPLE_STORIES: FeedStory[] = [
     author_id: "sample-author-2",
     title: "nap queen strikes again 😴",
     content: "Luna found a sunny spot on the couch and hasn't moved in 3 hours. Living her best life honestly. Who else has a cat that sleeps 20 hours a day?",
+    category: "general",
     photo_urls: ["https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800&h=600&fit=crop"],
     likes_count: 38,
     comments_count: 12,
@@ -49,6 +51,7 @@ const SAMPLE_STORIES: FeedStory[] = [
     author_id: "sample-author-3",
     title: "first swim of the summer! 🏊",
     content: "Buddy was so scared at first but once he got in, we couldn't get him out! He's officially a water dog now. Can't wait for more beach days together.",
+    category: "recovery",
     photo_urls: ["https://images.unsplash.com/photo-1558788353-f76d92427f16?w=800&h=600&fit=crop"],
     likes_count: 56,
     comments_count: 8,
@@ -62,6 +65,7 @@ const SAMPLE_STORIES: FeedStory[] = [
     author_id: "sample-author-4",
     title: "adopted this sweet girl today! 🎉",
     content: "Meet Bella! She's a 2-year-old rescue and she already feels like family. She curled up in my lap within 10 minutes of coming home. Adopt, don't shop! ❤️",
+    category: "adoption",
     photo_urls: ["https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=800&h=600&fit=crop"],
     likes_count: 91,
     comments_count: 22,
@@ -75,6 +79,7 @@ const SAMPLE_STORIES: FeedStory[] = [
     author_id: "sample-author-5",
     title: "graduated puppy school! 🎓",
     content: "Charlie passed his obedience training with flying colors! He can now sit, stay, shake, and roll over. Treats were definitely the secret weapon 🦴",
+    category: "milestone",
     photo_urls: ["https://images.unsplash.com/photo-1530281700549-e82e7bf110d6?w=800&h=600&fit=crop"],
     likes_count: 43,
     comments_count: 15,
@@ -88,6 +93,7 @@ const SAMPLE_STORIES: FeedStory[] = [
     author_id: "sample-author-6",
     title: "someone loves the snow! ❄️",
     content: "Took Daisy out for her first snow day and she went absolutely crazy! Zoomies for 20 minutes straight. She tried to eat every snowflake. Winter is officially her favorite season 🐾",
+    category: "rescue",
     photo_urls: ["https://images.unsplash.com/photo-1477884213360-7e9d7dcc8f9b?w=800&h=600&fit=crop"],
     likes_count: 67,
     comments_count: 18,
@@ -224,7 +230,7 @@ function FeedCard({ story, isFollowing, isLiked, onFollow, onLike, user, isSampl
   );
 }
 
-export function PublicFeed() {
+export function PublicFeed({ search, category }: { search?: string; category?: string }) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [followedSet, setFollowedSet] = useState<Set<string>>(new Set());
@@ -301,8 +307,16 @@ export function PublicFeed() {
   });
 
   // Use real stories if available, otherwise show sample data immediately
-  const displayStories = stories.length > 0 ? stories : SAMPLE_STORIES;
+  const allStories = stories.length > 0 ? stories : SAMPLE_STORIES;
   const isSampleData = stories.length === 0;
+
+  const displayStories = allStories.filter((story) => {
+    const matchesCategory = !category || category === "all" || story.category === category;
+    const q = search?.toLowerCase().trim();
+    const matchesSearch = !q || [story.title, story.content, story.pets.name, story.profiles.full_name]
+      .some((f) => f?.toLowerCase().includes(q));
+    return matchesCategory && matchesSearch;
+  });
 
   const [lightbox, setLightbox] = useState<{ url: string; alt: string } | null>(null);
 
