@@ -9,8 +9,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { toast } from "@/components/ui/sonner";
 import { fetchPets, Pet } from "@/lib/pets-api";
 import { createStory, uploadStoryPhoto, STORY_CATEGORIES } from "@/lib/community-api";
-import { ImagePlus, X } from "lucide-react";
+import { ImagePlus, X, AlertTriangle } from "lucide-react";
 import { isValidImageFile, ACCEPTED_IMAGE_TYPES } from "@/lib/utils";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface CreateStoryDialogProps {
   open: boolean;
