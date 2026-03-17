@@ -266,7 +266,7 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
             </div>
           </div>
         )}
-      
+
 
       {/* Donate dialog */}
       <Dialog open={showDonate} onOpenChange={setShowDonate}>
