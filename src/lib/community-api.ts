@@ -7,6 +7,7 @@ export const STORY_CATEGORIES = [
   { value: "milestone", label: "Milestone", color: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300" },
   { value: "rescue", label: "Rescue", color: "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300" },
   { value: "memorial", label: "Memorial", color: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300" },
+  { value: "protection", label: "Protection", color: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300" },
 ] as const;
 
 export type StoryCategory = typeof STORY_CATEGORIES[number]["value"];

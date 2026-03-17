@@ -16,16 +16,17 @@ interface CreateStoryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  defaultCategory?: string;
 }
 
-export function CreateStoryDialog({ open, onOpenChange, onSuccess }: CreateStoryDialogProps) {
+export function CreateStoryDialog({ open, onOpenChange, onSuccess, defaultCategory }: CreateStoryDialogProps) {
   const { user } = useAuth();
   const [pets, setPets] = useState<Pet[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [photos, setPhotos] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
-  const [form, setForm] = useState({ pet_id: "", title: "", content: "", category: "general" });
+  const [form, setForm] = useState({ pet_id: "", title: "", content: "", category: defaultCategory || "general" });
 
   useEffect(() => {
     if (open) fetchPets().then(setPets).catch(() => {});
@@ -76,7 +77,7 @@ export function CreateStoryDialog({ open, onOpenChange, onSuccess }: CreateStory
       toast.success("Story shared!");
       onSuccess();
       onOpenChange(false);
-      setForm({ pet_id: "", title: "", content: "", category: "general" });
+      setForm({ pet_id: "", title: "", content: "", category: defaultCategory || "general" });
       setPhotos([]);
       setPreviews([]);
     } catch (err: any) {

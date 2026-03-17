@@ -1,29 +1,44 @@
 
 
-## Plan: Help A Pet Protect — Abuse & Neglect Stories Feed
+## Community Section UI/UX Improvements
 
-Build a new page at `/help-protect` that displays a feed of stories about animal abuse and neglect. The feed reuses the existing `pet_stories` infrastructure, filtering by a new `"protection"` category.
+After reviewing the code, I can identify several UI/UX issues with the current Community section:
+
+1. **Empty state is bland** -- just a paw icon and text in a plain card
+2. **Story cards lack visual polish** -- no rounded images, flat layout, cramped spacing
+3. **No max-width constraint** -- stories stretch full width on large screens, making them hard to read
+4. **Comments section feels unfinished** -- no empty state, no visual separation between comments
+5. **Donate dialog is minimal** -- could use better visual hierarchy
+6. **Loading state is just text** -- no skeleton placeholders
+7. **Page header lacks personality** -- plain text with no visual flair
 
 ### Changes
 
-**1. Add "protection" category to `src/lib/community-api.ts`**
-- Add `{ value: "protection", label: "Protection", color: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300" }` to `STORY_CATEGORIES`.
+**1. CommunityPage.tsx -- Better header with gradient accent and max-width container**
+- Add a gradient accent banner or subtle background to the header area
+- Constrain content width with `max-w-2xl mx-auto` for a social-feed feel (like Instagram/Twitter)
+- Add a descriptive icon alongside the heading
 
-**2. Create `src/pages/HelpProtectPage.tsx`**
-- New page similar to `HelpForeverPage` structure: sticky header with back button, hero banner (themed around reporting abuse/neglect), search bar, and a single-column feed.
-- Fetches stories from `pet_stories` filtered by `category = 'protection'`.
-- Uses the existing `StoryCard` component for rendering each post (same social-feed style with likes, comments, donate).
-- Includes a "Share Story" button that opens `CreateStoryDialog` with category pre-set to `"protection"`.
-- Pagination via `useInfiniteQuery` with "Load More" button.
+**2. CommunityFeed.tsx -- Major visual overhaul of StoryCard**
+- Add `max-w-2xl mx-auto` wrapper for feed-style centering
+- **Loading state**: Replace text with 3 skeleton card placeholders (pulsing cards with fake image/text blocks)
+- **Empty state**: More engaging design with a larger illustration area, gradient text, and a CTA button
+- **Story cards**:
+  - Move author avatar/info above the image (social media pattern: avatar + name + timestamp on top)
+  - Round the card corners more, add subtle hover shadow
+  - Better photo grid: rounded corners inside card, proper aspect ratios
+  - Action bar: cleaner spacing, subtle background strip, rounded pill-style buttons for like/comment/donate
+  - Comments: add rounded bubble styling per comment, better empty-comments message, smooth expand animation
+  - Donate button: accent gradient styling to stand out
 
-**3. Create `src/lib/protection-api.ts`**
-- `fetchProtectionStories(page, searchQuery)` — queries `pet_stories` where `category = 'protection'`, with optional ilike search on title/content/pet name, ordered by `created_at desc`, paginated.
+**3. CreateStoryDialog.tsx -- Minor polish**
+- No major changes needed, already decent
 
-**4. Update `src/App.tsx`**
-- Replace the `/help-protect` placeholder route with the new `HelpProtectPage` component.
+### Technical Details
 
-**5. Update `src/components/community/CreateStoryDialog.tsx`**
-- Accept an optional `defaultCategory` prop so the Help Protect page can pre-select "protection" when creating stories.
+All changes are purely CSS/Tailwind and minor JSX restructuring in two files:
+- `src/pages/CommunityPage.tsx` -- wrap content in max-width container, enhance header
+- `src/components/community/CommunityFeed.tsx` -- skeleton loading, improved card layout, better action bar styling, comment bubbles, enhanced empty state
 
-No database changes needed — the existing `pet_stories.category` text column already supports any string value.
+No database or API changes required.
 
