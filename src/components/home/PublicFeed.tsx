@@ -1,12 +1,13 @@
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchPublicFeed, followPet, unfollowPet, checkFollowing, FEED_PAGE_SIZE, type FeedStory } from "@/lib/feed-api";
-import { toggleLike, batchCheckLiked } from "@/lib/community-api";
+import { toggleLike, batchCheckLiked, STORY_CATEGORIES } from "@/lib/community-api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -216,6 +217,14 @@ function FeedCard({ story, isFollowing, isLiked, onFollow, onLike, user, isSampl
         </div>
 
         <div>
+          {story.category && story.category !== "general" && (() => {
+            const cat = STORY_CATEGORIES.find((c) => c.value === story.category);
+            return cat ? (
+              <Badge variant="secondary" className={`mb-1.5 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full border-none ${cat.color}`}>
+                {cat.label}
+              </Badge>
+            ) : null;
+          })()}
           <p className="text-sm"><span className="font-semibold">{story.pets.name}</span> {story.title}</p>
           <p className="text-sm text-muted-foreground line-clamp-2">{story.content}</p>
         </div>
