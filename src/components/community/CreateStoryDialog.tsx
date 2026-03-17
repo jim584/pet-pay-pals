@@ -16,6 +16,7 @@ interface CreateStoryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  defaultCategory?: string;
 }
 
 export function CreateStoryDialog({ open, onOpenChange, onSuccess }: CreateStoryDialogProps) {
