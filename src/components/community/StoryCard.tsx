@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/components/ui/sonner";
-import { MessageCircle, DollarSign, Trash2, Send, PawPrint, User, Reply, X, Pencil, Check } from "lucide-react";
+import { MessageCircle, DollarSign, Trash2, Send, PawPrint, User, Reply, X, Pencil, Check, AlertTriangle } from "lucide-react";
 import { PrayingHands } from "@/components/icons/PrayingHands";
 import {
   PetStory, StoryComment, toggleLike, checkUserLiked,
@@ -119,7 +119,14 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
   const authorAvatar = (story as any).profiles?.avatar_url || null;
 
   return (
-    <Card className="overflow-hidden rounded-2xl border-border/60 shadow-sm hover:shadow-md transition-shadow duration-300">
+    <Card className={`overflow-hidden rounded-2xl border-border/60 shadow-sm hover:shadow-md transition-shadow duration-300 ${story.is_urgent ? "ring-2 ring-destructive/40 border-destructive/30" : ""}`}>
+      {/* Urgent banner */}
+      {story.is_urgent && (
+        <div className="flex items-center gap-1.5 px-4 py-1.5 bg-destructive/10 text-destructive text-xs font-semibold">
+          <AlertTriangle className="h-3.5 w-3.5" />
+          URGENT — Critical Case
+        </div>
+      )}
       {/* Author header — social media pattern */}
       <div className="flex items-center gap-3 px-4 pt-4 pb-2">
         <Avatar className="h-10 w-10 ring-2 ring-primary/20">

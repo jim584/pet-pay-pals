@@ -11,6 +11,7 @@ export async function fetchProtectionStories(page = 0, searchQuery?: string) {
     .from("pet_stories")
     .select("*, pets(name, species, breed, photo_url), profiles:author_id(full_name, avatar_url)")
     .eq("category", "protection")
+    .order("is_urgent", { ascending: false })
     .order("created_at", { ascending: false })
     .range(from, to);
 

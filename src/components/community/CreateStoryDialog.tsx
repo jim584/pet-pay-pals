@@ -9,8 +9,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { toast } from "@/components/ui/sonner";
 import { fetchPets, Pet } from "@/lib/pets-api";
 import { createStory, uploadStoryPhoto, STORY_CATEGORIES } from "@/lib/community-api";
-import { ImagePlus, X } from "lucide-react";
+import { ImagePlus, X, AlertTriangle } from "lucide-react";
 import { isValidImageFile, ACCEPTED_IMAGE_TYPES } from "@/lib/utils";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface CreateStoryDialogProps {
   open: boolean;
@@ -26,7 +27,7 @@ export function CreateStoryDialog({ open, onOpenChange, onSuccess, defaultCatego
   const [photos, setPhotos] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
-  const [form, setForm] = useState({ pet_id: "", title: "", content: "", category: defaultCategory || "general" });
+  const [form, setForm] = useState({ pet_id: "", title: "", content: "", category: defaultCategory || "general", is_urgent: false });
 
   useEffect(() => {
     if (open) fetchPets().then(setPets).catch(() => {});
@@ -73,11 +74,12 @@ export function CreateStoryDialog({ open, onOpenChange, onSuccess, defaultCatego
         content: form.content,
         photo_urls: photoUrls,
         category: form.category,
+        is_urgent: form.is_urgent,
       });
       toast.success("Story shared!");
       onSuccess();
       onOpenChange(false);
-      setForm({ pet_id: "", title: "", content: "", category: defaultCategory || "general" });
+      setForm({ pet_id: "", title: "", content: "", category: defaultCategory || "general", is_urgent: false });
       setPhotos([]);
       setPreviews([]);
     } catch (err: any) {
@@ -147,6 +149,19 @@ export function CreateStoryDialog({ open, onOpenChange, onSuccess, defaultCatego
             </div>
             <input ref={fileRef} type="file" accept={ACCEPTED_IMAGE_TYPES} multiple className="hidden" onChange={(e) => handlePhotos(e.target.files)} />
           </div>
+          {form.category === "protection" && (
+            <div className="flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/5 p-3">
+              <Checkbox
+                id="is_urgent"
+                checked={form.is_urgent}
+                onCheckedChange={(checked) => setForm({ ...form, is_urgent: !!checked })}
+              />
+              <label htmlFor="is_urgent" className="flex items-center gap-1.5 text-sm font-medium text-destructive cursor-pointer">
+                <AlertTriangle className="h-4 w-4" />
+                Mark as urgent / critical case
+              </label>
+            </div>
+          )}
           <Button type="submit" className="w-full" disabled={submitting || !form.pet_id}>
             {submitting ? "Sharing..." : "Share Story"}
           </Button>
