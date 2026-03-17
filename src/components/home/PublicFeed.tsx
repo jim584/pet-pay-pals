@@ -23,7 +23,7 @@ const SAMPLE_STORIES: FeedStory[] = [
     author_id: "sample-author-1",
     title: "had the best day at the park! 🌳",
     content: "We spent the whole afternoon chasing squirrels and making new friends. Max even learned to catch a frisbee mid-air! So proud of this little guy.",
-    photo_urls: ["https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=800&h=600&fit=crop"],
+    category: "general",
     likes_count: 24,
     comments_count: 5,
     created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
