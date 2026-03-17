@@ -67,12 +67,12 @@ export default function HelpProtectPage() {
         </div>
       </header>
 
-      <main className={`max-w-4xl mx-auto ${isMobile ? "px-3 py-4 pb-24" : "px-6 py-6"}`}>
+      <main className={`max-w-lg mx-auto ${isMobile ? "pb-24" : "py-4"}`}>
         {/* Hero banner */}
-        <div className="rounded-xl bg-destructive/5 border border-destructive/20 p-5 mb-6 text-center">
-          <h1 className="text-2xl font-bold font-display text-foreground">Report & Raise Awareness</h1>
-          <p className="text-muted-foreground mt-1 text-sm max-w-md mx-auto">
-            Share stories of animal abuse, neglect, or mistreatment. Together we can protect every pet.
+        <div className={`bg-destructive/5 border-b border-destructive/20 p-4 mb-0 text-center ${isMobile ? "" : "rounded-xl mb-4 border"}`}>
+          <h1 className="text-lg font-bold font-display text-foreground">Report & Raise Awareness</h1>
+          <p className="text-muted-foreground mt-0.5 text-xs max-w-sm mx-auto">
+            Share stories of animal abuse, neglect, or mistreatment.
           </p>
         </div>
 
