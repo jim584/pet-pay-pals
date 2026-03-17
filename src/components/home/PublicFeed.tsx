@@ -184,7 +184,7 @@ function FeedCard({ story, isFollowing, isLiked, onFollow, onLike, user, isSampl
                 className="flex items-center gap-1 text-sm transition-colors hover:text-amber-500"
                 onClick={() => isSample ? navigate("/auth") : requireAuth(() => onLike(story.id))}
               >
-                <PrayingHands className={`h-5 w-5 ${isLiked ? "fill-amber-500 text-amber-500" : ""}`} />
+                <PrayingHands className={`h-5 w-5 transition-opacity ${isLiked ? "opacity-100" : "opacity-50"}`} />
                 <span>{story.likes_count}</span>
               </button>
             </TooltipTrigger>

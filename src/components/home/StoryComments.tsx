@@ -260,7 +260,7 @@ function CommentRow({
             onClick={onLike}
             className={`flex items-center gap-0.5 text-[10px] font-medium transition-colors ${liked ? "text-amber-500" : "text-muted-foreground hover:text-foreground"}`}
           >
-            <PrayingHands className={`h-2.5 w-2.5 ${liked ? "fill-current" : ""}`} />
+            <PrayingHands className={`h-2.5 w-2.5 transition-opacity ${liked ? "opacity-100" : "opacity-50"}`} />
             {comment.likes_count > 0 && <span>{comment.likes_count}</span>}
           </button>
           {isAuthenticated && (

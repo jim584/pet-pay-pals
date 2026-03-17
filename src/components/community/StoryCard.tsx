@@ -168,7 +168,7 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
         {/* Action bar */}
         <div className="flex items-center gap-2 pt-2 border-t border-border/50">
           <Button variant="ghost" size="sm" className={`gap-1.5 rounded-full text-xs ${liked ? "text-amber-500 bg-amber-500/10" : ""}`} onClick={handleLike}>
-            <PrayingHands className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />
+            <PrayingHands className={`h-4 w-4 transition-opacity ${liked ? "opacity-100" : "opacity-50"}`} />
             {likesCount}
           </Button>
           <Button variant="ghost" size="sm" className="gap-1.5 rounded-full text-xs" onClick={handleToggleComments}>
@@ -314,7 +314,7 @@ function CommentBubble({ c, user, liked, onLike, onDelete, onEdit, onReply }: { 
             onClick={onLike}
             className={`flex items-center gap-0.5 text-[10px] font-medium transition-colors ${liked ? "text-amber-500" : "text-muted-foreground hover:text-foreground"}`}
           >
-            <PrayingHands className={`h-2.5 w-2.5 ${liked ? "fill-current" : ""}`} />
+            <PrayingHands className={`h-2.5 w-2.5 transition-opacity ${liked ? "opacity-100" : "opacity-50"}`} />
             {c.likes_count > 0 && <span>{c.likes_count}</span>}
           </button>
           {user && (
