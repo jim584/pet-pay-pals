@@ -149,6 +149,19 @@ export function CreateStoryDialog({ open, onOpenChange, onSuccess, defaultCatego
             </div>
             <input ref={fileRef} type="file" accept={ACCEPTED_IMAGE_TYPES} multiple className="hidden" onChange={(e) => handlePhotos(e.target.files)} />
           </div>
+          {form.category === "protection" && (
+            <div className="flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/5 p-3">
+              <Checkbox
+                id="is_urgent"
+                checked={form.is_urgent}
+                onCheckedChange={(checked) => setForm({ ...form, is_urgent: !!checked })}
+              />
+              <label htmlFor="is_urgent" className="flex items-center gap-1.5 text-sm font-medium text-destructive cursor-pointer">
+                <AlertTriangle className="h-4 w-4" />
+                Mark as urgent / critical case
+              </label>
+            </div>
+          )}
           <Button type="submit" className="w-full" disabled={submitting || !form.pet_id}>
             {submitting ? "Sharing..." : "Share Story"}
           </Button>

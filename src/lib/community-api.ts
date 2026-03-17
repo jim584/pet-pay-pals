@@ -75,7 +75,7 @@ export async function fetchStories(page = 0) {
   return data as unknown as PetStory[];
 }
 
-export async function createStory(story: { pet_id: string; author_id: string; title: string; content: string; photo_urls: string[]; category?: string }) {
+export async function createStory(story: { pet_id: string; author_id: string; title: string; content: string; photo_urls: string[]; category?: string; is_urgent?: boolean }) {
   const { data, error } = await supabase.from("pet_stories").insert(story).select().single();
   if (error) throw error;
   return data;
