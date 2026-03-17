@@ -13,6 +13,14 @@ const ASPECT_OPTIONS = [
   { label: "16:9", value: 16 / 9, icon: Monitor },
 ] as const;
 
+const FILTER_PRESETS: { label: string; filters: ImageFilters }[] = [
+  { label: "Original", filters: { brightness: 100, contrast: 100, saturation: 100 } },
+  { label: "Vivid", filters: { brightness: 105, contrast: 115, saturation: 140 } },
+  { label: "Warm", filters: { brightness: 108, contrast: 105, saturation: 120 } },
+  { label: "Cool", filters: { brightness: 100, contrast: 110, saturation: 80 } },
+  { label: "B&W", filters: { brightness: 105, contrast: 120, saturation: 0 } },
+];
+
 const FILTER_CONTROLS = [
   { key: "brightness" as const, label: "Brightness", icon: Sun },
   { key: "contrast" as const, label: "Contrast", icon: Contrast },
@@ -42,6 +50,7 @@ export function ImageCropDialog({
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const [processing, setProcessing] = useState(false);
   const [filters, setFilters] = useState<ImageFilters>({ ...DEFAULT_FILTERS });
+  const [activePreset, setActivePreset] = useState("Original");
 
   const filtersChanged =
     filters.brightness !== 100 || filters.contrast !== 100 || filters.saturation !== 100;
@@ -70,6 +79,7 @@ export function ImageCropDialog({
     setZoom(1);
     setActiveAspect(aspectRatio);
     setFilters({ ...DEFAULT_FILTERS });
+    setActivePreset("Original");
   };
 
   const handleCancel = () => {
@@ -125,6 +135,51 @@ export function ImageCropDialog({
           </div>
         )}
 
+        {/* Filter presets */}
+        <div className="px-4 pt-3">
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 block">Presets</span>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {FILTER_PRESETS.map((preset) => {
+              const previewStyle = {
+                filter: `brightness(${preset.filters.brightness}%) contrast(${preset.filters.contrast}%) saturate(${preset.filters.saturation}%)`,
+              };
+              return (
+                <button
+                  key={preset.label}
+                  type="button"
+                  onClick={() => {
+                    setFilters({ ...preset.filters });
+                    setActivePreset(preset.label);
+                  }}
+                  className="flex flex-col items-center gap-1 shrink-0"
+                >
+                  <div
+                    className={cn(
+                      "w-14 h-14 rounded-lg overflow-hidden border-2 transition-colors",
+                      activePreset === preset.label ? "border-primary" : "border-transparent"
+                    )}
+                  >
+                    {imageSrc && (
+                      <img
+                        src={imageSrc}
+                        alt={preset.label}
+                        className="w-full h-full object-cover"
+                        style={previewStyle}
+                      />
+                    )}
+                  </div>
+                  <span className={cn(
+                    "text-[10px] font-medium",
+                    activePreset === preset.label ? "text-primary" : "text-muted-foreground"
+                  )}>
+                    {preset.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Zoom */}
         <div className="px-4 pt-3 flex items-center gap-3">
           <ZoomIn className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -145,7 +200,7 @@ export function ImageCropDialog({
             {filtersChanged && (
               <button
                 type="button"
-                onClick={() => setFilters({ ...DEFAULT_FILTERS })}
+                onClick={() => { setFilters({ ...DEFAULT_FILTERS }); setActivePreset("Original"); }}
                 className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
                 <RotateCcw className="h-3 w-3" />
@@ -161,7 +216,7 @@ export function ImageCropDialog({
                 min={0}
                 max={200}
                 step={1}
-                onValueChange={(v) => setFilters((prev) => ({ ...prev, [key]: v[0] }))}
+                onValueChange={(v) => { setFilters((prev) => ({ ...prev, [key]: v[0] })); setActivePreset(""); }}
                 className="flex-1"
               />
               <span className="text-xs text-muted-foreground w-8 text-right tabular-nums">
