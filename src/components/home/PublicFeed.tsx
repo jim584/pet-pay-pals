@@ -311,7 +311,7 @@ export function PublicFeed({ search, category }: { search?: string; category?: s
   const isSampleData = stories.length === 0;
 
   const displayStories = allStories.filter((story) => {
-    const matchesCategory = !category || category === "all" || (story as any).category === category;
+    const matchesCategory = !category || category === "all" || story.category === category;
     const q = search?.toLowerCase().trim();
     const matchesSearch = !q || [story.title, story.content, story.pets.name, story.profiles.full_name]
       .some((f) => f?.toLowerCase().includes(q));
