@@ -7,11 +7,32 @@ export interface Pet {
   breed: string | null;
   species: string;
   age_years: number | null;
+  date_of_birth: string | null;
   weight_kg: number | null;
   photo_url: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export function calculateAge(dob: string): { years: number; months: number } {
+  const birth = new Date(dob);
+  const today = new Date();
+  let years = today.getFullYear() - birth.getFullYear();
+  let months = today.getMonth() - birth.getMonth();
+  if (today.getDate() < birth.getDate()) months--;
+  if (months < 0) { years--; months += 12; }
+  return { years, months };
+}
+
+export function formatAge(pet: Pet): string {
+  if (pet.date_of_birth) {
+    const { years, months } = calculateAge(pet.date_of_birth);
+    if (years === 0) return `${months} mo${months !== 1 ? "s" : ""}`;
+    return `${years} yr${years !== 1 ? "s" : ""}, ${months} mo${months !== 1 ? "s" : ""}`;
+  }
+  if (pet.age_years != null) return `${pet.age_years} yr${pet.age_years !== 1 ? "s" : ""}`;
+  return "—";
 }
 
 export interface HealthRecord {
