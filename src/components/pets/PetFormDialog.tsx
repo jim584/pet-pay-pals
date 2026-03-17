@@ -51,7 +51,7 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
         name: pet?.name ?? "",
         species: pet?.species ?? "dog",
         breed: pet?.breed ?? "",
-        age_years: pet?.age_years?.toString() ?? "",
+        date_of_birth: pet?.date_of_birth ? new Date(pet.date_of_birth + "T00:00:00") : undefined,
         weight_kg: pet?.weight_kg?.toString() ?? "",
         notes: pet?.notes ?? "",
       });
