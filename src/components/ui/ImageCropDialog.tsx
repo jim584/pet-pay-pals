@@ -135,6 +135,51 @@ export function ImageCropDialog({
           </div>
         )}
 
+        {/* Filter presets */}
+        <div className="px-4 pt-3">
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 block">Presets</span>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {FILTER_PRESETS.map((preset) => {
+              const previewStyle = {
+                filter: `brightness(${preset.filters.brightness}%) contrast(${preset.filters.contrast}%) saturate(${preset.filters.saturation}%)`,
+              };
+              return (
+                <button
+                  key={preset.label}
+                  type="button"
+                  onClick={() => {
+                    setFilters({ ...preset.filters });
+                    setActivePreset(preset.label);
+                  }}
+                  className="flex flex-col items-center gap-1 shrink-0"
+                >
+                  <div
+                    className={cn(
+                      "w-14 h-14 rounded-lg overflow-hidden border-2 transition-colors",
+                      activePreset === preset.label ? "border-primary" : "border-transparent"
+                    )}
+                  >
+                    {imageSrc && (
+                      <img
+                        src={imageSrc}
+                        alt={preset.label}
+                        className="w-full h-full object-cover"
+                        style={previewStyle}
+                      />
+                    )}
+                  </div>
+                  <span className={cn(
+                    "text-[10px] font-medium",
+                    activePreset === preset.label ? "text-primary" : "text-muted-foreground"
+                  )}>
+                    {preset.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Zoom */}
         <div className="px-4 pt-3 flex items-center gap-3">
           <ZoomIn className="h-4 w-4 text-muted-foreground shrink-0" />
