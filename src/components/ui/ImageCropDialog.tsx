@@ -79,6 +79,7 @@ export function ImageCropDialog({
     setZoom(1);
     setActiveAspect(aspectRatio);
     setFilters({ ...DEFAULT_FILTERS });
+    setActivePreset("Original");
   };
 
   const handleCancel = () => {
