@@ -1,22 +1,44 @@
 
 
-## Plan: Restyle Protection Feed to Instagram-like Layout
+## Community Section UI/UX Improvements
 
-The current `StoryCard` has rounded card borders, inline margins on photos, and pill-shaped action buttons. To match Instagram's feed style, the cards need to be flatter with edge-to-edge images and a cleaner action bar.
+After reviewing the code, I can identify several UI/UX issues with the current Community section:
 
-### Changes to `src/components/community/StoryCard.tsx`
+1. **Empty state is bland** -- just a paw icon and text in a plain card
+2. **Story cards lack visual polish** -- no rounded images, flat layout, cramped spacing
+3. **No max-width constraint** -- stories stretch full width on large screens, making them hard to read
+4. **Comments section feels unfinished** -- no empty state, no visual separation between comments
+5. **Donate dialog is minimal** -- could use better visual hierarchy
+6. **Loading state is just text** -- no skeleton placeholders
+7. **Page header lacks personality** -- plain text with no visual flair
 
-1. **Remove card border rounding and shadow** — use flat cards with subtle bottom border only (no rounded-2xl, no shadow)
-2. **Edge-to-edge photos** — remove `mx-3 rounded-xl` margins on images so they span the full card width, no border radius. Single images get full width, multi-images stay in a grid but flush
-3. **Author header** — tighten to Instagram style: smaller avatar (h-8 w-8), bold username, subtle "more" menu, remove ring styling
-4. **Action bar** — icon-only row (like, comment, donate/share) left-aligned without pill backgrounds, just icon buttons. Like count and comment count displayed as text below the icons
-5. **Caption area** — show author name bold inline with content text (Instagram pattern: **username** caption text), move title into this format
-6. **Time stamp** — show as relative time ("2h ago") in muted small text below caption
+### Changes
 
-### Changes to `src/pages/HelpProtectPage.tsx`
+**1. CommunityPage.tsx -- Better header with gradient accent and max-width container**
+- Add a gradient accent banner or subtle background to the header area
+- Constrain content width with `max-w-2xl mx-auto` for a social-feed feel (like Instagram/Twitter)
+- Add a descriptive icon alongside the heading
 
-7. **Tighten feed gap** — reduce gap between cards, remove `max-w-2xl` constraint to let cards fill the `max-w-4xl` container (or keep narrower ~max-w-lg for true IG feel)
-8. **Remove hero banner padding/border-radius on mobile** for a cleaner top section
+**2. CommunityFeed.tsx -- Major visual overhaul of StoryCard**
+- Add `max-w-2xl mx-auto` wrapper for feed-style centering
+- **Loading state**: Replace text with 3 skeleton card placeholders (pulsing cards with fake image/text blocks)
+- **Empty state**: More engaging design with a larger illustration area, gradient text, and a CTA button
+- **Story cards**:
+  - Move author avatar/info above the image (social media pattern: avatar + name + timestamp on top)
+  - Round the card corners more, add subtle hover shadow
+  - Better photo grid: rounded corners inside card, proper aspect ratios
+  - Action bar: cleaner spacing, subtle background strip, rounded pill-style buttons for like/comment/donate
+  - Comments: add rounded bubble styling per comment, better empty-comments message, smooth expand animation
+  - Donate button: accent gradient styling to stand out
 
-### No database or API changes needed.
+**3. CreateStoryDialog.tsx -- Minor polish**
+- No major changes needed, already decent
+
+### Technical Details
+
+All changes are purely CSS/Tailwind and minor JSX restructuring in two files:
+- `src/pages/CommunityPage.tsx` -- wrap content in max-width container, enhance header
+- `src/components/community/CommunityFeed.tsx` -- skeleton loading, improved card layout, better action bar styling, comment bubbles, enhanced empty state
+
+No database or API changes required.
 
