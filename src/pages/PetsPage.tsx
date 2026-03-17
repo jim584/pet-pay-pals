@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Pet, fetchPets, deletePet } from "@/lib/pets-api";
+import { Pet, fetchPets, deletePet, formatAge } from "@/lib/pets-api";
 import { PetFormDialog } from "@/components/pets/PetFormDialog";
 import { PetDetail } from "@/components/pets/PetDetail";
 import { toast } from "@/components/ui/sonner";
