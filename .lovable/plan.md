@@ -1,44 +1,63 @@
 
 
-## Community Section UI/UX Improvements
+## Plan: Build "Help A Pet Forever" Adoption Feed
 
-After reviewing the code, I can identify several UI/UX issues with the current Community section:
+### Overview
+Replace the placeholder at `/help-forever` with a full adoption feed page. This requires a new database table for adoption listings, a new page component, and supporting API/UI code.
 
-1. **Empty state is bland** -- just a paw icon and text in a plain card
-2. **Story cards lack visual polish** -- no rounded images, flat layout, cramped spacing
-3. **No max-width constraint** -- stories stretch full width on large screens, making them hard to read
-4. **Comments section feels unfinished** -- no empty state, no visual separation between comments
-5. **Donate dialog is minimal** -- could use better visual hierarchy
-6. **Loading state is just text** -- no skeleton placeholders
-7. **Page header lacks personality** -- plain text with no visual flair
+### 1. Database: Create `adoption_listings` table
 
-### Changes
+New table with columns:
+- `id` (uuid, PK)
+- `pet_name` (text, required)
+- `species` (text — dog, cat, other)
+- `breed` (text, nullable)
+- `age_text` (text — e.g. "2 years", "6 months")
+- `gender` (text — male/female)
+- `description` (text)
+- `photo_urls` (text array)
+- `shelter_name` (text, required)
+- `shelter_location` (text, nullable)
+- `contact_phone` (text, nullable)
+- `contact_email` (text, nullable)
+- `contact_website` (text, nullable)
+- `is_adopted` (boolean, default false)
+- `posted_by` (uuid, references auth.users via profiles pattern)
+- `created_at`, `updated_at` (timestamps)
 
-**1. CommunityPage.tsx -- Better header with gradient accent and max-width container**
-- Add a gradient accent banner or subtle background to the header area
-- Constrain content width with `max-w-2xl mx-auto` for a social-feed feel (like Instagram/Twitter)
-- Add a descriptive icon alongside the heading
+RLS policies:
+- SELECT: public (anon + authenticated) can view all non-adopted listings
+- INSERT: authenticated users can insert own listings
+- UPDATE/DELETE: only the poster or admins
 
-**2. CommunityFeed.tsx -- Major visual overhaul of StoryCard**
-- Add `max-w-2xl mx-auto` wrapper for feed-style centering
-- **Loading state**: Replace text with 3 skeleton card placeholders (pulsing cards with fake image/text blocks)
-- **Empty state**: More engaging design with a larger illustration area, gradient text, and a CTA button
-- **Story cards**:
-  - Move author avatar/info above the image (social media pattern: avatar + name + timestamp on top)
-  - Round the card corners more, add subtle hover shadow
-  - Better photo grid: rounded corners inside card, proper aspect ratios
-  - Action bar: cleaner spacing, subtle background strip, rounded pill-style buttons for like/comment/donate
-  - Comments: add rounded bubble styling per comment, better empty-comments message, smooth expand animation
-  - Donate button: accent gradient styling to stand out
+### 2. New API file: `src/lib/adoption-api.ts`
+- `fetchAdoptionListings(page, filters)` — paginated query with optional species filter
+- `createAdoptionListing(data)` — insert new listing
+- Types for `AdoptionListing`
 
-**3. CreateStoryDialog.tsx -- Minor polish**
-- No major changes needed, already decent
+### 3. New page: `src/pages/HelpForeverPage.tsx`
+- Same layout structure as HomePage (header, optional sidebar)
+- Species filter tabs at top (All / Dogs / Cats / Others)
+- Card-based feed showing each listing with:
+  - Pet photo (large)
+  - Name, breed, age, gender badges
+  - Description text
+  - Shelter info section (name, location, phone, email, website)
+  - "Contact Shelter" button
+- Infinite scroll / Load More pagination
+- CTA banner for logged-in users to post adoption listings
 
-### Technical Details
+### 4. New component: `src/components/adoption/AdoptionCard.tsx`
+- Displays one adoption listing with all details
+- Responsive card layout matching existing feed card style
 
-All changes are purely CSS/Tailwind and minor JSX restructuring in two files:
-- `src/pages/CommunityPage.tsx` -- wrap content in max-width container, enhance header
-- `src/components/community/CommunityFeed.tsx` -- skeleton loading, improved card layout, better action bar styling, comment bubbles, enhanced empty state
+### 5. New component: `src/components/adoption/CreateAdoptionDialog.tsx`
+- Form dialog for posting a new adoption listing
+- Fields: pet name, species, breed, age, gender, description, photos, shelter info, contact details
 
-No database or API changes required.
+### 6. Route update in `App.tsx`
+- Replace `/help-forever` placeholder route with the new `HelpForeverPage`
+
+### 7. Storage
+- Reuse the existing `pet-photos` bucket for adoption listing images
 
