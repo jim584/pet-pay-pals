@@ -77,7 +77,18 @@ export default function HelpForeverPage() {
           </p>
         </div>
 
-        {/* Filter tabs */}
+        {/* Search bar */}
+        <div className="relative mb-4">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by pet name, breed, or location..."
+            value={search}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+
+
         <Tabs value={species} onValueChange={setSpecies} className="mb-6">
           <TabsList className="w-full justify-start">
             {SPECIES_TABS.map((tab) => (
