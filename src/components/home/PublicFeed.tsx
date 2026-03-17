@@ -216,6 +216,14 @@ function FeedCard({ story, isFollowing, isLiked, onFollow, onLike, user, isSampl
         </div>
 
         <div>
+          {story.category && story.category !== "general" && (() => {
+            const cat = STORY_CATEGORIES.find((c) => c.value === story.category);
+            return cat ? (
+              <Badge variant="secondary" className={`mb-1.5 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full border-none ${cat.color}`}>
+                {cat.label}
+              </Badge>
+            ) : null;
+          })()}
           <p className="text-sm"><span className="font-semibold">{story.pets.name}</span> {story.title}</p>
           <p className="text-sm text-muted-foreground line-clamp-2">{story.content}</p>
         </div>
