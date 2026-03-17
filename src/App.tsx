@@ -20,6 +20,7 @@ import ProfileSettingsPage from "./pages/ProfileSettingsPage";
 import NotFound from "./pages/NotFound";
 import PlaceholderSection from "./pages/PlaceholderSection";
 import HelpForeverPage from "./pages/HelpForeverPage";
+import HelpProtectPage from "./pages/HelpProtectPage";
 
 const queryClient = new QueryClient();
 
