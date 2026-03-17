@@ -312,9 +312,9 @@ function CommentBubble({ c, user, liked, onLike, onDelete, onEdit, onReply }: { 
           )}
           <button
             onClick={onLike}
-            className={`flex items-center gap-0.5 text-[10px] font-medium transition-colors ${liked ? "text-destructive" : "text-muted-foreground hover:text-foreground"}`}
+            className={`flex items-center gap-0.5 text-[10px] font-medium transition-colors ${liked ? "text-amber-500" : "text-muted-foreground hover:text-foreground"}`}
           >
-            <Heart className={`h-2.5 w-2.5 ${liked ? "fill-current" : ""}`} />
+            <PrayingHands className={`h-2.5 w-2.5 ${liked ? "fill-current" : ""}`} />
             {c.likes_count > 0 && <span>{c.likes_count}</span>}
           </button>
           {user && (
