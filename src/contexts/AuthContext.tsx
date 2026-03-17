@@ -153,6 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    explicitSignOutRef.current = true;
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   };
