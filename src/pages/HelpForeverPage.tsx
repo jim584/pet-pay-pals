@@ -77,11 +77,11 @@ export default function HelpForeverPage() {
 
         {/* Loading */}
         {isLoading && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="flex flex-col gap-4 max-w-2xl mx-auto">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="rounded-lg border overflow-hidden">
-                <Skeleton className="aspect-[4/3] w-full" />
-                <div className="p-4 space-y-2">
+              <div key={i} className="rounded-lg border overflow-hidden sm:flex">
+                <Skeleton className="aspect-[4/3] sm:aspect-auto sm:w-56 sm:shrink-0 w-full sm:h-auto h-48" />
+                <div className="p-4 space-y-2 flex-1">
                   <Skeleton className="h-5 w-1/2" />
                   <Skeleton className="h-4 w-3/4" />
                   <Skeleton className="h-4 w-full" />
@@ -104,7 +104,7 @@ export default function HelpForeverPage() {
 
         {/* Listings grid */}
         {listings.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="flex flex-col gap-4 max-w-2xl mx-auto">
             {listings.map((listing) => (
               <AdoptionCard key={listing.id} listing={listing} />
             ))}

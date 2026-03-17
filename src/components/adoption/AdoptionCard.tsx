@@ -30,18 +30,18 @@ export function AdoptionCard({ listing }: { listing: AdoptionListing }) {
   };
 
   return (
-    <Card className="overflow-hidden hover:shadow-lg transition-shadow">
+    <Card className="overflow-hidden hover:shadow-lg transition-shadow sm:flex sm:flex-row">
       {photo ? (
-        <div className="aspect-[4/3] overflow-hidden">
+        <div className="aspect-[4/3] sm:aspect-auto sm:w-56 sm:shrink-0 overflow-hidden">
           <img src={photo} alt={listing.pet_name} className="w-full h-full object-cover" />
         </div>
       ) : (
-        <div className="aspect-[4/3] bg-muted flex items-center justify-center">
+        <div className="aspect-[4/3] sm:aspect-auto sm:w-56 sm:shrink-0 bg-muted flex items-center justify-center">
           <PawPrint className="h-16 w-16 text-muted-foreground/30" />
         </div>
       )}
 
-      <CardContent className="p-4 space-y-3">
+      <CardContent className="p-4 space-y-3 flex-1">
         <div>
           <h3 className="text-lg font-bold font-display text-foreground">{listing.pet_name}</h3>
           <div className="flex flex-wrap gap-1.5 mt-1.5">
