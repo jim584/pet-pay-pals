@@ -57,6 +57,14 @@ export async function createAdoptionListing(
   return data as AdoptionListing;
 }
 
+export async function markAsAdopted(listingId: string) {
+  const { error } = await supabase
+    .from("adoption_listings")
+    .update({ is_adopted: true })
+    .eq("id", listingId);
+  if (error) throw error;
+}
+
 export async function uploadAdoptionPhoto(file: File): Promise<string> {
   const ext = file.name.split(".").pop();
   const path = `adoption/${crypto.randomUUID()}.${ext}`;

@@ -1,22 +1,39 @@
+import { useState } from "react";
 import type { AdoptionListing } from "@/lib/adoption-api";
+import { markAsAdopted } from "@/lib/adoption-api";
+import { useAuth } from "@/contexts/AuthContext";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, Phone, Mail, Globe, PawPrint } from "lucide-react";
+import { MapPin, Phone, Mail, Globe, PawPrint, CheckCircle2 } from "lucide-react";
+import { toast } from "sonner";
 
 export function AdoptionCard({ listing }: { listing: AdoptionListing }) {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [marking, setMarking] = useState(false);
+  const isOwner = user?.id === listing.posted_by;
   const photo = listing.photo_urls?.[0];
+
+  const handleMarkAdopted = async () => {
+    setMarking(true);
+    try {
+      await markAsAdopted(listing.id);
+      toast.success(`${listing.pet_name} has been marked as adopted! 🎉`);
+      queryClient.invalidateQueries({ queryKey: ["adoption-listings"] });
+    } catch {
+      toast.error("Failed to update listing");
+    } finally {
+      setMarking(false);
+    }
+  };
 
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
-      {/* Photo */}
       {photo ? (
         <div className="aspect-[4/3] overflow-hidden">
-          <img
-            src={photo}
-            alt={listing.pet_name}
-            className="w-full h-full object-cover"
-          />
+          <img src={photo} alt={listing.pet_name} className="w-full h-full object-cover" />
         </div>
       ) : (
         <div className="aspect-[4/3] bg-muted flex items-center justify-center">
@@ -25,7 +42,6 @@ export function AdoptionCard({ listing }: { listing: AdoptionListing }) {
       )}
 
       <CardContent className="p-4 space-y-3">
-        {/* Name + badges */}
         <div>
           <h3 className="text-lg font-bold font-display text-foreground">{listing.pet_name}</h3>
           <div className="flex flex-wrap gap-1.5 mt-1.5">
@@ -36,12 +52,10 @@ export function AdoptionCard({ listing }: { listing: AdoptionListing }) {
           </div>
         </div>
 
-        {/* Description */}
         {listing.description && (
           <p className="text-sm text-muted-foreground line-clamp-3">{listing.description}</p>
         )}
 
-        {/* Shelter info */}
         <div className="rounded-lg bg-muted/50 p-3 space-y-1.5 text-sm">
           <p className="font-semibold text-foreground">{listing.shelter_name}</p>
           {listing.shelter_location && (
@@ -66,16 +80,27 @@ export function AdoptionCard({ listing }: { listing: AdoptionListing }) {
           )}
         </div>
 
-        {/* Contact CTA */}
-        {(listing.contact_phone || listing.contact_email) && (
-          <Button className="w-full" asChild>
-            <a
-              href={listing.contact_phone ? `tel:${listing.contact_phone}` : `mailto:${listing.contact_email}`}
+        <div className="flex flex-col gap-2">
+          {(listing.contact_phone || listing.contact_email) && (
+            <Button className="w-full" asChild>
+              <a href={listing.contact_phone ? `tel:${listing.contact_phone}` : `mailto:${listing.contact_email}`}>
+                Contact Shelter
+              </a>
+            </Button>
+          )}
+
+          {isOwner && !listing.is_adopted && (
+            <Button
+              variant="outline"
+              className="w-full gap-2 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+              onClick={handleMarkAdopted}
+              disabled={marking}
             >
-              Contact Shelter
-            </a>
-          </Button>
-        )}
+              <CheckCircle2 className="h-4 w-4" />
+              {marking ? "Updating..." : "Mark as Adopted"}
+            </Button>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
