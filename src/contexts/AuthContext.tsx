@@ -37,44 +37,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let initialLoadDone = false;
     let mounted = true;
-    
 
+    // Set up listener first, but DON'T resolve loading from it during initial load.
+    // Only getSession() below should flip loading to false, preventing flash redirects.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
         if (!mounted) return;
 
-        // Don't clear session on token refresh failures — let Supabase retry
         if (event === 'TOKEN_REFRESHED' && !newSession) {
           console.warn('Token refresh returned no session — keeping current state');
           return;
         }
 
-        // Only clear state on explicit sign-out, not on refresh failures
         if (event === 'SIGNED_OUT') {
           if (explicitSignOutRef.current) {
             explicitSignOutRef.current = false;
+            setSession(null);
+            setUser(null);
             setRole(null);
-            
           } else {
-            // Might be a stale-tab token expiry — try to recover
             console.warn('Unexpected SIGNED_OUT event — attempting session recovery');
             const { data } = await supabase.auth.getSession();
             if (data.session) {
               setSession(data.session);
               setUser(data.session.user);
-              setTimeout(() => {
-                if (mounted) fetchRole(data.session!.user.id);
-              }, 0);
+              setTimeout(() => { if (mounted) fetchRole(data.session!.user.id); }, 0);
             } else {
-              // Truly signed out
               setSession(null);
               setUser(null);
               setRole(null);
             }
-          }
-          if (!initialLoadDone) {
-            initialLoadDone = true;
-            setLoading(false);
           }
           return;
         }
@@ -82,15 +74,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(newSession);
         setUser(newSession?.user ?? null);
         if (newSession?.user) {
-          setTimeout(() => {
-            if (mounted) fetchRole(newSession.user.id);
-          }, 0);
+          setTimeout(() => { if (mounted) fetchRole(newSession.user.id); }, 0);
         } else {
           setRole(null);
-        }
-        if (!initialLoadDone) {
-          initialLoadDone = true;
-          setLoading(false);
         }
       }
     );
@@ -101,16 +87,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(s?.user ?? null);
       if (s?.user) {
         fetchRole(s.user.id).finally(() => {
-          if (!initialLoadDone && mounted) {
-            initialLoadDone = true;
-            setLoading(false);
-          }
+          if (mounted) setLoading(false);
         });
       } else {
-        if (!initialLoadDone) {
-          initialLoadDone = true;
-          setLoading(false);
-        }
+        setLoading(false);
       }
     });
 
