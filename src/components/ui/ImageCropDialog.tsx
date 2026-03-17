@@ -50,6 +50,7 @@ export function ImageCropDialog({
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const [processing, setProcessing] = useState(false);
   const [filters, setFilters] = useState<ImageFilters>({ ...DEFAULT_FILTERS });
+  const [activePreset, setActivePreset] = useState("Original");
 
   const filtersChanged =
     filters.brightness !== 100 || filters.contrast !== 100 || filters.saturation !== 100;
