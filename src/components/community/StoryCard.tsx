@@ -288,7 +288,7 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
           </Button>
         </DialogContent>
       </Dialog>
-    </Card>
+    </article>
   );
 }
 

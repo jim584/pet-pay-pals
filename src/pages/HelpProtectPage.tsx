@@ -119,7 +119,7 @@ export default function HelpProtectPage() {
 
         {/* Feed */}
         {stories.length > 0 && (
-          <div className="flex flex-col gap-4 max-w-2xl mx-auto">
+          <div className="flex flex-col">
             {stories.map((story) => (
               <StoryCard key={story.id} story={story} onRefresh={handleRefresh} />
             ))}
