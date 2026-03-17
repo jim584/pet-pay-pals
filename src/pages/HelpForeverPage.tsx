@@ -23,6 +23,16 @@ export default function HelpForeverPage() {
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const [species, setSpecies] = useState("all");
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  // Debounce search input
+  const searchTimeout = useState<ReturnType<typeof setTimeout> | null>(null);
+  const handleSearch = (value: string) => {
+    setSearch(value);
+    if (searchTimeout[0]) clearTimeout(searchTimeout[0]);
+    searchTimeout[0] = setTimeout(() => setDebouncedSearch(value), 400);
+  };
 
   const {
     data,
@@ -31,8 +41,8 @@ export default function HelpForeverPage() {
     isFetchingNextPage,
     isLoading,
   } = useInfiniteQuery({
-    queryKey: ["adoption-listings", species],
-    queryFn: ({ pageParam = 0 }) => fetchAdoptionListings(pageParam, species),
+    queryKey: ["adoption-listings", species, debouncedSearch],
+    queryFn: ({ pageParam = 0 }) => fetchAdoptionListings(pageParam, species, debouncedSearch),
     getNextPageParam: (lastPage, allPages) =>
       lastPage.length === 8 ? allPages.length : undefined,
     initialPageParam: 0,
