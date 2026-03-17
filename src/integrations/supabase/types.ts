@@ -277,6 +277,7 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          is_urgent: boolean
           likes_count: number
           pet_id: string
           photo_urls: string[] | null
@@ -290,6 +291,7 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          is_urgent?: boolean
           likes_count?: number
           pet_id: string
           photo_urls?: string[] | null
@@ -303,6 +305,7 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          is_urgent?: boolean
           likes_count?: number
           pet_id?: string
           photo_urls?: string[] | null
