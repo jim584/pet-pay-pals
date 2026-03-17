@@ -334,6 +334,7 @@ export type Database = {
           age_years: number | null
           breed: string | null
           created_at: string
+          date_of_birth: string | null
           followers_count: number
           id: string
           name: string
@@ -348,6 +349,7 @@ export type Database = {
           age_years?: number | null
           breed?: string | null
           created_at?: string
+          date_of_birth?: string | null
           followers_count?: number
           id?: string
           name: string
@@ -362,6 +364,7 @@ export type Database = {
           age_years?: number | null
           breed?: string | null
           created_at?: string
+          date_of_birth?: string | null
           followers_count?: number
           id?: string
           name?: string
