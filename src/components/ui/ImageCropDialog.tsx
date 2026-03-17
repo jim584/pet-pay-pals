@@ -3,8 +3,8 @@ import Cropper, { Area } from "react-easy-crop";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { getCroppedImage } from "@/lib/crop-utils";
-import { ZoomIn, Square, RectangleHorizontal, Monitor } from "lucide-react";
+import { getCroppedImage, DEFAULT_FILTERS, ImageFilters } from "@/lib/crop-utils";
+import { ZoomIn, Square, RectangleHorizontal, Monitor, Sun, Contrast, Palette, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const ASPECT_OPTIONS = [
@@ -12,6 +12,12 @@ const ASPECT_OPTIONS = [
   { label: "4:3", value: 4 / 3, icon: RectangleHorizontal },
   { label: "16:9", value: 16 / 9, icon: Monitor },
 ] as const;
+
+const FILTER_CONTROLS = [
+  { key: "brightness" as const, label: "Brightness", icon: Sun },
+  { key: "contrast" as const, label: "Contrast", icon: Contrast },
+  { key: "saturation" as const, label: "Saturation", icon: Palette },
+];
 
 interface ImageCropDialogProps {
   open: boolean;
@@ -35,6 +41,10 @@ export function ImageCropDialog({
   const [activeAspect, setActiveAspect] = useState(aspectRatio);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [filters, setFilters] = useState<ImageFilters>({ ...DEFAULT_FILTERS });
+
+  const filtersChanged =
+    filters.brightness !== 100 || filters.contrast !== 100 || filters.saturation !== 100;
 
   const onCropComplete = useCallback((_: Area, croppedPixels: Area) => {
     setCroppedAreaPixels(croppedPixels);
@@ -44,32 +54,42 @@ export function ImageCropDialog({
     if (!croppedAreaPixels) return;
     setProcessing(true);
     try {
-      const croppedFile = await getCroppedImage(imageSrc, croppedAreaPixels);
+      const croppedFile = await getCroppedImage(imageSrc, croppedAreaPixels, "cropped.jpg", filters);
       const previewUrl = URL.createObjectURL(croppedFile);
       onConfirm(croppedFile, previewUrl);
     } catch {
-      // fallback: pass original
+      // fallback
     } finally {
       setProcessing(false);
-      setCrop({ x: 0, y: 0 });
-      setZoom(1);
+      resetState();
     }
   };
 
-  const handleCancel = () => {
+  const resetState = () => {
     setCrop({ x: 0, y: 0 });
     setZoom(1);
     setActiveAspect(aspectRatio);
+    setFilters({ ...DEFAULT_FILTERS });
+  };
+
+  const handleCancel = () => {
+    resetState();
     onCancel();
+  };
+
+  const filterStyle = {
+    filter: `brightness(${filters.brightness}%) contrast(${filters.contrast}%) saturate(${filters.saturation}%)`,
   };
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && handleCancel()}>
-      <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden">
+      <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden max-h-[90vh] overflow-y-auto">
         <DialogHeader className="p-4 pb-2">
-          <DialogTitle>Crop Image</DialogTitle>
+          <DialogTitle>Edit Image</DialogTitle>
         </DialogHeader>
-        <div className="relative w-full h-72 sm:h-80 bg-muted">
+
+        {/* Crop area with live filter preview */}
+        <div className="relative w-full h-64 sm:h-72 bg-muted" style={filterStyle}>
           {imageSrc && (
             <Cropper
               image={imageSrc}
@@ -82,8 +102,10 @@ export function ImageCropDialog({
             />
           )}
         </div>
+
+        {/* Aspect ratio pills */}
         {showAspectOptions && (
-          <div className="px-4 pt-2 flex items-center justify-center gap-1.5">
+          <div className="px-4 pt-3 flex items-center justify-center gap-1.5">
             {ASPECT_OPTIONS.map((opt) => (
               <button
                 key={opt.label}
@@ -102,7 +124,9 @@ export function ImageCropDialog({
             ))}
           </div>
         )}
-        <div className="px-4 py-3 flex items-center gap-3">
+
+        {/* Zoom */}
+        <div className="px-4 pt-3 flex items-center gap-3">
           <ZoomIn className="h-4 w-4 text-muted-foreground shrink-0" />
           <Slider
             value={[zoom]}
@@ -113,12 +137,46 @@ export function ImageCropDialog({
             className="flex-1"
           />
         </div>
-        <DialogFooter className="p-4 pt-0 gap-2">
+
+        {/* Filters */}
+        <div className="px-4 pt-2 pb-1 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Adjustments</span>
+            {filtersChanged && (
+              <button
+                type="button"
+                onClick={() => setFilters({ ...DEFAULT_FILTERS })}
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <RotateCcw className="h-3 w-3" />
+                Reset
+              </button>
+            )}
+          </div>
+          {FILTER_CONTROLS.map(({ key, label, icon: Icon }) => (
+            <div key={key} className="flex items-center gap-3">
+              <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+              <Slider
+                value={[filters[key]]}
+                min={0}
+                max={200}
+                step={1}
+                onValueChange={(v) => setFilters((prev) => ({ ...prev, [key]: v[0] }))}
+                className="flex-1"
+              />
+              <span className="text-xs text-muted-foreground w-8 text-right tabular-nums">
+                {filters[key]}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <DialogFooter className="p-4 pt-2 gap-2">
           <Button variant="outline" onClick={handleCancel} disabled={processing}>
             Cancel
           </Button>
           <Button onClick={handleConfirm} disabled={processing}>
-            {processing ? "Cropping…" : "Apply Crop"}
+            {processing ? "Applying…" : "Apply"}
           </Button>
         </DialogFooter>
       </DialogContent>

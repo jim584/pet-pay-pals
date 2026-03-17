@@ -5,14 +5,27 @@ export interface CropArea {
   height: number;
 }
 
+export interface ImageFilters {
+  brightness: number; // 0-200, default 100
+  contrast: number;   // 0-200, default 100
+  saturation: number; // 0-200, default 100
+}
+
+export const DEFAULT_FILTERS: ImageFilters = {
+  brightness: 100,
+  contrast: 100,
+  saturation: 100,
+};
+
 /**
- * Creates a cropped image from a source image and crop area.
+ * Creates a cropped image from a source image and crop area with optional filters.
  * Returns a File object ready for upload.
  */
 export async function getCroppedImage(
   imageSrc: string,
   cropArea: CropArea,
-  fileName = "cropped.jpg"
+  fileName = "cropped.jpg",
+  filters: ImageFilters = DEFAULT_FILTERS
 ): Promise<File> {
   const image = await createImage(imageSrc);
   const canvas = document.createElement("canvas");
@@ -21,6 +34,9 @@ export async function getCroppedImage(
 
   canvas.width = cropArea.width;
   canvas.height = cropArea.height;
+
+  // Apply CSS filters to canvas context
+  ctx.filter = `brightness(${filters.brightness}%) contrast(${filters.contrast}%) saturate(${filters.saturation}%)`;
 
   ctx.drawImage(
     image,
