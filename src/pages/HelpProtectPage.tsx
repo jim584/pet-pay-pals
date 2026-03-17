@@ -77,13 +77,13 @@ export default function HelpProtectPage() {
         </div>
 
         {/* Search */}
-        <div className="relative mb-6">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <div className="relative px-3 py-3">
+          <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search protection stories..."
             value={search}
             onChange={(e) => handleSearch(e.target.value)}
-            className="pl-9"
+            className="pl-9 rounded-lg bg-muted border-none h-9"
           />
         </div>
 
