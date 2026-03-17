@@ -1,44 +1,46 @@
 
 
-## Community Section UI/UX Improvements
+## Plan: Add Instagram-Style Image Cropper to Photo Uploads
 
-After reviewing the code, I can identify several UI/UX issues with the current Community section:
+Add a reusable image cropping dialog that appears whenever a user selects a photo — across story posts, pet profiles, and any future upload points. Users can pan, zoom, and crop before the image is finalized, just like Instagram.
 
-1. **Empty state is bland** -- just a paw icon and text in a plain card
-2. **Story cards lack visual polish** -- no rounded images, flat layout, cramped spacing
-3. **No max-width constraint** -- stories stretch full width on large screens, making them hard to read
-4. **Comments section feels unfinished** -- no empty state, no visual separation between comments
-5. **Donate dialog is minimal** -- could use better visual hierarchy
-6. **Loading state is just text** -- no skeleton placeholders
-7. **Page header lacks personality** -- plain text with no visual flair
+### Library
 
-### Changes
+Install `react-easy-crop` — a lightweight, well-maintained React cropper with pinch-zoom, drag, and aspect ratio support.
 
-**1. CommunityPage.tsx -- Better header with gradient accent and max-width container**
-- Add a gradient accent banner or subtle background to the header area
-- Constrain content width with `max-w-2xl mx-auto` for a social-feed feel (like Instagram/Twitter)
-- Add a descriptive icon alongside the heading
+### New Component: `src/components/ui/ImageCropDialog.tsx`
 
-**2. CommunityFeed.tsx -- Major visual overhaul of StoryCard**
-- Add `max-w-2xl mx-auto` wrapper for feed-style centering
-- **Loading state**: Replace text with 3 skeleton card placeholders (pulsing cards with fake image/text blocks)
-- **Empty state**: More engaging design with a larger illustration area, gradient text, and a CTA button
-- **Story cards**:
-  - Move author avatar/info above the image (social media pattern: avatar + name + timestamp on top)
-  - Round the card corners more, add subtle hover shadow
-  - Better photo grid: rounded corners inside card, proper aspect ratios
-  - Action bar: cleaner spacing, subtle background strip, rounded pill-style buttons for like/comment/donate
-  - Comments: add rounded bubble styling per comment, better empty-comments message, smooth expand animation
-  - Donate button: accent gradient styling to stand out
+A reusable modal that:
+- Takes an image source (data URL) and an aspect ratio (default 4:3 per existing feed convention)
+- Shows a crop area with drag/zoom controls (slider for zoom)
+- On confirm, uses `canvas` to produce a cropped `Blob`/`File`
+- On cancel, discards the crop
+- Returns the cropped file and preview URL to the parent
 
-**3. CreateStoryDialog.tsx -- Minor polish**
-- No major changes needed, already decent
+### Changes to `CreateStoryDialog.tsx` (story posts)
 
-### Technical Details
+- When user selects photo(s), instead of immediately adding to the photos array, open the `ImageCropDialog` for each image sequentially
+- After cropping, add the cropped file + preview to state
+- Supports the existing multi-photo flow (up to 4 images)
 
-All changes are purely CSS/Tailwind and minor JSX restructuring in two files:
-- `src/pages/CommunityPage.tsx` -- wrap content in max-width container, enhance header
-- `src/components/community/CommunityFeed.tsx` -- skeleton loading, improved card layout, better action bar styling, comment bubbles, enhanced empty state
+### Changes to `PetFormDialog.tsx` (pet profile photo)
 
-No database or API changes required.
+- After file selection, open `ImageCropDialog` with a 1:1 (square) aspect ratio for profile photos
+- On confirm, set the cropped file as the selected photo
+
+### Helper: `src/lib/crop-utils.ts`
+
+A utility function `getCroppedImage(imageSrc, cropArea)` that draws onto an offscreen canvas and returns a `Blob` — keeps the crop logic reusable and out of components.
+
+### Summary of files
+
+| File | Action |
+|------|--------|
+| `package.json` | Add `react-easy-crop` |
+| `src/lib/crop-utils.ts` | Create — canvas crop helper |
+| `src/components/ui/ImageCropDialog.tsx` | Create — reusable crop modal |
+| `src/components/community/CreateStoryDialog.tsx` | Edit — integrate cropper into multi-photo flow |
+| `src/components/pets/PetFormDialog.tsx` | Edit — integrate cropper for pet profile photo |
+
+No database or backend changes needed.
 
