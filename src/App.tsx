@@ -19,6 +19,7 @@ import VetServicesPage from "./pages/VetServicesPage";
 import ProfileSettingsPage from "./pages/ProfileSettingsPage";
 import NotFound from "./pages/NotFound";
 import PlaceholderSection from "./pages/PlaceholderSection";
+import HelpForeverPage from "./pages/HelpForeverPage";
 
 const queryClient = new QueryClient();
 
