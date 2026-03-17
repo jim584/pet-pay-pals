@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchPublicFeed, followPet, unfollowPet, checkFollowing, FEED_PAGE_SIZE, type FeedStory } from "@/lib/feed-api";
-import { toggleLike, batchCheckLiked } from "@/lib/community-api";
+import { toggleLike, batchCheckLiked, STORY_CATEGORIES } from "@/lib/community-api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
