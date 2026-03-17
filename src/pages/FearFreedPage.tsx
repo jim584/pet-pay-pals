@@ -140,7 +140,7 @@ export default function FearFreedPage() {
 
         {/* Grid */}
         {filtered.length > 0 ? (
-          <div className={`grid gap-5 ${isMobile ? "grid-cols-1" : "grid-cols-2"}`}>
+          <div className="grid grid-cols-1 gap-5 max-w-2xl mx-auto">
             {filtered.map((post) => (
               <BlogCard key={post.id} post={post} />
             ))}
