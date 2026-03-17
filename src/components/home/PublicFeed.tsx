@@ -356,6 +356,7 @@ export function PublicFeed({ search, category }: { search?: string; category?: s
           onImageClick={(url, alt) => setLightbox({ url, alt })}
         />
       ))}
+      
 
       {/* Load More button */}
       {!isSampleData && hasNextPage && (
