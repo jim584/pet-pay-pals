@@ -22,6 +22,7 @@ export interface PetStory {
   photo_urls: string[];
   likes_count: number;
   comments_count: number;
+  is_urgent: boolean;
   created_at: string;
   updated_at: string;
   pets?: { name: string; species: string; breed: string | null; photo_url: string | null };
