@@ -9,6 +9,7 @@ export interface FeedStory {
   photo_urls: string[];
   likes_count: number;
   comments_count: number;
+  category: string;
   created_at: string;
   pets: { name: string; photo_url: string | null; species: string; breed: string | null; followers_count: number };
   profiles: { full_name: string; avatar_url: string | null };
