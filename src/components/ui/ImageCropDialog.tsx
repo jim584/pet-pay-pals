@@ -59,6 +59,7 @@ export function ImageCropDialog({
   const handleCancel = () => {
     setCrop({ x: 0, y: 0 });
     setZoom(1);
+    setActiveAspect(aspectRatio);
     onCancel();
   };
 
