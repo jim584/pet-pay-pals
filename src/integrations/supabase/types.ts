@@ -606,6 +606,45 @@ export type Database = {
         }
         Relationships: []
       }
+      vetted_products: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          external_url: string
+          id: string
+          image_url: string | null
+          listed_by: string
+          name: string
+          price_text: string | null
+          store_name: string | null
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          external_url: string
+          id?: string
+          image_url?: string | null
+          listed_by: string
+          name: string
+          price_text?: string | null
+          store_name?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          external_url?: string
+          id?: string
+          image_url?: string | null
+          listed_by?: string
+          name?: string
+          price_text?: string | null
+          store_name?: string | null
+        }
+        Relationships: []
+      }
       wallet_transactions: {
         Row: {
           amount: number

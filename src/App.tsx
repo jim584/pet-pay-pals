@@ -21,6 +21,7 @@ import NotFound from "./pages/NotFound";
 import PlaceholderSection from "./pages/PlaceholderSection";
 import HelpForeverPage from "./pages/HelpForeverPage";
 import HelpProtectPage from "./pages/HelpProtectPage";
+import VettedPage from "./pages/VettedPage";
 
 const queryClient = new QueryClient();
 
@@ -50,7 +51,7 @@ function AppRoutes() {
         <Route path="/help-overcome" element={<PlaceholderSection title="Help A Pet Overcome™" />} />
         <Route path="/help-protect" element={<HelpProtectPage />} />
         <Route path="/help-behave" element={<PlaceholderSection title="Help A Pet Behave™" />} />
-        <Route path="/vetted" element={<PlaceholderSection title="Vetted™" />} />
+        <Route path="/vetted" element={<VettedPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       {isMobile && <MobileBottomNav />}
