@@ -4,12 +4,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { getCroppedImage } from "@/lib/crop-utils";
-import { ZoomIn } from "lucide-react";
+import { ZoomIn, Square, RectangleHorizontal, Monitor } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+const ASPECT_OPTIONS = [
+  { label: "1:1", value: 1, icon: Square },
+  { label: "4:3", value: 4 / 3, icon: RectangleHorizontal },
+  { label: "16:9", value: 16 / 9, icon: Monitor },
+] as const;
 
 interface ImageCropDialogProps {
   open: boolean;
   imageSrc: string;
   aspectRatio?: number;
+  showAspectOptions?: boolean;
   onConfirm: (croppedFile: File, previewUrl: string) => void;
   onCancel: () => void;
 }
@@ -18,11 +26,13 @@ export function ImageCropDialog({
   open,
   imageSrc,
   aspectRatio = 4 / 3,
+  showAspectOptions = true,
   onConfirm,
   onCancel,
 }: ImageCropDialogProps) {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
+  const [activeAspect, setActiveAspect] = useState(aspectRatio);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const [processing, setProcessing] = useState(false);
 
