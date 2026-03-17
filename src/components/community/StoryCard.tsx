@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/components/ui/sonner";
-import { MessageCircle, DollarSign, Trash2, Send, PawPrint, User, Reply, X, Check, AlertTriangle, Bookmark, MoreHorizontal } from "lucide-react";
+import { MessageCircle, DollarSign, Trash2, Send, PawPrint, User, Reply, X, Pencil, Check, AlertTriangle } from "lucide-react";
 import { PrayingHands } from "@/components/icons/PrayingHands";
 import {
   PetStory, StoryComment, toggleLike, checkUserLiked,
@@ -12,7 +13,6 @@ import {
 } from "@/lib/community-api";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { formatDistanceToNow } from "date-fns";
 
 export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: () => void }) {
   const { user } = useAuth();
@@ -118,10 +118,8 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
   const authorName = (story as any).profiles?.full_name || "Anonymous";
   const authorAvatar = (story as any).profiles?.avatar_url || null;
 
-  const relativeTime = formatDistanceToNow(new Date(story.created_at), { addSuffix: false });
-
   return (
-    <article className={`bg-card border-b border-border/40 ${story.is_urgent ? "bg-destructive/[0.03]" : ""}`}>
+    <Card className={`overflow-hidden rounded-2xl border-border/60 shadow-sm hover:shadow-md transition-shadow duration-300 ${story.is_urgent ? "ring-2 ring-destructive/40 border-destructive/30" : ""}`}>
       {/* Urgent banner */}
       {story.is_urgent && (
         <div className="flex items-center gap-1.5 px-4 py-1.5 bg-destructive/10 text-destructive text-xs font-semibold">
@@ -129,98 +127,76 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
           URGENT — Critical Case
         </div>
       )}
-
-      {/* Author header — Instagram style */}
-      <div className="flex items-center gap-2.5 px-3 py-2.5">
-        <Avatar className="h-8 w-8">
+      {/* Author header — social media pattern */}
+      <div className="flex items-center gap-3 px-4 pt-4 pb-2">
+        <Avatar className="h-10 w-10 ring-2 ring-primary/20">
           <AvatarImage src={authorAvatar ?? undefined} />
-          <AvatarFallback className="bg-muted text-muted-foreground text-xs"><User className="h-3.5 w-3.5" /></AvatarFallback>
+          <AvatarFallback className="bg-primary/10 text-primary"><User className="h-4 w-4" /></AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
-            <span className="font-semibold text-sm truncate">{authorName}</span>
-            {story.is_urgent && <Badge variant="destructive" className="text-[9px] px-1.5 py-0 h-4 rounded">Urgent</Badge>}
-          </div>
-          <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-            <PawPrint className="h-2.5 w-2.5" />
+          <p className="font-semibold text-sm font-display truncate">{authorName}</p>
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <PawPrint className="h-3 w-3" />
             <span className="truncate">{petName}</span>
+            <span>·</span>
+            <span>{new Date(story.created_at).toLocaleDateString()}</span>
           </div>
         </div>
-        {isAuthor ? (
-          <button onClick={async () => { await deleteStory(story.id); onRefresh(); }} className="p-1.5 text-muted-foreground hover:text-destructive transition-colors">
+        {isAuthor && (
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/50 hover:text-destructive" onClick={async () => { await deleteStory(story.id); onRefresh(); }}>
             <Trash2 className="h-4 w-4" />
-          </button>
-        ) : (
-          <button className="p-1.5 text-muted-foreground hover:text-foreground transition-colors">
-            <MoreHorizontal className="h-5 w-5" />
-          </button>
+          </Button>
         )}
       </div>
 
-      {/* Photos — edge-to-edge */}
+      {/* Photos */}
       {story.photo_urls && story.photo_urls.length > 0 && (
-        <div className={`w-full overflow-hidden ${story.photo_urls.length === 1 ? "" : "grid grid-cols-2 gap-px bg-border"}`}>
+        <div className={`mx-3 mb-2 overflow-hidden rounded-xl ${story.photo_urls.length === 1 ? "" : "grid grid-cols-2 gap-1"}`}>
           {story.photo_urls.slice(0, 4).map((url, i) => (
-            <img key={i} src={url} alt="" className={`w-full object-cover ${story.photo_urls!.length === 1 ? "aspect-square" : "aspect-square"}`} />
+            <img key={i} src={url} alt="" className={`w-full object-cover ${story.photo_urls!.length === 1 ? "max-h-80 rounded-xl" : "h-40 rounded-lg"}`} />
           ))}
         </div>
       )}
 
-      {/* Action bar — icon-only, Instagram style */}
-      <div className="flex items-center px-3 py-2">
-        <div className="flex items-center gap-3">
-          <button onClick={handleLike} className={`transition-colors ${liked ? "text-amber-500" : "text-foreground hover:text-muted-foreground"}`}>
-            <PrayingHands className="h-6 w-6" />
-          </button>
-          <button onClick={handleToggleComments} className="text-foreground hover:text-muted-foreground transition-colors">
-            <MessageCircle className="h-6 w-6" />
-          </button>
+      <CardContent className="px-4 pb-4 pt-1 space-y-3">
+        <div>
+          {story.category && story.category !== "general" && (() => {
+            const cat = STORY_CATEGORIES.find((c) => c.value === story.category);
+            return cat ? (
+              <Badge variant="secondary" className={`mb-2 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full border-none ${cat.color}`}>
+                {cat.label}
+              </Badge>
+            ) : null;
+          })()}
+          <p className="font-bold font-display text-base mb-1">{story.title}</p>
+          <p className="text-sm text-foreground/80 leading-relaxed">{story.content}</p>
+        </div>
+
+        {/* Action bar */}
+        <div className="flex items-center gap-2 pt-2 border-t border-border/50">
+          <Button variant="ghost" size="sm" className={`gap-1.5 rounded-full text-xs ${liked ? "text-amber-500 bg-amber-500/10" : ""}`} onClick={handleLike}>
+            <PrayingHands className={`h-4 w-4 transition-opacity ${liked ? "opacity-100" : "opacity-50"}`} />
+            {likesCount}
+          </Button>
+          <Button variant="ghost" size="sm" className="gap-1.5 rounded-full text-xs" onClick={handleToggleComments}>
+            <MessageCircle className="h-4 w-4" />
+            {story.comments_count}
+          </Button>
           {!isAuthor && (
-            <button onClick={() => setShowDonate(true)} className="text-foreground hover:text-muted-foreground transition-colors">
-              <DollarSign className="h-6 w-6" />
-            </button>
+            <Button
+              size="sm"
+              className="gap-1.5 rounded-full text-xs ml-auto bg-accent text-accent-foreground hover:bg-accent/90 shadow-sm"
+              onClick={() => setShowDonate(true)}
+            >
+              <DollarSign className="h-4 w-4" />
+              Donate
+            </Button>
           )}
         </div>
-        <button className="ml-auto text-foreground hover:text-muted-foreground transition-colors">
-          <Bookmark className="h-6 w-6" />
-        </button>
-      </div>
 
-      {/* Likes count */}
-      {likesCount > 0 && (
-        <p className="px-3 text-sm font-semibold">{likesCount} prayer{likesCount !== 1 ? "s" : ""}</p>
-      )}
-
-      {/* Caption — Instagram inline style */}
-      <div className="px-3 pb-1">
-        {story.category && story.category !== "general" && (() => {
-          const cat = STORY_CATEGORIES.find((c) => c.value === story.category);
-          return cat ? (
-            <Badge variant="secondary" className={`mr-1.5 text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0 h-4 rounded border-none ${cat.color}`}>
-              {cat.label}
-            </Badge>
-          ) : null;
-        })()}
-        <p className="text-sm">
-          <span className="font-semibold">{authorName}</span>{" "}
-          <span className="font-semibold">{story.title}</span>{" "}
-          <span className="text-foreground/80">{story.content}</span>
-        </p>
-      </div>
-
-      {/* Comments count link */}
-      {story.comments_count > 0 && !showComments && (
-        <button onClick={handleToggleComments} className="px-3 text-sm text-muted-foreground hover:text-foreground transition-colors">
-          View all {story.comments_count} comment{story.comments_count !== 1 ? "s" : ""}
-        </button>
-      )}
-
-      {/* Timestamp */}
-      <p className="px-3 pt-1 pb-3 text-[10px] uppercase tracking-wide text-muted-foreground">{relativeTime} ago</p>
-
-      {/* Comments section */}
-      {showComments && (
-        <div className="space-y-3 px-3 pb-3 border-t border-border/30 pt-3">
+        {/* Comments section */}
+        {showComments && (
+          <div className="space-y-3 pt-3 border-t border-border/50">
             {comments.length === 0 && (
               <p className="text-xs text-muted-foreground text-center py-3">No comments yet — be the first!</p>
             )}
@@ -266,7 +242,7 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
             </div>
           </div>
         )}
-
+      </CardContent>
 
       {/* Donate dialog */}
       <Dialog open={showDonate} onOpenChange={setShowDonate}>
@@ -288,7 +264,7 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
           </Button>
         </DialogContent>
       </Dialog>
-    </article>
+    </Card>
   );
 }
 

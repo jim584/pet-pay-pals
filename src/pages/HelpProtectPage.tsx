@@ -67,23 +67,23 @@ export default function HelpProtectPage() {
         </div>
       </header>
 
-      <main className={`max-w-lg mx-auto ${isMobile ? "pb-24" : "py-4"}`}>
+      <main className={`max-w-4xl mx-auto ${isMobile ? "px-3 py-4 pb-24" : "px-6 py-6"}`}>
         {/* Hero banner */}
-        <div className={`bg-destructive/5 border-b border-destructive/20 p-4 mb-0 text-center ${isMobile ? "" : "rounded-xl mb-4 border"}`}>
-          <h1 className="text-lg font-bold font-display text-foreground">Report & Raise Awareness</h1>
-          <p className="text-muted-foreground mt-0.5 text-xs max-w-sm mx-auto">
-            Share stories of animal abuse, neglect, or mistreatment.
+        <div className="rounded-xl bg-destructive/5 border border-destructive/20 p-5 mb-6 text-center">
+          <h1 className="text-2xl font-bold font-display text-foreground">Report & Raise Awareness</h1>
+          <p className="text-muted-foreground mt-1 text-sm max-w-md mx-auto">
+            Share stories of animal abuse, neglect, or mistreatment. Together we can protect every pet.
           </p>
         </div>
 
         {/* Search */}
-        <div className="relative px-3 py-3">
-          <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <div className="relative mb-6">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search protection stories..."
             value={search}
             onChange={(e) => handleSearch(e.target.value)}
-            className="pl-9 rounded-lg bg-muted border-none h-9"
+            className="pl-9"
           />
         </div>
 
@@ -119,7 +119,7 @@ export default function HelpProtectPage() {
 
         {/* Feed */}
         {stories.length > 0 && (
-          <div className="flex flex-col">
+          <div className="flex flex-col gap-4 max-w-2xl mx-auto">
             {stories.map((story) => (
               <StoryCard key={story.id} story={story} onRefresh={handleRefresh} />
             ))}
