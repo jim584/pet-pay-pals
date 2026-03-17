@@ -104,7 +104,7 @@ export default function HelpForeverPage() {
 
         {/* Listings grid */}
         {listings.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="flex flex-col gap-4 max-w-2xl mx-auto">
             {listings.map((listing) => (
               <AdoptionCard key={listing.id} listing={listing} />
             ))}
