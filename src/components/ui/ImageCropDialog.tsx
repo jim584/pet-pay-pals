@@ -216,7 +216,7 @@ export function ImageCropDialog({
                 min={0}
                 max={200}
                 step={1}
-                onValueChange={(v) => setFilters((prev) => ({ ...prev, [key]: v[0] }))}
+                onValueChange={(v) => { setFilters((prev) => ({ ...prev, [key]: v[0] })); setActivePreset(""); }}
                 className="flex-1"
               />
               <span className="text-xs text-muted-foreground w-8 text-right tabular-nums">
