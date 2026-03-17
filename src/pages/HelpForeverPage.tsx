@@ -6,9 +6,10 @@ import { fetchAdoptionListings } from "@/lib/adoption-api";
 import { AdoptionCard } from "@/components/adoption/AdoptionCard";
 import { CreateAdoptionDialog } from "@/components/adoption/CreateAdoptionDialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PawPrint, ArrowLeft, Heart } from "lucide-react";
+import { PawPrint, ArrowLeft, Heart, Search } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const SPECIES_TABS = [

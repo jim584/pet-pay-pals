@@ -24,7 +24,8 @@ const PAGE_SIZE = 8;
 
 export async function fetchAdoptionListings(
   page: number,
-  speciesFilter?: string
+  speciesFilter?: string,
+  searchQuery?: string
 ) {
   const from = page * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
@@ -38,6 +39,11 @@ export async function fetchAdoptionListings(
 
   if (speciesFilter && speciesFilter !== "all") {
     query = query.eq("species", speciesFilter);
+  }
+
+  if (searchQuery && searchQuery.trim()) {
+    const term = `%${searchQuery.trim()}%`;
+    query = query.or(`pet_name.ilike.${term},breed.ilike.${term},shelter_location.ilike.${term}`);
   }
 
   const { data, error } = await query;
