@@ -1,0 +1,1 @@
+ALTER TABLE public.pets ADD COLUMN date_of_birth date NULL;

@@ -8,11 +8,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/components/ui/sonner";
-import { createPet, updatePet, Pet } from "@/lib/pets-api";
+import { createPet, updatePet, Pet, calculateAge } from "@/lib/pets-api";
 import { supabase } from "@/integrations/supabase/client";
 import { isValidImageFile, ACCEPTED_IMAGE_TYPES } from "@/lib/utils";
-import { Camera, PawPrint, X } from "lucide-react";
+import { Camera, PawPrint, X, CalendarIcon } from "lucide-react";
 import { ImageCropDialog } from "@/components/ui/ImageCropDialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface PetFormDialogProps {
   open: boolean;
@@ -32,7 +36,7 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
     name: pet?.name ?? "",
     species: pet?.species ?? "dog",
     breed: pet?.breed ?? "",
-    age_years: pet?.age_years?.toString() ?? "",
+    date_of_birth: pet?.date_of_birth ? new Date(pet.date_of_birth + "T00:00:00") : undefined as Date | undefined,
     weight_kg: pet?.weight_kg?.toString() ?? "",
     notes: pet?.notes ?? "",
   });
@@ -47,7 +51,7 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
         name: pet?.name ?? "",
         species: pet?.species ?? "dog",
         breed: pet?.breed ?? "",
-        age_years: pet?.age_years?.toString() ?? "",
+        date_of_birth: pet?.date_of_birth ? new Date(pet.date_of_birth + "T00:00:00") : undefined,
         weight_kg: pet?.weight_kg?.toString() ?? "",
         notes: pet?.notes ?? "",
       });
@@ -115,11 +119,14 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
     if (!user) return;
     setSubmitting(true);
     try {
+      const dobStr = form.date_of_birth ? format(form.date_of_birth, "yyyy-MM-dd") : null;
+      const computedAge = dobStr ? calculateAge(dobStr).years : null;
       const payload = {
         name: form.name,
         species: form.species,
         breed: form.breed || null,
-        age_years: form.age_years ? parseInt(form.age_years) : null,
+        date_of_birth: dobStr,
+        age_years: computedAge,
         weight_kg: form.weight_kg ? parseFloat(form.weight_kg) : null,
         notes: form.notes || null,
         owner_id: user.id,
@@ -210,8 +217,40 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Age (years)</Label>
-                <Input type="number" min="0" value={form.age_years} onChange={(e) => setForm({ ...form, age_years: e.target.value })} />
+                <Label>Date of Birth</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !form.date_of_birth && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {form.date_of_birth ? format(form.date_of_birth, "PPP") : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={form.date_of_birth}
+                      onSelect={(date) => setForm({ ...form, date_of_birth: date || undefined })}
+                      disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                      initialFocus
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
+                {form.date_of_birth && (
+                  <p className="text-xs text-muted-foreground">
+                    Age: {(() => {
+                      const { years, months } = calculateAge(format(form.date_of_birth, "yyyy-MM-dd"));
+                      if (years === 0) return `${months} month${months !== 1 ? "s" : ""}`;
+                      return `${years} year${years !== 1 ? "s" : ""}, ${months} month${months !== 1 ? "s" : ""}`;
+                    })()}
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Weight (lbs)</Label>

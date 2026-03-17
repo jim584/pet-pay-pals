@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Pet, fetchPets, deletePet } from "@/lib/pets-api";
+import { Pet, fetchPets, deletePet, formatAge } from "@/lib/pets-api";
 import { PetFormDialog } from "@/components/pets/PetFormDialog";
 import { PetDetail } from "@/components/pets/PetDetail";
 import { toast } from "@/components/ui/sonner";
@@ -127,7 +127,7 @@ export default function PetsPage() {
                   </Button>
                 </div>
                 <div className="mt-3 flex gap-4 text-xs text-muted-foreground">
-                  {pet.age_years && <span>{pet.age_years} yr{pet.age_years > 1 ? "s" : ""}</span>}
+                  {(pet.date_of_birth || pet.age_years) && <span>{formatAge(pet)}</span>}
                   {pet.weight_kg && <span>{pet.weight_kg} lbs</span>}
                 </div>
               </CardContent>
