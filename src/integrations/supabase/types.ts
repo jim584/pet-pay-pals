@@ -14,6 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      adoption_listings: {
+        Row: {
+          age_text: string | null
+          breed: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          contact_website: string | null
+          created_at: string
+          description: string | null
+          gender: string | null
+          id: string
+          is_adopted: boolean
+          pet_name: string
+          photo_urls: string[] | null
+          posted_by: string
+          shelter_location: string | null
+          shelter_name: string
+          species: string
+          updated_at: string
+        }
+        Insert: {
+          age_text?: string | null
+          breed?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          contact_website?: string | null
+          created_at?: string
+          description?: string | null
+          gender?: string | null
+          id?: string
+          is_adopted?: boolean
+          pet_name: string
+          photo_urls?: string[] | null
+          posted_by: string
+          shelter_location?: string | null
+          shelter_name: string
+          species?: string
+          updated_at?: string
+        }
+        Update: {
+          age_text?: string | null
+          breed?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          contact_website?: string | null
+          created_at?: string
+          description?: string | null
+          gender?: string | null
+          id?: string
+          is_adopted?: boolean
+          pet_name?: string
+          photo_urls?: string[] | null
+          posted_by?: string
+          shelter_location?: string | null
+          shelter_name?: string
+          species?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       appointments: {
         Row: {
           created_at: string

@@ -19,6 +19,7 @@ import VetServicesPage from "./pages/VetServicesPage";
 import ProfileSettingsPage from "./pages/ProfileSettingsPage";
 import NotFound from "./pages/NotFound";
 import PlaceholderSection from "./pages/PlaceholderSection";
+import HelpForeverPage from "./pages/HelpForeverPage";
 
 const queryClient = new QueryClient();
 
@@ -42,7 +43,7 @@ function AppRoutes() {
         </Route>
         {/* Compass menu placeholder routes */}
         <Route path="/help-now" element={<PlaceholderSection title="Help A Pet Now™" />} />
-        <Route path="/help-forever" element={<PlaceholderSection title="Help A Pet Forever™" />} />
+        <Route path="/help-forever" element={<HelpForeverPage />} />
         <Route path="/four-feet-under" element={<PlaceholderSection title="Four Feet Under™" />} />
         <Route path="/fearfreed" element={<PlaceholderSection title="FearFreed™" />} />
         <Route path="/help-overcome" element={<PlaceholderSection title="Help A Pet Overcome™" />} />
