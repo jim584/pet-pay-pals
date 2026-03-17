@@ -35,7 +35,16 @@ export function CreateAdoptionDialog() {
     contact_email: "",
     contact_website: "",
   });
+  const [dob, setDob] = useState<Date | undefined>();
   const [photos, setPhotos] = useState<File[]>([]);
+
+  const computedAgeText = dob
+    ? (() => {
+        const { years, months } = calculateAge(format(dob, "yyyy-MM-dd"));
+        if (years === 0) return `${months} month${months !== 1 ? "s" : ""}`;
+        return `${years} year${years !== 1 ? "s" : ""}, ${months} month${months !== 1 ? "s" : ""}`;
+      })()
+    : "";
 
   const set = (key: string, value: string) => setForm((f) => ({ ...f, [key]: value }));
 
