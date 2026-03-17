@@ -8,11 +8,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/components/ui/sonner";
-import { createPet, updatePet, Pet } from "@/lib/pets-api";
+import { createPet, updatePet, Pet, calculateAge } from "@/lib/pets-api";
 import { supabase } from "@/integrations/supabase/client";
 import { isValidImageFile, ACCEPTED_IMAGE_TYPES } from "@/lib/utils";
-import { Camera, PawPrint, X } from "lucide-react";
+import { Camera, PawPrint, X, CalendarIcon } from "lucide-react";
 import { ImageCropDialog } from "@/components/ui/ImageCropDialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface PetFormDialogProps {
   open: boolean;
