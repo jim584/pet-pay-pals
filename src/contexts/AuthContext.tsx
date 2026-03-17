@@ -54,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (explicitSignOutRef.current) {
             explicitSignOutRef.current = false;
             setRole(null);
-            isExplicitSignOut = false;
+            
           } else {
             // Might be a stale-tab token expiry — try to recover
             console.warn('Unexpected SIGNED_OUT event — attempting session recovery');
