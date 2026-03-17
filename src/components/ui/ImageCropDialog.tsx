@@ -82,6 +82,26 @@ export function ImageCropDialog({
             />
           )}
         </div>
+        {showAspectOptions && (
+          <div className="px-4 pt-2 flex items-center justify-center gap-1.5">
+            {ASPECT_OPTIONS.map((opt) => (
+              <button
+                key={opt.label}
+                type="button"
+                onClick={() => setActiveAspect(opt.value)}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors",
+                  activeAspect === opt.value
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-accent"
+                )}
+              >
+                <opt.icon className="h-3.5 w-3.5" />
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="px-4 py-3 flex items-center gap-3">
           <ZoomIn className="h-4 w-4 text-muted-foreground shrink-0" />
           <Slider
