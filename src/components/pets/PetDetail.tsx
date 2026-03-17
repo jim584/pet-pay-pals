@@ -9,7 +9,7 @@ import { Pet, HealthRecord, EmergencyContact, fetchHealthRecords, fetchEmergency
 import { AddHealthRecordDialog } from "./AddHealthRecordDialog";
 import { AddEmergencyContactDialog } from "./AddEmergencyContactDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { PawPrint, Plus, Trash2, Calendar, Stethoscope, Phone, ArrowLeft, Pencil } from "lucide-react";
+import { PawPrint, Plus, Trash2, Calendar, Stethoscope, Phone, ArrowLeft, Pencil, Cake, PartyPopper } from "lucide-react";
 
 interface PetDetailProps {
   pet: Pet;
