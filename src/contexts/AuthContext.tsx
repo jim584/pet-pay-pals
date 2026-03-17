@@ -51,9 +51,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // Only clear state on explicit sign-out, not on refresh failures
         if (event === 'SIGNED_OUT') {
-          if (isExplicitSignOut) {
-            setSession(null);
-            setUser(null);
+          if (explicitSignOutRef.current) {
+            explicitSignOutRef.current = false;
             setRole(null);
             isExplicitSignOut = false;
           } else {
