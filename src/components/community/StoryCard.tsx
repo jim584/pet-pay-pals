@@ -218,9 +218,9 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
       {/* Timestamp */}
       <p className="px-3 pt-1 pb-3 text-[10px] uppercase tracking-wide text-muted-foreground">{relativeTime} ago</p>
 
-        {/* Comments section */}
-        {showComments && (
-          <div className="space-y-3 pt-3 border-t border-border/50">
+      {/* Comments section */}
+      {showComments && (
+        <div className="space-y-3 px-3 pb-3 border-t border-border/30 pt-3">
             {comments.length === 0 && (
               <p className="text-xs text-muted-foreground text-center py-3">No comments yet — be the first!</p>
             )}
