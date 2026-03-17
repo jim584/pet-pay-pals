@@ -1,44 +1,55 @@
 
 
-## Community Section UI/UX Improvements
+## Plan: Vetted™ — Affiliate E-Commerce Page
 
-After reviewing the code, I can identify several UI/UX issues with the current Community section:
+### 1. Database: Create `vetted_products` table
 
-1. **Empty state is bland** -- just a paw icon and text in a plain card
-2. **Story cards lack visual polish** -- no rounded images, flat layout, cramped spacing
-3. **No max-width constraint** -- stories stretch full width on large screens, making them hard to read
-4. **Comments section feels unfinished** -- no empty state, no visual separation between comments
-5. **Donate dialog is minimal** -- could use better visual hierarchy
-6. **Loading state is just text** -- no skeleton placeholders
-7. **Page header lacks personality** -- plain text with no visual flair
+```sql
+CREATE TABLE public.vetted_products (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  listed_by uuid NOT NULL,
+  name text NOT NULL,
+  description text,
+  image_url text,
+  price_text text,
+  external_url text NOT NULL,
+  store_name text,
+  category text NOT NULL DEFAULT 'general',
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE public.vetted_products ENABLE ROW LEVEL SECURITY;
+```
 
-### Changes
+RLS policies: public SELECT for all (anon + authenticated), authenticated INSERT/DELETE for own listings (`auth.uid() = listed_by`).
 
-**1. CommunityPage.tsx -- Better header with gradient accent and max-width container**
-- Add a gradient accent banner or subtle background to the header area
-- Constrain content width with `max-w-2xl mx-auto` for a social-feed feel (like Instagram/Twitter)
-- Add a descriptive icon alongside the heading
+### 2. Create `src/lib/vetted-api.ts`
 
-**2. CommunityFeed.tsx -- Major visual overhaul of StoryCard**
-- Add `max-w-2xl mx-auto` wrapper for feed-style centering
-- **Loading state**: Replace text with 3 skeleton card placeholders (pulsing cards with fake image/text blocks)
-- **Empty state**: More engaging design with a larger illustration area, gradient text, and a CTA button
-- **Story cards**:
-  - Move author avatar/info above the image (social media pattern: avatar + name + timestamp on top)
-  - Round the card corners more, add subtle hover shadow
-  - Better photo grid: rounded corners inside card, proper aspect ratios
-  - Action bar: cleaner spacing, subtle background strip, rounded pill-style buttons for like/comment/donate
-  - Comments: add rounded bubble styling per comment, better empty-comments message, smooth expand animation
-  - Donate button: accent gradient styling to stand out
+- `fetchVettedProducts(page, category?, search?)` — paginated query with optional category filter and ilike search on name/description/store_name, page size 12.
+- `createVettedProduct(product)` — insert new listing.
+- `deleteVettedProduct(id)` — delete own listing.
 
-**3. CreateStoryDialog.tsx -- Minor polish**
-- No major changes needed, already decent
+### 3. Create `src/components/vetted/ProductCard.tsx`
 
-### Technical Details
+Card with product image (aspect-ratio), name, price text, store badge (e.g. "Amazon"), description snippet, and a "Shop Now" `<a>` button opening `external_url` in a new tab via `target="_blank" rel="noopener noreferrer"`.
 
-All changes are purely CSS/Tailwind and minor JSX restructuring in two files:
-- `src/pages/CommunityPage.tsx` -- wrap content in max-width container, enhance header
-- `src/components/community/CommunityFeed.tsx` -- skeleton loading, improved card layout, better action bar styling, comment bubbles, enhanced empty state
+### 4. Create `src/components/vetted/CreateProductDialog.tsx`
 
-No database or API changes required.
+Form dialog: name, description, image URL, price text, external URL, store name, category select. Categories: Food, Toys, Health, Accessories, General.
+
+### 5. Create `src/pages/VettedPage.tsx`
+
+Shop-style layout following the same pattern as `HelpForeverPage`:
+- Hero banner with Vetted™ branding.
+- Search bar (debounced) + category filter tabs.
+- Responsive product grid (2 cols mobile, 4 cols desktop).
+- "List a Product" button for authenticated users.
+- Infinite scroll with "Load More".
+
+### 6. Update `src/App.tsx`
+
+Replace `/vetted` placeholder route with `VettedPage`.
+
+### 7. Seed sample products
+
+Insert 6-8 sample products with Unsplash images and example external links (Amazon, Chewy, etc.).
 
