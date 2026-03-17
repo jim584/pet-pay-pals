@@ -9,7 +9,7 @@ import { Pet, HealthRecord, EmergencyContact, fetchHealthRecords, fetchEmergency
 import { AddHealthRecordDialog } from "./AddHealthRecordDialog";
 import { AddEmergencyContactDialog } from "./AddEmergencyContactDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { PawPrint, Plus, Trash2, Calendar, Stethoscope, Phone, ArrowLeft, Pencil } from "lucide-react";
+import { PawPrint, Plus, Trash2, Calendar, Stethoscope, Phone, ArrowLeft, Pencil, Cake, PartyPopper } from "lucide-react";
 
 interface PetDetailProps {
   pet: Pet;
@@ -105,6 +105,50 @@ export function PetDetail({ pet, onBack, onEdit }: PetDetailProps) {
           </Card>
         ))}
       </div>
+
+      {/* Birthday Countdown */}
+      {pet.date_of_birth && (() => {
+        const today = new Date();
+        const birth = new Date(pet.date_of_birth + "T00:00:00");
+        const nextBirthday = new Date(today.getFullYear(), birth.getMonth(), birth.getDate());
+        if (nextBirthday.getTime() < new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()) {
+          nextBirthday.setFullYear(today.getFullYear() + 1);
+        }
+        const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const daysUntil = Math.round((nextBirthday.getTime() - todayMidnight.getTime()) / (1000 * 60 * 60 * 24));
+        const isToday = daysUntil === 0;
+
+        return (
+          <Card className={isToday ? "border-primary bg-primary/5" : "border-accent"}>
+            <CardContent className="p-4 flex items-center gap-3">
+              {isToday ? (
+                <PartyPopper className="h-8 w-8 text-primary shrink-0" />
+              ) : (
+                <Cake className="h-8 w-8 text-accent-foreground/60 shrink-0" />
+              )}
+              <div>
+                {isToday ? (
+                  <>
+                    <p className="font-bold font-display text-primary">🎉 Happy Birthday, {pet.name}!</p>
+                    <p className="text-sm text-muted-foreground">
+                      Born {birth.toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-bold font-display">
+                      {daysUntil === 1 ? "Birthday tomorrow! 🎂" : `Birthday in ${daysUntil} days`}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {nextBirthday.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
+                    </p>
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {pet.notes && (
         <Card>
