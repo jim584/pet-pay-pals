@@ -200,7 +200,7 @@ export function ImageCropDialog({
             {filtersChanged && (
               <button
                 type="button"
-                onClick={() => setFilters({ ...DEFAULT_FILTERS })}
+                onClick={() => { setFilters({ ...DEFAULT_FILTERS }); setActivePreset("Original"); }}
                 className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
                 <RotateCcw className="h-3 w-3" />
