@@ -5,11 +5,16 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Upload, Loader2 } from "lucide-react";
+import { Plus, Upload, Loader2, CalendarIcon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { createAdoptionListing, uploadAdoptionPhoto } from "@/lib/adoption-api";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { calculateAge } from "@/lib/pets-api";
 
 export function CreateAdoptionDialog() {
   const { user } = useAuth();
@@ -30,7 +35,16 @@ export function CreateAdoptionDialog() {
     contact_email: "",
     contact_website: "",
   });
+  const [dob, setDob] = useState<Date | undefined>();
   const [photos, setPhotos] = useState<File[]>([]);
+
+  const computedAgeText = dob
+    ? (() => {
+        const { years, months } = calculateAge(format(dob, "yyyy-MM-dd"));
+        if (years === 0) return `${months} month${months !== 1 ? "s" : ""}`;
+        return `${years} year${years !== 1 ? "s" : ""}, ${months} month${months !== 1 ? "s" : ""}`;
+      })()
+    : "";
 
   const set = (key: string, value: string) => setForm((f) => ({ ...f, [key]: value }));
 
@@ -54,7 +68,7 @@ export function CreateAdoptionDialog() {
         pet_name: form.pet_name,
         species: form.species,
         breed: form.breed || null,
-        age_text: form.age_text || null,
+        age_text: dob ? computedAgeText : (form.age_text || null),
         gender: form.gender || null,
         description: form.description || null,
         photo_urls,
@@ -70,6 +84,7 @@ export function CreateAdoptionDialog() {
       queryClient.invalidateQueries({ queryKey: ["adoption-listings"] });
       setOpen(false);
       setForm({ pet_name: "", species: "dog", breed: "", age_text: "", gender: "", description: "", shelter_name: "", shelter_location: "", contact_phone: "", contact_email: "", contact_website: "" });
+      setDob(undefined);
       setPhotos([]);
     } catch (err: any) {
       toast({ title: "Error posting listing", description: err.message, variant: "destructive" });
@@ -113,8 +128,37 @@ export function CreateAdoptionDialog() {
               <Input value={form.breed} onChange={(e) => set("breed", e.target.value)} placeholder="e.g. Golden Retriever" />
             </div>
             <div className="space-y-1.5">
-              <Label>Age</Label>
-              <Input value={form.age_text} onChange={(e) => set("age_text", e.target.value)} placeholder="e.g. 2 years" />
+              <Label>Date of Birth</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !dob && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dob ? format(dob, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={dob}
+                    onSelect={setDob}
+                    disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+              {dob && (
+                <p className="text-xs text-muted-foreground">Age: {computedAgeText}</p>
+              )}
+              {!dob && (
+                <Input value={form.age_text} onChange={(e) => set("age_text", e.target.value)} placeholder="Or type e.g. 2 years" className="mt-1.5" />
+              )}
             </div>
             <div className="space-y-1.5 col-span-2">
               <Label>Gender</Label>
