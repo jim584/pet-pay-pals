@@ -18,6 +18,8 @@ import { STORY_CATEGORIES } from "@/lib/community-api";
 export default function HomePage() {
   const { user, loading } = useAuth();
   const isMobile = useIsMobile();
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("all");
 
   const { data: profile } = useQuery({
     queryKey: ["headerProfile", user?.id],
