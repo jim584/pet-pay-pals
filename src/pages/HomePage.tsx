@@ -1,16 +1,19 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CompassMenu } from "@/components/home/CompassMenu";
 import { PublicFeed } from "@/components/home/PublicFeed";
 import { SuggestedPets } from "@/components/home/SuggestedPets";
 import { MobileSuggestedPets } from "@/components/home/MobileSuggestedPets";
-import { PawPrint, User } from "lucide-react";
+import { PawPrint, User, Search } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { STORY_CATEGORIES } from "@/lib/community-api";
 
 export default function HomePage() {
   const { user, loading } = useAuth();
