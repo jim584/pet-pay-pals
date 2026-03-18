@@ -1,44 +1,32 @@
 
 
-## Community Section UI/UX Improvements
+## Plan: Photo Carousel on Feed Cards
 
-After reviewing the code, I can identify several UI/UX issues with the current Community section:
-
-1. **Empty state is bland** -- just a paw icon and text in a plain card
-2. **Story cards lack visual polish** -- no rounded images, flat layout, cramped spacing
-3. **No max-width constraint** -- stories stretch full width on large screens, making them hard to read
-4. **Comments section feels unfinished** -- no empty state, no visual separation between comments
-5. **Donate dialog is minimal** -- could use better visual hierarchy
-6. **Loading state is just text** -- no skeleton placeholders
-7. **Page header lacks personality** -- plain text with no visual flair
+Currently both `PublicFeed.tsx` (home page) and `StoryCard.tsx` (community page) only show the first photo or a simple grid. We'll add a swipeable carousel with dot indicators when a story has multiple photos.
 
 ### Changes
 
-**1. CommunityPage.tsx -- Better header with gradient accent and max-width container**
-- Add a gradient accent banner or subtle background to the header area
-- Constrain content width with `max-w-2xl mx-auto` for a social-feed feel (like Instagram/Twitter)
-- Add a descriptive icon alongside the heading
+**`src/components/home/PublicFeed.tsx`** (lines 174-183)
+- Replace the single `<img>` with an Embla carousel when `photo_urls.length > 1`
+- Keep single-image rendering unchanged for posts with 1 photo
+- Add dot indicators below the image for navigation
+- Each slide uses `AspectRatio` with the same 4:3 ratio, clickable for fullscreen
 
-**2. CommunityFeed.tsx -- Major visual overhaul of StoryCard**
-- Add `max-w-2xl mx-auto` wrapper for feed-style centering
-- **Loading state**: Replace text with 3 skeleton card placeholders (pulsing cards with fake image/text blocks)
-- **Empty state**: More engaging design with a larger illustration area, gradient text, and a CTA button
-- **Story cards**:
-  - Move author avatar/info above the image (social media pattern: avatar + name + timestamp on top)
-  - Round the card corners more, add subtle hover shadow
-  - Better photo grid: rounded corners inside card, proper aspect ratios
-  - Action bar: cleaner spacing, subtle background strip, rounded pill-style buttons for like/comment/donate
-  - Comments: add rounded bubble styling per comment, better empty-comments message, smooth expand animation
-  - Donate button: accent gradient styling to stand out
+**`src/components/community/StoryCard.tsx`** (lines 120-128, the photo grid section)
+- Replace the current grid layout with the same carousel component when multiple photos exist
+- Keep single-image display as-is
+- Add dot indicators and swipe support
 
-**3. CreateStoryDialog.tsx -- Minor polish**
-- No major changes needed, already decent
+**Shared carousel pattern** (inline in each component, using existing `Carousel` components):
+```
+import { Carousel, CarouselContent, CarouselItem, CarouselApi } from "@/components/ui/carousel"
+```
+- Track active slide index via `CarouselApi` for dot indicators
+- Render dots as small circles below the image area
+- No prev/next arrows (swipe-only for clean mobile UX)
 
-### Technical Details
-
-All changes are purely CSS/Tailwind and minor JSX restructuring in two files:
-- `src/pages/CommunityPage.tsx` -- wrap content in max-width container, enhance header
-- `src/components/community/CommunityFeed.tsx` -- skeleton loading, improved card layout, better action bar styling, comment bubbles, enhanced empty state
-
-No database or API changes required.
+### Visual Design
+- Dot indicators: small circles centered below image, active dot uses `bg-primary`, inactive `bg-muted-foreground/30`
+- Smooth swipe transitions via Embla defaults
+- Maintains existing aspect ratios and click-to-fullscreen behavior
 
