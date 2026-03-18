@@ -3,7 +3,7 @@ import { fetchPublicFeed, followPet, unfollowPet, checkFollowing, FEED_PAGE_SIZE
 import { toggleLike, batchCheckLiked, STORY_CATEGORIES } from "@/lib/community-api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
