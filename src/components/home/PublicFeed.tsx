@@ -3,7 +3,7 @@ import { fetchPublicFeed, followPet, unfollowPet, checkFollowing, FEED_PAGE_SIZE
 import { toggleLike, batchCheckLiked, STORY_CATEGORIES } from "@/lib/community-api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel";
 import { PetProfilePreview } from "./PetProfilePreview";
 import { StoryComments } from "./StoryComments";
 import { MessageCircle, Share2, UserPlus, PawPrint, User, X, RefreshCw, Search } from "lucide-react";
@@ -172,15 +173,19 @@ function FeedCard({ story, isFollowing, isLiked, onFollow, onLike, user, isSampl
       </CardHeader>
 
       {story.photo_urls && story.photo_urls.length > 0 && (
-        <AspectRatio ratio={4 / 3}>
-          <img
-            src={story.photo_urls[0]}
-            alt={story.title}
-            className="object-cover w-full h-full cursor-pointer transition-opacity hover:opacity-90"
-            loading="lazy"
-            onClick={() => onImageClick(story.photo_urls![0], story.title)}
-          />
-        </AspectRatio>
+        story.photo_urls.length === 1 ? (
+          <AspectRatio ratio={4 / 3}>
+            <img
+              src={story.photo_urls[0]}
+              alt={story.title}
+              className="object-cover w-full h-full cursor-pointer transition-opacity hover:opacity-90"
+              loading="lazy"
+              onClick={() => onImageClick(story.photo_urls![0], story.title)}
+            />
+          </AspectRatio>
+        ) : (
+          <FeedCarousel photos={story.photo_urls} alt={story.title} onImageClick={(url) => onImageClick(url, story.title)} />
+        )
       )}
 
       <CardContent className="p-4 space-y-2">
@@ -406,6 +411,48 @@ export function PublicFeed({ search, category }: { search?: string; category?: s
           )}
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function FeedCarousel({ photos, alt, onImageClick }: { photos: string[]; alt: string; onImageClick: (url: string) => void }) {
+  const [api, setApi] = useState<CarouselApi>();
+  const [current, setCurrent] = useState(0);
+
+  useEffect(() => {
+    if (!api) return;
+    setCurrent(api.selectedScrollSnap());
+    api.on("select", () => setCurrent(api.selectedScrollSnap()));
+  }, [api]);
+
+  return (
+    <div className="relative">
+      <Carousel setApi={setApi} className="w-full">
+        <CarouselContent className="-ml-0">
+          {photos.map((url, i) => (
+            <CarouselItem key={i} className="pl-0">
+              <AspectRatio ratio={4 / 3}>
+                <img
+                  src={url}
+                  alt={`${alt} - photo ${i + 1}`}
+                  className="object-cover w-full h-full cursor-pointer transition-opacity hover:opacity-90"
+                  loading="lazy"
+                  onClick={() => onImageClick(url)}
+                />
+              </AspectRatio>
+            </CarouselItem>
+          ))}
+        </CarouselContent>
+      </Carousel>
+      <div className="flex justify-center gap-1.5 py-2">
+        {photos.map((_, i) => (
+          <button
+            key={i}
+            className={`h-1.5 rounded-full transition-all ${i === current ? "w-4 bg-primary" : "w-1.5 bg-muted-foreground/30"}`}
+            onClick={() => api?.scrollTo(i)}
+          />
+        ))}
+      </div>
     </div>
   );
 }

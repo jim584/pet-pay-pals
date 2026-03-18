@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import {
 } from "@/lib/community-api";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel";
 
 export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: () => void }) {
   const { user } = useAuth();
@@ -151,11 +152,15 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
 
       {/* Photos */}
       {story.photo_urls && story.photo_urls.length > 0 && (
-        <div className={`mx-3 mb-2 overflow-hidden rounded-xl ${story.photo_urls.length === 1 ? "" : "grid grid-cols-2 gap-1"}`}>
-          {story.photo_urls.slice(0, 4).map((url, i) => (
-            <img key={i} src={url} alt="" className={`w-full object-cover ${story.photo_urls!.length === 1 ? "max-h-80 rounded-xl" : "h-40 rounded-lg"}`} />
-          ))}
-        </div>
+        story.photo_urls.length === 1 ? (
+          <div className="mx-3 mb-2 overflow-hidden rounded-xl">
+            <img src={story.photo_urls[0]} alt="" className="w-full object-cover max-h-80 rounded-xl" />
+          </div>
+        ) : (
+          <div className="mx-3 mb-2">
+            <StoryCarousel photos={story.photo_urls} />
+          </div>
+        )
       )}
 
       <CardContent className="px-4 pb-4 pt-1 space-y-3">
@@ -341,6 +346,40 @@ function CommentBubble({ c, user, liked, onLike, onDelete, onEdit, onReply }: { 
           <Trash2 className="h-3 w-3" />
         </button>
       )}
+    </div>
+  );
+}
+
+function StoryCarousel({ photos }: { photos: string[] }) {
+  const [api, setApi] = useState<CarouselApi>();
+  const [current, setCurrent] = useState(0);
+
+  useEffect(() => {
+    if (!api) return;
+    setCurrent(api.selectedScrollSnap());
+    api.on("select", () => setCurrent(api.selectedScrollSnap()));
+  }, [api]);
+
+  return (
+    <div className="relative overflow-hidden rounded-xl">
+      <Carousel setApi={setApi} className="w-full">
+        <CarouselContent className="-ml-0">
+          {photos.map((url, i) => (
+            <CarouselItem key={i} className="pl-0">
+              <img src={url} alt={`Photo ${i + 1}`} className="w-full object-cover max-h-80 rounded-xl" />
+            </CarouselItem>
+          ))}
+        </CarouselContent>
+      </Carousel>
+      <div className="flex justify-center gap-1.5 py-2">
+        {photos.map((_, i) => (
+          <button
+            key={i}
+            className={`h-1.5 rounded-full transition-all ${i === current ? "w-4 bg-primary" : "w-1.5 bg-muted-foreground/30"}`}
+            onClick={() => api?.scrollTo(i)}
+          />
+        ))}
+      </div>
     </div>
   );
 }
