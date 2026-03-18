@@ -173,19 +173,11 @@ function FeedCard({ story, isFollowing, isLiked, onFollow, onLike, user, isSampl
       </CardHeader>
 
       {story.photo_urls && story.photo_urls.length > 0 && (
-        story.photo_urls.length === 1 ? (
-          <AspectRatio ratio={4 / 3}>
-            <img
-              src={story.photo_urls[0]}
-              alt={story.title}
-              className="object-cover w-full h-full cursor-pointer transition-opacity hover:opacity-90"
-              loading="lazy"
-              onClick={() => onImageClick(story.photo_urls![0], story.title)}
-            />
-          </AspectRatio>
-        ) : (
-          <FeedCarousel photos={story.photo_urls} alt={story.title} onImageClick={(url) => onImageClick(url, story.title)} />
-        )
+        <PhotoGrid
+          photos={story.photo_urls}
+          alt={story.title}
+          onImageClick={(url) => onImageClick(url, story.title)}
+        />
       )}
 
       <CardContent className="p-4 space-y-2">
