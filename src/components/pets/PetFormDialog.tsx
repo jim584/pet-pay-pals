@@ -13,6 +13,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { isValidImageFile, ACCEPTED_IMAGE_TYPES } from "@/lib/utils";
 import { Camera, PawPrint, X, CalendarIcon } from "lucide-react";
 import { ImageCropDialog } from "@/components/ui/ImageCropDialog";
+import { getBreedsForSpecies } from "@/lib/breeds";
+import { BreedCombobox } from "@/components/pets/BreedCombobox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
@@ -199,7 +201,7 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Species</Label>
-                <Select value={form.species} onValueChange={(v) => setForm({ ...form, species: v })}>
+                <Select value={form.species} onValueChange={(v) => setForm({ ...form, species: v, breed: "" })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="dog">Dog</SelectItem>
@@ -212,7 +214,15 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
               </div>
               <div className="space-y-2">
                 <Label>Breed</Label>
-                <Input value={form.breed} onChange={(e) => setForm({ ...form, breed: e.target.value })} />
+                {getBreedsForSpecies(form.species).length > 0 ? (
+                  <BreedCombobox
+                    breeds={getBreedsForSpecies(form.species)}
+                    value={form.breed}
+                    onChange={(v) => setForm({ ...form, breed: v })}
+                  />
+                ) : (
+                  <Input value={form.breed} onChange={(e) => setForm({ ...form, breed: e.target.value })} />
+                )}
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
