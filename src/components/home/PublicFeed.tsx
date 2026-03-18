@@ -424,7 +424,7 @@ function FeedCarousel({ photos, alt, onImageClick }: { photos: string[]; alt: st
 
   return (
     <div className="relative w-full">
-      <div className="overflow-hidden w-full">
+      <div className="overflow-hidden w-full relative">
         <div
           className="flex transition-transform duration-300 ease-in-out"
           style={{ transform: `translateX(-${current * 100}%)` }}
@@ -443,8 +443,11 @@ function FeedCarousel({ photos, alt, onImageClick }: { photos: string[]; alt: st
             </div>
           ))}
         </div>
+        {/* Photo counter overlay */}
+        <div className="absolute top-3 right-3 bg-background/70 backdrop-blur text-foreground text-xs font-medium px-2 py-0.5 rounded-full">
+          {`${current + 1}/${photos.length}`}
+        </div>
       </div>
-      {/* Swipe hint arrows */}
       {current > 0 && (
         <button
           onClick={() => goTo(current - 1)}
