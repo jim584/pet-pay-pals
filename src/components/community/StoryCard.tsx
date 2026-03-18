@@ -375,6 +375,7 @@ function StoryCarousel({ photos }: { photos: string[] }) {
           {`${current + 1}/${photos.length}`}
         </div>
       </div>
+      {current > 0 && (
         <button
           onClick={() => goTo(current - 1)}
           className="absolute left-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-background/70 backdrop-blur flex items-center justify-center shadow-sm hover:bg-background/90 transition-colors"
