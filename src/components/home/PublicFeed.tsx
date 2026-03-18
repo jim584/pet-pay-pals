@@ -399,11 +399,34 @@ export function PublicFeed({ search, category }: { search?: string; category?: s
             <X className="h-5 w-5" />
           </button>
           {lightbox && (
-            <img
-              src={lightbox.url}
-              alt={lightbox.alt}
-              className="w-full h-full max-h-[85vh] object-contain rounded-lg"
-            />
+            <>
+              {lightbox.photos.length > 1 && (
+                <div className="absolute top-3 left-3 z-50 bg-background/70 backdrop-blur text-foreground text-xs font-medium px-2 py-0.5 rounded-full">
+                  {lightbox.index + 1}/{lightbox.photos.length}
+                </div>
+              )}
+              {lightbox.index > 0 && (
+                <button
+                  onClick={() => setLightbox((prev) => prev ? { ...prev, index: prev.index - 1 } : null)}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 z-50 h-10 w-10 rounded-full bg-background/80 backdrop-blur flex items-center justify-center shadow-md hover:bg-background transition-colors"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </button>
+              )}
+              {lightbox.index < lightbox.photos.length - 1 && (
+                <button
+                  onClick={() => setLightbox((prev) => prev ? { ...prev, index: prev.index + 1 } : null)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 z-50 h-10 w-10 rounded-full bg-background/80 backdrop-blur flex items-center justify-center shadow-md hover:bg-background transition-colors"
+                >
+                  <ArrowRight className="h-5 w-5" />
+                </button>
+              )}
+              <img
+                src={lightbox.photos[lightbox.index]}
+                alt={lightbox.alt}
+                className="w-full h-full max-h-[85vh] object-contain rounded-lg"
+              />
+            </>
           )}
         </DialogContent>
       </Dialog>
