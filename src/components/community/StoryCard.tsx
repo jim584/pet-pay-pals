@@ -349,3 +349,37 @@ function CommentBubble({ c, user, liked, onLike, onDelete, onEdit, onReply }: { 
     </div>
   );
 }
+
+function StoryCarousel({ photos }: { photos: string[] }) {
+  const [api, setApi] = useState<CarouselApi>();
+  const [current, setCurrent] = useState(0);
+
+  useEffect(() => {
+    if (!api) return;
+    setCurrent(api.selectedScrollSnap());
+    api.on("select", () => setCurrent(api.selectedScrollSnap()));
+  }, [api]);
+
+  return (
+    <div className="relative overflow-hidden rounded-xl">
+      <Carousel setApi={setApi} className="w-full">
+        <CarouselContent className="-ml-0">
+          {photos.map((url, i) => (
+            <CarouselItem key={i} className="pl-0">
+              <img src={url} alt={`Photo ${i + 1}`} className="w-full object-cover max-h-80 rounded-xl" />
+            </CarouselItem>
+          ))}
+        </CarouselContent>
+      </Carousel>
+      <div className="flex justify-center gap-1.5 py-2">
+        {photos.map((_, i) => (
+          <button
+            key={i}
+            className={`h-1.5 rounded-full transition-all ${i === current ? "w-4 bg-primary" : "w-1.5 bg-muted-foreground/30"}`}
+            onClick={() => api?.scrollTo(i)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
