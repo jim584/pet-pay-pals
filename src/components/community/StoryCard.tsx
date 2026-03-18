@@ -152,11 +152,15 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
 
       {/* Photos */}
       {story.photo_urls && story.photo_urls.length > 0 && (
-        <div className={`mx-3 mb-2 overflow-hidden rounded-xl ${story.photo_urls.length === 1 ? "" : "grid grid-cols-2 gap-1"}`}>
-          {story.photo_urls.slice(0, 4).map((url, i) => (
-            <img key={i} src={url} alt="" className={`w-full object-cover ${story.photo_urls!.length === 1 ? "max-h-80 rounded-xl" : "h-40 rounded-lg"}`} />
-          ))}
-        </div>
+        story.photo_urls.length === 1 ? (
+          <div className="mx-3 mb-2 overflow-hidden rounded-xl">
+            <img src={story.photo_urls[0]} alt="" className="w-full object-cover max-h-80 rounded-xl" />
+          </div>
+        ) : (
+          <div className="mx-3 mb-2">
+            <StoryCarousel photos={story.photo_urls} />
+          </div>
+        )
       )}
 
       <CardContent className="px-4 pb-4 pt-1 space-y-3">
