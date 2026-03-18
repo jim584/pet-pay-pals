@@ -426,20 +426,20 @@ function FeedCarousel({ photos, alt, onImageClick }: { photos: string[]; alt: st
   }, [api]);
 
   return (
-    <div className="relative">
-      <Carousel setApi={setApi} className="w-full">
+    <div className="relative w-full overflow-hidden">
+      <Carousel setApi={setApi} opts={{ align: "start", loop: false }} className="w-full">
         <CarouselContent className="ml-0">
           {photos.map((url, i) => (
-            <CarouselItem key={i} className="pl-0 basis-full">
-              <div className="relative w-full" style={{ paddingBottom: '75%' }}>
+            <CarouselItem key={i} className="pl-0" style={{ flex: '0 0 100%', minWidth: 0 }}>
+              <AspectRatio ratio={4 / 3}>
                 <img
                   src={url}
                   alt={`${alt} - photo ${i + 1}`}
-                  className="absolute inset-0 object-cover w-full h-full cursor-pointer transition-opacity hover:opacity-90"
+                  className="object-cover w-full h-full cursor-pointer transition-opacity hover:opacity-90"
                   loading="lazy"
                   onClick={() => onImageClick(url)}
                 />
-              </div>
+              </AspectRatio>
             </CarouselItem>
           ))}
         </CarouselContent>
