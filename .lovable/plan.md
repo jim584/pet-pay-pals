@@ -1,44 +1,26 @@
 
 
-## Community Section UI/UX Improvements
+## Plan: Use Breed List for Searchable Breed Dropdown
 
-After reviewing the code, I can identify several UI/UX issues with the current Community section:
+Use the uploaded breed data to replace the free-text breed input with a searchable, species-aware dropdown in the pet registration form.
 
-1. **Empty state is bland** -- just a paw icon and text in a plain card
-2. **Story cards lack visual polish** -- no rounded images, flat layout, cramped spacing
-3. **No max-width constraint** -- stories stretch full width on large screens, making them hard to read
-4. **Comments section feels unfinished** -- no empty state, no visual separation between comments
-5. **Donate dialog is minimal** -- could use better visual hierarchy
-6. **Loading state is just text** -- no skeleton placeholders
-7. **Page header lacks personality** -- plain text with no visual flair
+### What Changes
 
-### Changes
+**1. Create a breed data file -- `src/lib/breeds.ts`**
+- Export two arrays: `DOG_BREEDS` (~200 entries) and `CAT_BREEDS` (59 entries) extracted from the PDF
+- Export a helper `getBreedsForSpecies(species: string)` that returns the appropriate list (or empty array for bird/rabbit/other)
 
-**1. CommunityPage.tsx -- Better header with gradient accent and max-width container**
-- Add a gradient accent banner or subtle background to the header area
-- Constrain content width with `max-w-2xl mx-auto` for a social-feed feel (like Instagram/Twitter)
-- Add a descriptive icon alongside the heading
-
-**2. CommunityFeed.tsx -- Major visual overhaul of StoryCard**
-- Add `max-w-2xl mx-auto` wrapper for feed-style centering
-- **Loading state**: Replace text with 3 skeleton card placeholders (pulsing cards with fake image/text blocks)
-- **Empty state**: More engaging design with a larger illustration area, gradient text, and a CTA button
-- **Story cards**:
-  - Move author avatar/info above the image (social media pattern: avatar + name + timestamp on top)
-  - Round the card corners more, add subtle hover shadow
-  - Better photo grid: rounded corners inside card, proper aspect ratios
-  - Action bar: cleaner spacing, subtle background strip, rounded pill-style buttons for like/comment/donate
-  - Comments: add rounded bubble styling per comment, better empty-comments message, smooth expand animation
-  - Donate button: accent gradient styling to stand out
-
-**3. CreateStoryDialog.tsx -- Minor polish**
-- No major changes needed, already decent
+**2. Update `src/components/pets/PetFormDialog.tsx`**
+- Replace the plain `<Input>` for breed with a searchable combobox (using the existing `Command` + `Popover` components from shadcn/ui)
+- When species is "dog" or "cat", show the filtered breed list as the user types
+- For other species (bird, rabbit, other), keep the free-text input since we don't have breed data
+- When species changes, clear the breed field to avoid mismatched data
+- Allow users to type a custom breed not in the list (in case something is missing)
 
 ### Technical Details
 
-All changes are purely CSS/Tailwind and minor JSX restructuring in two files:
-- `src/pages/CommunityPage.tsx` -- wrap content in max-width container, enhance header
-- `src/components/community/CommunityFeed.tsx` -- skeleton loading, improved card layout, better action bar styling, comment bubbles, enhanced empty state
-
-No database or API changes required.
+- No new dependencies -- uses existing `Command`, `Popover`, `CommandInput`, `CommandItem` components already in the project
+- Breeds are stored as a static TypeScript file (no database table needed)
+- The combobox filters breeds client-side as the user types, showing matching results
+- Approximately 260 breeds total, small enough to bundle statically
 
