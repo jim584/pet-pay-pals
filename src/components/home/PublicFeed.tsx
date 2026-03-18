@@ -11,10 +11,10 @@ import { Badge } from "@/components/ui/badge";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel";
+
 import { PetProfilePreview } from "./PetProfilePreview";
 import { StoryComments } from "./StoryComments";
-import { MessageCircle, Share2, UserPlus, PawPrint, User, X, RefreshCw, Search } from "lucide-react";
+import { MessageCircle, Share2, UserPlus, PawPrint, User, X, RefreshCw, Search, ArrowLeft, ArrowRight } from "lucide-react";
 import { PrayingHands } from "@/components/icons/PrayingHands";
 import { formatDistanceToNow } from "date-fns";
 
@@ -416,21 +416,21 @@ export function PublicFeed({ search, category }: { search?: string; category?: s
 }
 
 function FeedCarousel({ photos, alt, onImageClick }: { photos: string[]; alt: string; onImageClick: (url: string) => void }) {
-  const [api, setApi] = useState<CarouselApi>();
   const [current, setCurrent] = useState(0);
 
-  useEffect(() => {
-    if (!api) return;
-    setCurrent(api.selectedScrollSnap());
-    api.on("select", () => setCurrent(api.selectedScrollSnap()));
-  }, [api]);
+  const goTo = (index: number) => {
+    setCurrent(Math.max(0, Math.min(index, photos.length - 1)));
+  };
 
   return (
-    <div className="relative">
-      <Carousel setApi={setApi} className="w-full">
-        <CarouselContent className="-ml-0">
+    <div className="relative w-full">
+      <div className="overflow-hidden w-full">
+        <div
+          className="flex transition-transform duration-300 ease-in-out"
+          style={{ transform: `translateX(-${current * 100}%)` }}
+        >
           {photos.map((url, i) => (
-            <CarouselItem key={i} className="pl-0">
+            <div key={i} className="w-full shrink-0">
               <AspectRatio ratio={4 / 3}>
                 <img
                   src={url}
@@ -440,16 +440,34 @@ function FeedCarousel({ photos, alt, onImageClick }: { photos: string[]; alt: st
                   onClick={() => onImageClick(url)}
                 />
               </AspectRatio>
-            </CarouselItem>
+            </div>
           ))}
-        </CarouselContent>
-      </Carousel>
+        </div>
+      </div>
+      {/* Swipe hint arrows */}
+      {current > 0 && (
+        <button
+          onClick={() => goTo(current - 1)}
+          className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-background/70 backdrop-blur flex items-center justify-center shadow-sm hover:bg-background/90 transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </button>
+      )}
+      {current < photos.length - 1 && (
+        <button
+          onClick={() => goTo(current + 1)}
+          className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-background/70 backdrop-blur flex items-center justify-center shadow-sm hover:bg-background/90 transition-colors"
+        >
+          <ArrowRight className="h-4 w-4" />
+        </button>
+      )}
+      {/* Dot indicators */}
       <div className="flex justify-center gap-1.5 py-2">
         {photos.map((_, i) => (
           <button
             key={i}
             className={`h-1.5 rounded-full transition-all ${i === current ? "w-4 bg-primary" : "w-1.5 bg-muted-foreground/30"}`}
-            onClick={() => api?.scrollTo(i)}
+            onClick={() => goTo(i)}
           />
         ))}
       </div>
