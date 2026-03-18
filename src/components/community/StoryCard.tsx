@@ -370,8 +370,11 @@ function StoryCarousel({ photos }: { photos: string[] }) {
             </div>
           ))}
         </div>
+        {/* Photo counter overlay */}
+        <div className="absolute top-3 right-3 bg-background/70 backdrop-blur text-foreground text-xs font-medium px-2 py-0.5 rounded-full">
+          {current + 1}/{photos.length}
+        </div>
       </div>
-      {current > 0 && (
         <button
           onClick={() => goTo(current - 1)}
           className="absolute left-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-background/70 backdrop-blur flex items-center justify-center shadow-sm hover:bg-background/90 transition-colors"
