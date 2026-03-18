@@ -391,43 +391,45 @@ export function PublicFeed({ search, category }: { search?: string; category?: s
       )}
 
       <Dialog open={!!lightbox} onOpenChange={() => setLightbox(null)}>
-        <DialogContent className="max-w-[90vw] max-h-[90vh] p-0 border-none bg-transparent shadow-none [&>button]:hidden">
-          <button
-            onClick={() => setLightbox(null)}
-            className="absolute top-2 right-2 z-50 rounded-full bg-background/80 p-1.5 backdrop-blur hover:bg-background transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
-          {lightbox && (
-            <>
-              {lightbox.photos.length > 1 && (
-                <div className="absolute top-3 left-3 z-50 bg-background/70 backdrop-blur text-foreground text-xs font-medium px-2 py-0.5 rounded-full">
-                  {lightbox.index + 1}/{lightbox.photos.length}
-                </div>
-              )}
-              {lightbox.index > 0 && (
-                <button
-                  onClick={() => setLightbox((prev) => prev ? { ...prev, index: prev.index - 1 } : null)}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 z-50 h-10 w-10 rounded-full bg-background/80 backdrop-blur flex items-center justify-center shadow-md hover:bg-background transition-colors"
-                >
-                  <ArrowLeft className="h-5 w-5" />
-                </button>
-              )}
-              {lightbox.index < lightbox.photos.length - 1 && (
-                <button
-                  onClick={() => setLightbox((prev) => prev ? { ...prev, index: prev.index + 1 } : null)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 z-50 h-10 w-10 rounded-full bg-background/80 backdrop-blur flex items-center justify-center shadow-md hover:bg-background transition-colors"
-                >
-                  <ArrowRight className="h-5 w-5" />
-                </button>
-              )}
-              <img
-                src={lightbox.photos[lightbox.index]}
-                alt={lightbox.alt}
-                className="w-full h-full max-h-[85vh] object-contain rounded-lg"
-              />
-            </>
-          )}
+        <DialogContent className="max-w-[90vw] max-h-[90vh] p-0 border-none bg-transparent shadow-none [&>button]:hidden overflow-visible">
+          <div className="relative w-full h-full">
+            <button
+              onClick={() => setLightbox(null)}
+              className="absolute -top-4 -right-4 z-50 rounded-full bg-background p-2 shadow-lg hover:bg-accent transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            {lightbox && (
+              <>
+                {lightbox.photos.length > 1 && (
+                  <div className="absolute top-3 left-3 z-50 bg-black/60 backdrop-blur text-white text-xs font-medium px-2.5 py-1 rounded-full">
+                    {lightbox.index + 1}/{lightbox.photos.length}
+                  </div>
+                )}
+                {lightbox.index > 0 && (
+                  <button
+                    onClick={() => setLightbox((prev) => prev ? { ...prev, index: prev.index - 1 } : null)}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 z-50 h-11 w-11 rounded-full bg-black/60 backdrop-blur text-white flex items-center justify-center shadow-lg hover:bg-black/80 transition-colors"
+                  >
+                    <ArrowLeft className="h-5 w-5" />
+                  </button>
+                )}
+                {lightbox.index < lightbox.photos.length - 1 && (
+                  <button
+                    onClick={() => setLightbox((prev) => prev ? { ...prev, index: prev.index + 1 } : null)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 z-50 h-11 w-11 rounded-full bg-black/60 backdrop-blur text-white flex items-center justify-center shadow-lg hover:bg-black/80 transition-colors"
+                  >
+                    <ArrowRight className="h-5 w-5" />
+                  </button>
+                )}
+                <img
+                  src={lightbox.photos[lightbox.index]}
+                  alt={lightbox.alt}
+                  className="w-full h-full max-h-[85vh] object-contain rounded-lg"
+                />
+              </>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
