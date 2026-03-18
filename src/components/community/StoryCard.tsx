@@ -13,7 +13,7 @@ import {
 } from "@/lib/community-api";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel";
+
 
 export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: () => void }) {
   const { user } = useAuth();
