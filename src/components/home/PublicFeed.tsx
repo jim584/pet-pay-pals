@@ -424,7 +424,7 @@ function FeedCarousel({ photos, alt, onImageClick }: { photos: string[]; alt: st
 
   return (
     <div className="relative w-full">
-      <div className="overflow-hidden w-full">
+      <div className="overflow-hidden w-full relative">
         <div
           className="flex transition-transform duration-300 ease-in-out"
           style={{ transform: `translateX(-${current * 100}%)` }}
