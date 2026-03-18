@@ -14,7 +14,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 import { PetProfilePreview } from "./PetProfilePreview";
 import { StoryComments } from "./StoryComments";
-import { MessageCircle, Share2, UserPlus, PawPrint, User, X, RefreshCw, Search } from "lucide-react";
+import { MessageCircle, Share2, UserPlus, PawPrint, User, X, RefreshCw, Search, ArrowLeft, ArrowRight } from "lucide-react";
 import { PrayingHands } from "@/components/icons/PrayingHands";
 import { formatDistanceToNow } from "date-fns";
 
@@ -324,7 +324,7 @@ export function PublicFeed({ search, category }: { search?: string; category?: s
     return matchesCategory && matchesSearch;
   });
 
-  const [lightbox, setLightbox] = useState<{ url: string; alt: string } | null>(null);
+  const [lightbox, setLightbox] = useState<{ photos: string[]; index: number; alt: string } | null>(null);
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -359,7 +359,11 @@ export function PublicFeed({ search, category }: { search?: string; category?: s
           onLike={(storyId) => likeMutation.mutate(storyId)}
           user={user}
           isSample={isSampleData}
-          onImageClick={(url, alt) => setLightbox({ url, alt })}
+          onImageClick={(url, alt) => {
+            const photos = story.photo_urls || [url];
+            const index = photos.indexOf(url);
+            setLightbox({ photos, index: index >= 0 ? index : 0, alt });
+          }}
         />
       ))}
       
@@ -395,11 +399,34 @@ export function PublicFeed({ search, category }: { search?: string; category?: s
             <X className="h-5 w-5" />
           </button>
           {lightbox && (
-            <img
-              src={lightbox.url}
-              alt={lightbox.alt}
-              className="w-full h-full max-h-[85vh] object-contain rounded-lg"
-            />
+            <>
+              {lightbox.photos.length > 1 && (
+                <div className="absolute top-3 left-3 z-50 bg-background/70 backdrop-blur text-foreground text-xs font-medium px-2 py-0.5 rounded-full">
+                  {lightbox.index + 1}/{lightbox.photos.length}
+                </div>
+              )}
+              {lightbox.index > 0 && (
+                <button
+                  onClick={() => setLightbox((prev) => prev ? { ...prev, index: prev.index - 1 } : null)}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 z-50 h-10 w-10 rounded-full bg-background/80 backdrop-blur flex items-center justify-center shadow-md hover:bg-background transition-colors"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </button>
+              )}
+              {lightbox.index < lightbox.photos.length - 1 && (
+                <button
+                  onClick={() => setLightbox((prev) => prev ? { ...prev, index: prev.index + 1 } : null)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 z-50 h-10 w-10 rounded-full bg-background/80 backdrop-blur flex items-center justify-center shadow-md hover:bg-background transition-colors"
+                >
+                  <ArrowRight className="h-5 w-5" />
+                </button>
+              )}
+              <img
+                src={lightbox.photos[lightbox.index]}
+                alt={lightbox.alt}
+                className="w-full h-full max-h-[85vh] object-contain rounded-lg"
+              />
+            </>
           )}
         </DialogContent>
       </Dialog>
