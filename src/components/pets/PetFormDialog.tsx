@@ -13,6 +13,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { isValidImageFile, ACCEPTED_IMAGE_TYPES } from "@/lib/utils";
 import { Camera, PawPrint, X, CalendarIcon } from "lucide-react";
 import { ImageCropDialog } from "@/components/ui/ImageCropDialog";
+import { getBreedsForSpecies } from "@/lib/breeds";
+import { BreedCombobox } from "@/components/pets/BreedCombobox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
