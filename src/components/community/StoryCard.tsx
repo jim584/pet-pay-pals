@@ -351,32 +351,48 @@ function CommentBubble({ c, user, liked, onLike, onDelete, onEdit, onReply }: { 
 }
 
 function StoryCarousel({ photos }: { photos: string[] }) {
-  const [api, setApi] = useState<CarouselApi>();
   const [current, setCurrent] = useState(0);
 
-  useEffect(() => {
-    if (!api) return;
-    setCurrent(api.selectedScrollSnap());
-    api.on("select", () => setCurrent(api.selectedScrollSnap()));
-  }, [api]);
+  const goTo = (index: number) => {
+    setCurrent(Math.max(0, Math.min(index, photos.length - 1)));
+  };
 
   return (
     <div className="relative overflow-hidden rounded-xl">
-      <Carousel setApi={setApi} className="w-full">
-        <CarouselContent className="-ml-0">
+      <div className="overflow-hidden w-full">
+        <div
+          className="flex transition-transform duration-300 ease-in-out"
+          style={{ transform: `translateX(-${current * 100}%)` }}
+        >
           {photos.map((url, i) => (
-            <CarouselItem key={i} className="pl-0">
-              <img src={url} alt={`Photo ${i + 1}`} className="w-full object-cover max-h-80 rounded-xl" />
-            </CarouselItem>
+            <div key={i} className="w-full shrink-0">
+              <img src={url} alt={`Photo ${i + 1}`} className="w-full object-cover max-h-80" />
+            </div>
           ))}
-        </CarouselContent>
-      </Carousel>
+        </div>
+      </div>
+      {current > 0 && (
+        <button
+          onClick={() => goTo(current - 1)}
+          className="absolute left-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-background/70 backdrop-blur flex items-center justify-center shadow-sm hover:bg-background/90 transition-colors"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+      )}
+      {current < photos.length - 1 && (
+        <button
+          onClick={() => goTo(current + 1)}
+          className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-background/70 backdrop-blur flex items-center justify-center shadow-sm hover:bg-background/90 transition-colors"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      )}
       <div className="flex justify-center gap-1.5 py-2">
         {photos.map((_, i) => (
           <button
             key={i}
             className={`h-1.5 rounded-full transition-all ${i === current ? "w-4 bg-primary" : "w-1.5 bg-muted-foreground/30"}`}
-            onClick={() => api?.scrollTo(i)}
+            onClick={() => goTo(i)}
           />
         ))}
       </div>
