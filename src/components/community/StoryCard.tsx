@@ -153,15 +153,9 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
 
       {/* Photos */}
       {story.photo_urls && story.photo_urls.length > 0 && (
-        story.photo_urls.length === 1 ? (
-          <div className="mx-3 mb-2 overflow-hidden rounded-xl">
-            <img src={story.photo_urls[0]} alt="" className="w-full object-cover max-h-80 rounded-xl" />
-          </div>
-        ) : (
-          <div className="mx-3 mb-2">
-            <StoryCarousel photos={story.photo_urls} />
-          </div>
-        )
+        <div className="mx-3 mb-2 overflow-hidden rounded-xl">
+          <PhotoGrid photos={story.photo_urls} maxHeight="max-h-80" />
+        </div>
       )}
 
       <CardContent className="px-4 pb-4 pt-1 space-y-3">
