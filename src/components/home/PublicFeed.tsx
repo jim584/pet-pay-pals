@@ -324,7 +324,7 @@ export function PublicFeed({ search, category }: { search?: string; category?: s
     return matchesCategory && matchesSearch;
   });
 
-  const [lightbox, setLightbox] = useState<{ url: string; alt: string } | null>(null);
+  const [lightbox, setLightbox] = useState<{ photos: string[]; index: number; alt: string } | null>(null);
 
   return (
     <div className="space-y-4 sm:space-y-6">
