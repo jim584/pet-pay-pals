@@ -8,13 +8,13 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AspectRatio } from "@/components/ui/aspect-ratio";
+import { PhotoGrid } from "@/components/shared/PhotoGrid";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 import { PetProfilePreview } from "./PetProfilePreview";
 import { StoryComments } from "./StoryComments";
-import { MessageCircle, Share2, UserPlus, PawPrint, User, X, RefreshCw, Search, ArrowLeft, ArrowRight } from "lucide-react";
+import { MessageCircle, Share2, UserPlus, PawPrint, User, X, RefreshCw, Search } from "lucide-react";
 import { PrayingHands } from "@/components/icons/PrayingHands";
 import { formatDistanceToNow } from "date-fns";
 
@@ -173,19 +173,11 @@ function FeedCard({ story, isFollowing, isLiked, onFollow, onLike, user, isSampl
       </CardHeader>
 
       {story.photo_urls && story.photo_urls.length > 0 && (
-        story.photo_urls.length === 1 ? (
-          <AspectRatio ratio={4 / 3}>
-            <img
-              src={story.photo_urls[0]}
-              alt={story.title}
-              className="object-cover w-full h-full cursor-pointer transition-opacity hover:opacity-90"
-              loading="lazy"
-              onClick={() => onImageClick(story.photo_urls![0], story.title)}
-            />
-          </AspectRatio>
-        ) : (
-          <FeedCarousel photos={story.photo_urls} alt={story.title} onImageClick={(url) => onImageClick(url, story.title)} />
-        )
+        <PhotoGrid
+          photos={story.photo_urls}
+          alt={story.title}
+          onImageClick={(url) => onImageClick(url, story.title)}
+        />
       )}
 
       <CardContent className="p-4 space-y-2">
@@ -415,65 +407,3 @@ export function PublicFeed({ search, category }: { search?: string; category?: s
   );
 }
 
-function FeedCarousel({ photos, alt, onImageClick }: { photos: string[]; alt: string; onImageClick: (url: string) => void }) {
-  const [current, setCurrent] = useState(0);
-
-  const goTo = (index: number) => {
-    setCurrent(Math.max(0, Math.min(index, photos.length - 1)));
-  };
-
-  return (
-    <div className="relative w-full">
-      <div className="overflow-hidden w-full relative">
-        <div
-          className="flex transition-transform duration-300 ease-in-out"
-          style={{ transform: `translateX(-${current * 100}%)` }}
-        >
-          {photos.map((url, i) => (
-            <div key={i} className="w-full shrink-0">
-              <AspectRatio ratio={4 / 3}>
-                <img
-                  src={url}
-                  alt={`${alt} - photo ${i + 1}`}
-                  className="object-cover w-full h-full cursor-pointer transition-opacity hover:opacity-90"
-                  loading="lazy"
-                  onClick={() => onImageClick(url)}
-                />
-              </AspectRatio>
-            </div>
-          ))}
-        </div>
-        {/* Photo counter overlay */}
-        <div className="absolute top-3 right-3 bg-background/70 backdrop-blur text-foreground text-xs font-medium px-2 py-0.5 rounded-full">
-          {`${current + 1}/${photos.length}`}
-        </div>
-      </div>
-      {current > 0 && (
-        <button
-          onClick={() => goTo(current - 1)}
-          className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-background/70 backdrop-blur flex items-center justify-center shadow-sm hover:bg-background/90 transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </button>
-      )}
-      {current < photos.length - 1 && (
-        <button
-          onClick={() => goTo(current + 1)}
-          className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-background/70 backdrop-blur flex items-center justify-center shadow-sm hover:bg-background/90 transition-colors"
-        >
-          <ArrowRight className="h-4 w-4" />
-        </button>
-      )}
-      {/* Dot indicators */}
-      <div className="flex justify-center gap-1.5 py-2">
-        {photos.map((_, i) => (
-          <button
-            key={i}
-            className={`h-1.5 rounded-full transition-all ${i === current ? "w-4 bg-primary" : "w-1.5 bg-muted-foreground/30"}`}
-            onClick={() => goTo(i)}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}

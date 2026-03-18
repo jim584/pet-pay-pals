@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/components/ui/sonner";
-import { MessageCircle, DollarSign, Trash2, Send, PawPrint, User, Reply, X, Pencil, Check, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
+import { MessageCircle, DollarSign, Trash2, Send, PawPrint, User, Reply, X, Pencil, Check, AlertTriangle } from "lucide-react";
+import { PhotoGrid } from "@/components/shared/PhotoGrid";
 import { PrayingHands } from "@/components/icons/PrayingHands";
 import {
   PetStory, StoryComment, toggleLike, checkUserLiked,
@@ -152,15 +153,9 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
 
       {/* Photos */}
       {story.photo_urls && story.photo_urls.length > 0 && (
-        story.photo_urls.length === 1 ? (
-          <div className="mx-3 mb-2 overflow-hidden rounded-xl">
-            <img src={story.photo_urls[0]} alt="" className="w-full object-cover max-h-80 rounded-xl" />
-          </div>
-        ) : (
-          <div className="mx-3 mb-2">
-            <StoryCarousel photos={story.photo_urls} />
-          </div>
-        )
+        <div className="mx-3 mb-2 overflow-hidden rounded-xl">
+          <PhotoGrid photos={story.photo_urls} maxHeight="max-h-80" />
+        </div>
       )}
 
       <CardContent className="px-4 pb-4 pt-1 space-y-3">
@@ -346,60 +341,6 @@ function CommentBubble({ c, user, liked, onLike, onDelete, onEdit, onReply }: { 
           <Trash2 className="h-3 w-3" />
         </button>
       )}
-    </div>
-  );
-}
-
-function StoryCarousel({ photos }: { photos: string[] }) {
-  const [current, setCurrent] = useState(0);
-
-  const goTo = (index: number) => {
-    setCurrent(Math.max(0, Math.min(index, photos.length - 1)));
-  };
-
-  return (
-    <div className="relative overflow-hidden rounded-xl">
-      <div className="overflow-hidden w-full">
-        <div
-          className="flex transition-transform duration-300 ease-in-out"
-          style={{ transform: `translateX(-${current * 100}%)` }}
-        >
-          {photos.map((url, i) => (
-            <div key={i} className="w-full shrink-0">
-              <img src={url} alt={`Photo ${i + 1}`} className="w-full object-cover max-h-80" />
-            </div>
-          ))}
-        </div>
-        {/* Photo counter overlay */}
-        <div className="absolute top-3 right-3 bg-background/70 backdrop-blur text-foreground text-xs font-medium px-2 py-0.5 rounded-full">
-          {`${current + 1}/${photos.length}`}
-        </div>
-      </div>
-      {current > 0 && (
-        <button
-          onClick={() => goTo(current - 1)}
-          className="absolute left-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-background/70 backdrop-blur flex items-center justify-center shadow-sm hover:bg-background/90 transition-colors"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </button>
-      )}
-      {current < photos.length - 1 && (
-        <button
-          onClick={() => goTo(current + 1)}
-          className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-background/70 backdrop-blur flex items-center justify-center shadow-sm hover:bg-background/90 transition-colors"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </button>
-      )}
-      <div className="flex justify-center gap-1.5 py-2">
-        {photos.map((_, i) => (
-          <button
-            key={i}
-            className={`h-1.5 rounded-full transition-all ${i === current ? "w-4 bg-primary" : "w-1.5 bg-muted-foreground/30"}`}
-            onClick={() => goTo(i)}
-          />
-        ))}
-      </div>
     </div>
   );
 }
