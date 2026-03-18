@@ -359,7 +359,11 @@ export function PublicFeed({ search, category }: { search?: string; category?: s
           onLike={(storyId) => likeMutation.mutate(storyId)}
           user={user}
           isSample={isSampleData}
-          onImageClick={(url, alt) => setLightbox({ url, alt })}
+          onImageClick={(url, alt) => {
+            const photos = story.photo_urls || [url];
+            const index = photos.indexOf(url);
+            setLightbox({ photos, index: index >= 0 ? index : 0, alt });
+          }}
         />
       ))}
       
