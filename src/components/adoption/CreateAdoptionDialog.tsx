@@ -48,7 +48,7 @@ export function CreateAdoptionDialog() {
       })()
     : "";
 
-  const set = (key: string, value: string) => setForm((f) => ({ ...f, [key]: value }));
+  const set = (key: string, value: string) => setForm((f) => ({ ...f, [key]: value, ...(key === "species" ? { breed: "" } : {}) }));
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
