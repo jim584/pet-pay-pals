@@ -127,7 +127,16 @@ export function CreateAdoptionDialog() {
             </div>
             <div className="space-y-1.5">
               <Label>Breed</Label>
-              <Input value={form.breed} onChange={(e) => set("breed", e.target.value)} placeholder="e.g. Golden Retriever" />
+              {getBreedsForSpecies(form.species).length > 0 ? (
+                <BreedCombobox
+                  breeds={getBreedsForSpecies(form.species)}
+                  value={form.breed}
+                  onChange={(v) => set("breed", v)}
+                />
+              ) : (
+                <Input value={form.breed} onChange={(e) => set("breed", e.target.value)} placeholder="e.g. Breed name" />
+              )}
+            </div>
             </div>
             <div className="space-y-1.5">
               <Label>Date of Birth</Label>
