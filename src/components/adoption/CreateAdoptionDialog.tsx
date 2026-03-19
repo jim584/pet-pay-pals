@@ -137,7 +137,6 @@ export function CreateAdoptionDialog() {
                 <Input value={form.breed} onChange={(e) => set("breed", e.target.value)} placeholder="e.g. Breed name" />
               )}
             </div>
-            </div>
             <div className="space-y-1.5">
               <Label>Date of Birth</Label>
               <Popover>
