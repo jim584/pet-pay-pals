@@ -15,6 +15,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { calculateAge } from "@/lib/pets-api";
+import { getBreedsForSpecies } from "@/lib/breeds";
+import { BreedCombobox } from "@/components/pets/BreedCombobox";
 
 export function CreateAdoptionDialog() {
   const { user } = useAuth();
