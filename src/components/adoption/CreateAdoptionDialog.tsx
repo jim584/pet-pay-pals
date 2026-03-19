@@ -15,6 +15,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { calculateAge } from "@/lib/pets-api";
+import { getBreedsForSpecies } from "@/lib/breeds";
+import { BreedCombobox } from "@/components/pets/BreedCombobox";
 
 export function CreateAdoptionDialog() {
   const { user } = useAuth();
@@ -46,7 +48,7 @@ export function CreateAdoptionDialog() {
       })()
     : "";
 
-  const set = (key: string, value: string) => setForm((f) => ({ ...f, [key]: value }));
+  const set = (key: string, value: string) => setForm((f) => ({ ...f, [key]: value, ...(key === "species" ? { breed: "" } : {}) }));
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -125,7 +127,15 @@ export function CreateAdoptionDialog() {
             </div>
             <div className="space-y-1.5">
               <Label>Breed</Label>
-              <Input value={form.breed} onChange={(e) => set("breed", e.target.value)} placeholder="e.g. Golden Retriever" />
+              {getBreedsForSpecies(form.species).length > 0 ? (
+                <BreedCombobox
+                  breeds={getBreedsForSpecies(form.species)}
+                  value={form.breed}
+                  onChange={(v) => set("breed", v)}
+                />
+              ) : (
+                <Input value={form.breed} onChange={(e) => set("breed", e.target.value)} placeholder="e.g. Breed name" />
+              )}
             </div>
             <div className="space-y-1.5">
               <Label>Date of Birth</Label>
