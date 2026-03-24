@@ -8,6 +8,7 @@ import { toast } from "@/components/ui/sonner";
 import { MessageCircle, DollarSign, Trash2, Send, PawPrint, User, Reply, X, Pencil, Check, AlertTriangle } from "lucide-react";
 import { PhotoGrid } from "@/components/shared/PhotoGrid";
 import { ReactionPicker } from "@/components/shared/ReactionPicker";
+import { ReactionSummary } from "@/components/shared/ReactionSummary";
 import { PrayingHands } from "@/components/icons/PrayingHands";
 import type { ReactionType } from "@/lib/reactions";
 import {
