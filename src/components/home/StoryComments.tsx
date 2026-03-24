@@ -35,7 +35,7 @@ export function StoryComments({ storyId, isOpen }: Props) {
   const qc = useQueryClient();
   const [text, setText] = useState("");
   const [replyingTo, setReplyingTo] = useState<StoryComment | null>(null);
-  const [likedSet, setLikedSet] = useState<Set<string>>(new Set());
+  const [reactionsMap, setReactionsMap] = useState<Map<string, string>>(new Map());
 
   const { data: comments = [], isLoading } = useQuery({
     queryKey: ["storyComments", storyId],
