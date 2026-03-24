@@ -57,8 +57,8 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
       const data = await fetchComments(story.id);
       setComments(data);
       if (user) {
-        const liked = await batchCheckCommentLiked(data.map((c) => c.id), user.id);
-        setCommentLikedSet(liked);
+        const reactions = await batchCheckCommentReactions(data.map((c) => c.id), user.id);
+        setCommentReactionsMap(reactions);
       }
     } catch (err: any) {
       console.error("Comments error:", err);
