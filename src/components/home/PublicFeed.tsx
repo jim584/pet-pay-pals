@@ -1,6 +1,8 @@
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchPublicFeed, followPet, unfollowPet, checkFollowing, FEED_PAGE_SIZE, type FeedStory } from "@/lib/feed-api";
-import { toggleLike, batchCheckLiked, STORY_CATEGORIES } from "@/lib/community-api";
+import { toggleReaction, batchCheckReactions, STORY_CATEGORIES } from "@/lib/community-api";
+import { ReactionPicker } from "@/components/shared/ReactionPicker";
+import type { ReactionType } from "@/lib/reactions";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState, useCallback } from "react";
@@ -15,7 +17,6 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { PetProfilePreview } from "./PetProfilePreview";
 import { StoryComments } from "./StoryComments";
 import { MessageCircle, Share2, UserPlus, PawPrint, User, X, RefreshCw, Search, ArrowLeft, ArrowRight } from "lucide-react";
-import { PrayingHands } from "@/components/icons/PrayingHands";
 import { formatDistanceToNow } from "date-fns";
 
 const SAMPLE_STORIES: FeedStory[] = [
@@ -105,12 +106,12 @@ const SAMPLE_STORIES: FeedStory[] = [
   },
 ];
 
-function FeedCard({ story, isFollowing, isLiked, onFollow, onLike, user, isSample, onImageClick }: {
+function FeedCard({ story, isFollowing, currentReaction, onFollow, onReact, user, isSample, onImageClick }: {
   story: FeedStory;
   isFollowing: boolean;
-  isLiked: boolean;
+  currentReaction: ReactionType | null;
   onFollow: (petId: string) => void;
-  onLike: (storyId: string) => void;
+  onReact: (storyId: string, type: ReactionType) => void;
   user: any;
   isSample?: boolean;
   onImageClick: (url: string, alt: string) => void;
@@ -182,18 +183,21 @@ function FeedCard({ story, isFollowing, isLiked, onFollow, onLike, user, isSampl
 
       <CardContent className="p-4 space-y-2">
         <div className="flex items-center gap-3">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                className="flex items-center gap-1 text-sm transition-colors hover:text-amber-500"
-                onClick={() => isSample ? navigate("/auth") : requireAuth(() => onLike(story.id))}
-              >
-                <PrayingHands className={`h-5 w-5 transition-opacity ${isLiked ? "opacity-100" : "opacity-50"}`} />
-                <span>{story.likes_count}</span>
-              </button>
-            </TooltipTrigger>
-            {!user && <TooltipContent>Log in to like this post</TooltipContent>}
-          </Tooltip>
+          {isSample ? (
+            <button
+              className="flex items-center gap-1 text-sm text-muted-foreground"
+              onClick={() => navigate("/auth")}
+            >
+              🙏 <span>{story.likes_count}</span>
+            </button>
+          ) : (
+            <ReactionPicker
+              currentReaction={currentReaction}
+              onReact={(type) => requireAuth(() => onReact(story.id, type))}
+              totalCount={story.likes_count}
+              disabled={!user}
+            />
+          )}
 
           <Tooltip>
             <TooltipTrigger asChild>
@@ -240,7 +244,7 @@ export function PublicFeed({ search, category }: { search?: string; category?: s
   const { user } = useAuth();
   const qc = useQueryClient();
   const [followedSet, setFollowedSet] = useState<Set<string>>(new Set());
-  const [likedSet, setLikedSet] = useState<Set<string>>(new Set());
+  const [reactionsMap, setReactionsMap] = useState<Map<string, string>>(new Map());
 
   const {
     data,
@@ -273,7 +277,7 @@ export function PublicFeed({ search, category }: { search?: string; category?: s
     const petIds = [...new Set(stories.map((s) => s.pet_id))];
     checkFollowing(petIds, user.id).then(setFollowedSet);
 
-    batchCheckLiked(stories.map((s) => s.id), user.id).then(setLikedSet);
+    batchCheckReactions(stories.map((s) => s.id), user.id).then(setReactionsMap);
   }, [user, storyIds]);
 
   const followMutation = useMutation({
@@ -295,17 +299,18 @@ export function PublicFeed({ search, category }: { search?: string; category?: s
     },
   });
 
-  const likeMutation = useMutation({
-    mutationFn: async (storyId: string) => {
+  const reactionMutation = useMutation({
+    mutationFn: async ({ storyId, type }: { storyId: string; type: ReactionType }) => {
       if (!user) return;
       // Optimistic toggle
-      setLikedSet((prev) => {
-        const next = new Set(prev);
-        if (next.has(storyId)) next.delete(storyId);
-        else next.add(storyId);
+      setReactionsMap((prev) => {
+        const next = new Map(prev);
+        const current = next.get(storyId);
+        if (current === type) next.delete(storyId);
+        else next.set(storyId, type);
         return next;
       });
-      await toggleLike(storyId, user.id);
+      await toggleReaction(storyId, user.id, type);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["publicFeed"] });
@@ -354,9 +359,9 @@ export function PublicFeed({ search, category }: { search?: string; category?: s
           key={story.id}
           story={story}
           isFollowing={followedSet.has(story.pet_id)}
-          isLiked={likedSet.has(story.id)}
+          currentReaction={(reactionsMap.get(story.id) as ReactionType) ?? null}
           onFollow={(petId) => followMutation.mutate(petId)}
-          onLike={(storyId) => likeMutation.mutate(storyId)}
+          onReact={(storyId, type) => reactionMutation.mutate({ storyId, type })}
           user={user}
           isSample={isSampleData}
           onImageClick={(url, alt) => {

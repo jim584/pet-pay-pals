@@ -7,10 +7,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/components/ui/sonner";
 import { MessageCircle, DollarSign, Trash2, Send, PawPrint, User, Reply, X, Pencil, Check, AlertTriangle } from "lucide-react";
 import { PhotoGrid } from "@/components/shared/PhotoGrid";
+import { ReactionPicker } from "@/components/shared/ReactionPicker";
 import { PrayingHands } from "@/components/icons/PrayingHands";
+import type { ReactionType } from "@/lib/reactions";
 import {
-  PetStory, StoryComment, toggleLike, checkUserLiked,
-  fetchComments, addComment, deleteComment, editComment, toggleCommentLike, batchCheckCommentLiked, sendDonation, deleteStory, STORY_CATEGORIES
+  PetStory, StoryComment, toggleReaction, checkUserReaction,
+  fetchComments, addComment, deleteComment, editComment, toggleCommentReaction, batchCheckCommentReactions, sendDonation, deleteStory, STORY_CATEGORIES
 } from "@/lib/community-api";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -18,7 +20,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 
 export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: () => void }) {
   const { user } = useAuth();
-  const [liked, setLiked] = useState(false);
+  const [currentReaction, setCurrentReaction] = useState<ReactionType | null>(null);
   const [likesCount, setLikesCount] = useState(story.likes_count);
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<StoryComment[]>([]);
@@ -27,25 +29,26 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
   const [donateAmount, setDonateAmount] = useState("");
   const [donating, setDonating] = useState(false);
   const [replyingTo, setReplyingTo] = useState<StoryComment | null>(null);
-  const [commentLikedSet, setCommentLikedSet] = useState<Set<string>>(new Set());
+  const [commentReactionsMap, setCommentReactionsMap] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
-    if (user) checkUserLiked(story.id, user.id).then(setLiked);
+    if (user) checkUserReaction(story.id, user.id).then((r) => setCurrentReaction(r as ReactionType | null));
   }, [story.id, user]);
 
-  const handleLike = async () => {
+  const handleReact = async (type: ReactionType) => {
     if (!user) return;
-    // Optimistic update
-    setLiked((prev) => !prev);
-    setLikesCount((c) => (liked ? Math.max(c - 1, 0) : c + 1));
+    const wasReacted = currentReaction;
+    const isSameReaction = currentReaction === type;
+    // Optimistic
+    setCurrentReaction(isSameReaction ? null : type);
+    setLikesCount((c) => isSameReaction ? Math.max(c - 1, 0) : (wasReacted ? c : c + 1));
     try {
-      await toggleLike(story.id, user.id);
+      await toggleReaction(story.id, user.id, type);
     } catch (err: any) {
-      // Revert on error
-      setLiked((prev) => !prev);
-      setLikesCount((c) => (liked ? c + 1 : Math.max(c - 1, 0)));
-      console.error("Like error:", err);
-      toast.error("Couldn't process like. Please try again.");
+      setCurrentReaction(wasReacted);
+      setLikesCount((c) => isSameReaction ? c + 1 : (wasReacted ? c : Math.max(c - 1, 0)));
+      console.error("Reaction error:", err);
+      toast.error("Couldn't process reaction. Please try again.");
     }
   };
 
@@ -54,8 +57,8 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
       const data = await fetchComments(story.id);
       setComments(data);
       if (user) {
-        const liked = await batchCheckCommentLiked(data.map((c) => c.id), user.id);
-        setCommentLikedSet(liked);
+        const reactions = await batchCheckCommentReactions(data.map((c) => c.id), user.id);
+        setCommentReactionsMap(reactions);
       }
     } catch (err: any) {
       console.error("Comments error:", err);
@@ -174,10 +177,11 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
 
         {/* Action bar */}
         <div className="flex items-center gap-2 pt-2 border-t border-border/50">
-          <Button variant="ghost" size="sm" className={`gap-1.5 rounded-full text-xs ${liked ? "text-amber-500 bg-amber-500/10" : ""}`} onClick={handleLike}>
-            <PrayingHands className={`h-4 w-4 transition-opacity ${liked ? "opacity-100" : "opacity-50"}`} />
-            {likesCount}
-          </Button>
+          <ReactionPicker
+            currentReaction={currentReaction}
+            onReact={handleReact}
+            totalCount={likesCount}
+          />
           <Button variant="ghost" size="sm" className="gap-1.5 rounded-full text-xs" onClick={handleToggleComments}>
             <MessageCircle className="h-4 w-4" />
             {story.comments_count}
@@ -212,10 +216,10 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
               }
               return topLevel.map((c) => (
                 <div key={c.id}>
-                  <CommentBubble c={c} user={user} liked={commentLikedSet.has(c.id)} onLike={async () => { if (!user) return; await toggleCommentLike(c.id, user.id); loadComments(); }} onDelete={() => { deleteComment(c.id); loadComments(); }} onEdit={async (content) => { await editComment(c.id, content); loadComments(); }} onReply={() => setReplyingTo(c)} />
+                  <CommentBubble c={c} user={user} currentReaction={(commentReactionsMap.get(c.id) as ReactionType) ?? null} onReact={async (type) => { if (!user) return; await toggleCommentReaction(c.id, user.id, type); loadComments(); }} onDelete={() => { deleteComment(c.id); loadComments(); }} onEdit={async (content) => { await editComment(c.id, content); loadComments(); }} onReply={() => setReplyingTo(c)} />
                   {byParent.get(c.id)?.map((reply) => (
                     <div key={reply.id} className="pl-8 mt-1.5">
-                      <CommentBubble c={reply} user={user} liked={commentLikedSet.has(reply.id)} onLike={async () => { if (!user) return; await toggleCommentLike(reply.id, user.id); loadComments(); }} onDelete={() => { deleteComment(reply.id); loadComments(); }} onEdit={async (content) => { await editComment(reply.id, content); loadComments(); }} onReply={() => setReplyingTo(reply)} />
+                      <CommentBubble c={reply} user={user} currentReaction={(commentReactionsMap.get(reply.id) as ReactionType) ?? null} onReact={async (type) => { if (!user) return; await toggleCommentReaction(reply.id, user.id, type); loadComments(); }} onDelete={() => { deleteComment(reply.id); loadComments(); }} onEdit={async (content) => { await editComment(reply.id, content); loadComments(); }} onReply={() => setReplyingTo(reply)} />
                     </div>
                   ))}
                 </div>
@@ -268,7 +272,7 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
   );
 }
 
-function CommentBubble({ c, user, liked, onLike, onDelete, onEdit, onReply }: { c: StoryComment; user: any; liked: boolean; onLike: () => void; onDelete: () => void; onEdit: (content: string) => void; onReply: () => void }) {
+function CommentBubble({ c, user, currentReaction, onReact, onDelete, onEdit, onReply }: { c: StoryComment; user: any; currentReaction: ReactionType | null; onReact: (type: ReactionType) => void; onDelete: () => void; onEdit: (content: string) => void; onReply: () => void }) {
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState(c.content);
 
@@ -317,13 +321,12 @@ function CommentBubble({ c, user, liked, onLike, onDelete, onEdit, onReply }: { 
           {c.updated_at !== c.created_at && (
             <span className="text-[10px] italic text-muted-foreground">(edited)</span>
           )}
-          <button
-            onClick={onLike}
-            className={`flex items-center gap-0.5 text-[10px] font-medium transition-colors ${liked ? "text-amber-500" : "text-muted-foreground hover:text-foreground"}`}
-          >
-            <PrayingHands className={`h-2.5 w-2.5 transition-opacity ${liked ? "opacity-100" : "opacity-50"}`} />
-            {c.likes_count > 0 && <span>{c.likes_count}</span>}
-          </button>
+          <ReactionPicker
+            currentReaction={currentReaction}
+            onReact={onReact}
+            totalCount={c.likes_count}
+            size="sm"
+          />
           {user && (
             <button onClick={onReply} className="text-[10px] font-medium text-muted-foreground hover:text-foreground">
               Reply

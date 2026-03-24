@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchComments, addComment, deleteComment, editComment, toggleCommentLike, batchCheckCommentLiked, type StoryComment } from "@/lib/community-api";
+import { fetchComments, addComment, deleteComment, editComment, toggleCommentReaction, batchCheckCommentReactions, type StoryComment } from "@/lib/community-api";
+import { ReactionPicker } from "@/components/shared/ReactionPicker";
+import type { ReactionType } from "@/lib/reactions";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { User, Trash2, Send, Loader2, Reply, X, Pencil, Check } from "lucide-react";
-import { PrayingHands } from "@/components/icons/PrayingHands";
 import { formatDistanceToNow } from "date-fns";
 import { useNavigate } from "react-router-dom";
 
@@ -34,7 +35,7 @@ export function StoryComments({ storyId, isOpen }: Props) {
   const qc = useQueryClient();
   const [text, setText] = useState("");
   const [replyingTo, setReplyingTo] = useState<StoryComment | null>(null);
-  const [likedSet, setLikedSet] = useState<Set<string>>(new Set());
+  const [reactionsMap, setReactionsMap] = useState<Map<string, string>>(new Map());
 
   const { data: comments = [], isLoading } = useQuery({
     queryKey: ["storyComments", storyId],
@@ -45,7 +46,7 @@ export function StoryComments({ storyId, isOpen }: Props) {
 
   useEffect(() => {
     if (!user || comments.length === 0) return;
-    batchCheckCommentLiked(comments.map((c) => c.id), user.id).then(setLikedSet);
+    batchCheckCommentReactions(comments.map((c) => c.id), user.id).then(setReactionsMap);
   }, [comments, user]);
 
   const addMutation = useMutation({
@@ -73,21 +74,24 @@ export function StoryComments({ storyId, isOpen }: Props) {
     },
   });
 
-  const handleLikeComment = async (commentId: string) => {
+  const handleReactComment = async (commentId: string, type: ReactionType) => {
     if (!user) { navigate("/auth"); return; }
-    const wasLiked = likedSet.has(commentId);
-    setLikedSet((prev) => {
-      const next = new Set(prev);
-      wasLiked ? next.delete(commentId) : next.add(commentId);
+    const prev = reactionsMap.get(commentId) as ReactionType | undefined;
+    // Optimistic
+    setReactionsMap((m) => {
+      const next = new Map(m);
+      if (prev === type) next.delete(commentId);
+      else next.set(commentId, type);
       return next;
     });
     try {
-      await toggleCommentLike(commentId, user.id);
+      await toggleCommentReaction(commentId, user.id, type);
       qc.invalidateQueries({ queryKey: ["storyComments", storyId] });
     } catch {
-      setLikedSet((prev) => {
-        const next = new Set(prev);
-        wasLiked ? next.add(commentId) : next.delete(commentId);
+      setReactionsMap((m) => {
+        const next = new Map(m);
+        if (prev) next.set(commentId, prev);
+        else next.delete(commentId);
         return next;
       });
     }
@@ -119,8 +123,8 @@ export function StoryComments({ storyId, isOpen }: Props) {
               <CommentRow
                 comment={comment}
                 isOwn={user?.id === comment.user_id}
-                liked={likedSet.has(comment.id)}
-                onLike={() => handleLikeComment(comment.id)}
+                currentReaction={(reactionsMap.get(comment.id) as ReactionType) ?? null}
+                onReact={(type) => handleReactComment(comment.id, type)}
                 onDelete={() => deleteMutation.mutate(comment.id)}
                 onEdit={(content) => editMutation.mutate({ id: comment.id, content })}
                 onReply={() => setReplyingTo(comment)}
@@ -132,8 +136,8 @@ export function StoryComments({ storyId, isOpen }: Props) {
                   <CommentRow
                     comment={reply}
                     isOwn={user?.id === reply.user_id}
-                    liked={likedSet.has(reply.id)}
-                    onLike={() => handleLikeComment(reply.id)}
+                    currentReaction={(reactionsMap.get(reply.id) as ReactionType) ?? null}
+                    onReact={(type) => handleReactComment(reply.id, type)}
                     onDelete={() => deleteMutation.mutate(reply.id)}
                     onEdit={(content) => editMutation.mutate({ id: reply.id, content })}
                     onReply={() => setReplyingTo(reply)}
@@ -185,8 +189,8 @@ export function StoryComments({ storyId, isOpen }: Props) {
 function CommentRow({
   comment,
   isOwn,
-  liked,
-  onLike,
+  currentReaction,
+  onReact,
   onDelete,
   onEdit,
   onReply,
@@ -195,8 +199,8 @@ function CommentRow({
 }: {
   comment: StoryComment;
   isOwn: boolean;
-  liked: boolean;
-  onLike: () => void;
+  currentReaction: ReactionType | null;
+  onReact: (type: ReactionType) => void;
   onDelete: () => void;
   onEdit: (content: string) => void;
   onReply: () => void;
@@ -256,13 +260,12 @@ function CommentRow({
               <span className="ml-1 italic">(edited)</span>
             )}
           </p>
-          <button
-            onClick={onLike}
-            className={`flex items-center gap-0.5 text-[10px] font-medium transition-colors ${liked ? "text-amber-500" : "text-muted-foreground hover:text-foreground"}`}
-          >
-            <PrayingHands className={`h-2.5 w-2.5 transition-opacity ${liked ? "opacity-100" : "opacity-50"}`} />
-            {comment.likes_count > 0 && <span>{comment.likes_count}</span>}
-          </button>
+          <ReactionPicker
+            currentReaction={currentReaction}
+            onReact={onReact}
+            totalCount={comment.likes_count}
+            size="sm"
+          />
           {isAuthenticated && (
             <button
               onClick={onReply}

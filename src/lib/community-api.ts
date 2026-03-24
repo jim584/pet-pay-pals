@@ -86,42 +86,62 @@ export async function deleteStory(id: string) {
   if (error) throw error;
 }
 
-export async function toggleLike(storyId: string, userId: string) {
-  // Check if already liked
+export async function toggleReaction(storyId: string, userId: string, reactionType: string) {
   const { data: existing } = await supabase
     .from("story_likes")
-    .select("id")
+    .select("id, reaction_type")
     .eq("story_id", storyId)
     .eq("user_id", userId)
     .maybeSingle();
 
   if (existing) {
-    await supabase.from("story_likes").delete().eq("id", existing.id);
-    return false;
+    if (existing.reaction_type === reactionType) {
+      await supabase.from("story_likes").delete().eq("id", existing.id);
+      return null;
+    } else {
+      await supabase.from("story_likes").update({ reaction_type: reactionType }).eq("id", existing.id);
+      return reactionType;
+    }
   } else {
-    await supabase.from("story_likes").insert({ story_id: storyId, user_id: userId });
-    return true;
+    await supabase.from("story_likes").insert({ story_id: storyId, user_id: userId, reaction_type: reactionType } as any);
+    return reactionType;
   }
 }
 
-export async function checkUserLiked(storyId: string, userId: string) {
+// Legacy wrapper
+export async function toggleLike(storyId: string, userId: string) {
+  return toggleReaction(storyId, userId, "pray");
+}
+
+export async function checkUserReaction(storyId: string, userId: string): Promise<string | null> {
   const { data } = await supabase
     .from("story_likes")
-    .select("id")
+    .select("reaction_type")
     .eq("story_id", storyId)
     .eq("user_id", userId)
     .maybeSingle();
-  return !!data;
+  return (data as any)?.reaction_type ?? null;
+}
+
+export async function checkUserLiked(storyId: string, userId: string) {
+  return !!(await checkUserReaction(storyId, userId));
+}
+
+export async function batchCheckReactions(storyIds: string[], userId: string): Promise<Map<string, string>> {
+  if (storyIds.length === 0) return new Map();
+  const { data } = await supabase
+    .from("story_likes")
+    .select("story_id, reaction_type")
+    .eq("user_id", userId)
+    .in("story_id", storyIds);
+  const map = new Map<string, string>();
+  for (const r of (data || []) as any[]) map.set(r.story_id, r.reaction_type);
+  return map;
 }
 
 export async function batchCheckLiked(storyIds: string[], userId: string): Promise<Set<string>> {
-  if (storyIds.length === 0) return new Set();
-  const { data } = await supabase
-    .from("story_likes")
-    .select("story_id")
-    .eq("user_id", userId)
-    .in("story_id", storyIds);
-  return new Set((data || []).map((r: any) => r.story_id));
+  const map = await batchCheckReactions(storyIds, userId);
+  return new Set(map.keys());
 }
 
 export async function fetchComments(storyId: string) {
@@ -154,31 +174,47 @@ export async function editComment(id: string, content: string) {
   if (error) throw error;
 }
 
-export async function toggleCommentLike(commentId: string, userId: string) {
+export async function toggleCommentReaction(commentId: string, userId: string, reactionType: string) {
   const { data: existing } = await supabase
     .from("comment_likes")
-    .select("id")
+    .select("id, reaction_type")
     .eq("comment_id", commentId)
     .eq("user_id", userId)
     .maybeSingle();
 
   if (existing) {
-    await supabase.from("comment_likes").delete().eq("id", existing.id);
-    return false;
+    if ((existing as any).reaction_type === reactionType) {
+      await supabase.from("comment_likes").delete().eq("id", existing.id);
+      return null;
+    } else {
+      await supabase.from("comment_likes").update({ reaction_type: reactionType } as any).eq("id", existing.id);
+      return reactionType;
+    }
   } else {
-    await supabase.from("comment_likes").insert({ comment_id: commentId, user_id: userId });
-    return true;
+    await supabase.from("comment_likes").insert({ comment_id: commentId, user_id: userId, reaction_type: reactionType } as any);
+    return reactionType;
   }
 }
 
-export async function batchCheckCommentLiked(commentIds: string[], userId: string): Promise<Set<string>> {
-  if (commentIds.length === 0) return new Set();
+export async function toggleCommentLike(commentId: string, userId: string) {
+  return toggleCommentReaction(commentId, userId, "pray");
+}
+
+export async function batchCheckCommentReactions(commentIds: string[], userId: string): Promise<Map<string, string>> {
+  if (commentIds.length === 0) return new Map();
   const { data } = await supabase
     .from("comment_likes")
-    .select("comment_id")
+    .select("comment_id, reaction_type")
     .eq("user_id", userId)
     .in("comment_id", commentIds);
-  return new Set((data || []).map((r: any) => r.comment_id));
+  const map = new Map<string, string>();
+  for (const r of (data || []) as any[]) map.set(r.comment_id, r.reaction_type);
+  return map;
+}
+
+export async function batchCheckCommentLiked(commentIds: string[], userId: string): Promise<Set<string>> {
+  const map = await batchCheckCommentReactions(commentIds, userId);
+  return new Set(map.keys());
 }
 
 export async function fetchWallet(userId: string) {
