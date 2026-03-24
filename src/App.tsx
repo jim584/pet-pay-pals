@@ -51,7 +51,7 @@ function AppRoutes() {
         <Route path="/help-forever" element={<HelpForeverPage />} />
         <Route path="/four-feet-under" element={<PlaceholderSection title="Four Feet Under™" />} />
         <Route path="/fearfreed" element={<FearFreedPage />} />
-        <Route path="/help-overcome" element={<PlaceholderSection title="Help A Pet Overcome™" />} />
+        <Route path="/help-overcome" element={<HelpOvercomePage />} />
         <Route path="/help-protect" element={<HelpProtectPage />} />
         <Route path="/help-behave" element={<HelpBehavePage />} />
         <Route path="/vetted" element={<VettedPage />} />
