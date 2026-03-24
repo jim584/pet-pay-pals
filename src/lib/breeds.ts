@@ -71,7 +71,7 @@ export const CAT_BREEDS = [
 ] as const;
 
 export const HORSE_BREEDS = [
-  "Akhal-Teke","Altai Horse","American Bashkir Curly","American Cream Draft","American Quarter Horse",
+  "Mixed Breed","Akhal-Teke","Altai Horse","American Bashkir Curly","American Cream Draft","American Quarter Horse",
   "American Saddlebred","Andalusian","Anglo-Arabian","Appaloosa","Arabian","Ardennes","Austrian Warmblood",
   "Auxois","Azteca","Baise Horse","Balikun Horse","Barb","Belgian Draft","Belgian Warmblood","Berber",
   "Bhutia Pony","Bosnian Mountain Horse","Boulonnais","Brandenburger","Breton","Camargue","Canadian Horse",
