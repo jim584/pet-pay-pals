@@ -1,5 +1,5 @@
 export const DOG_BREEDS = [
-  "Affenpinscher","Afghan Hound","Airedale Terrier","Akita","Alaskan Malamute",
+  "Mixed Breed","Affenpinscher","Afghan Hound","Airedale Terrier","Akita","Alaskan Malamute",
   "American Bulldog","American English Coonhound","American Eskimo Dog","American Foxhound",
   "American Hairless Terrier","American Leopard Hound","American Staffordshire Terrier",
   "American Water Spaniel","Anatolian Shepherd Dog","Appenzeller Sennenhund",
