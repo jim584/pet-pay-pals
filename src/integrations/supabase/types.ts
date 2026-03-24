@@ -594,6 +594,95 @@ export type Database = {
           },
         ]
       }
+      sponsorship_donations: {
+        Row: {
+          amount: number
+          created_at: string
+          donor_email: string | null
+          donor_name: string | null
+          id: string
+          message: string | null
+          pet_id: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          donor_email?: string | null
+          donor_name?: string | null
+          id?: string
+          message?: string | null
+          pet_id: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          donor_email?: string | null
+          donor_name?: string | null
+          id?: string
+          message?: string | null
+          pet_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sponsorship_donations_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: false
+            referencedRelation: "sponsorship_pets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sponsorship_pets: {
+        Row: {
+          added_by: string
+          condition_details: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          photo_url: string | null
+          species: string
+          sponsorship_goal: number
+          sponsorship_raised: number
+          sponsorship_status: string
+          updated_at: string
+        }
+        Insert: {
+          added_by: string
+          condition_details?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          photo_url?: string | null
+          species?: string
+          sponsorship_goal?: number
+          sponsorship_raised?: number
+          sponsorship_status?: string
+          updated_at?: string
+        }
+        Update: {
+          added_by?: string
+          condition_details?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          photo_url?: string | null
+          species?: string
+          sponsorship_goal?: number
+          sponsorship_raised?: number
+          sponsorship_status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       story_comments: {
         Row: {
           content: string
