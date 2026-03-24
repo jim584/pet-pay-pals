@@ -106,12 +106,12 @@ const SAMPLE_STORIES: FeedStory[] = [
   },
 ];
 
-function FeedCard({ story, isFollowing, isLiked, onFollow, onLike, user, isSample, onImageClick }: {
+function FeedCard({ story, isFollowing, currentReaction, onFollow, onReact, user, isSample, onImageClick }: {
   story: FeedStory;
   isFollowing: boolean;
-  isLiked: boolean;
+  currentReaction: ReactionType | null;
   onFollow: (petId: string) => void;
-  onLike: (storyId: string) => void;
+  onReact: (storyId: string, type: ReactionType) => void;
   user: any;
   isSample?: boolean;
   onImageClick: (url: string, alt: string) => void;
