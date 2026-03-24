@@ -13,7 +13,7 @@ import { PrayingHands } from "@/components/icons/PrayingHands";
 import type { ReactionType } from "@/lib/reactions";
 import {
   PetStory, StoryComment, toggleReaction, checkUserReaction,
-  fetchComments, addComment, deleteComment, editComment, toggleCommentReaction, batchCheckCommentReactions, sendDonation, deleteStory, STORY_CATEGORIES
+  fetchComments, addComment, deleteComment, editComment, toggleCommentReaction, batchCheckCommentReactions, batchFetchReactionSummaries, sendDonation, deleteStory, STORY_CATEGORIES
 } from "@/lib/community-api";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
