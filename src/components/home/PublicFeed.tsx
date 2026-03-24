@@ -184,6 +184,9 @@ function FeedCard({ story, isFollowing, currentReaction, reactionSummary, onFoll
       )}
 
       <CardContent className="p-4 space-y-2">
+        {reactionSummary && reactionSummary.length > 0 && (
+          <ReactionSummary summary={reactionSummary} />
+        )}
         <div className="flex items-center gap-3">
           {isSample ? (
             <button
