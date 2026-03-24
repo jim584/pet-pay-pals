@@ -18,7 +18,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 import { PetProfilePreview } from "./PetProfilePreview";
 import { StoryComments } from "./StoryComments";
-import { MessageCircle, Share2, UserPlus, PawPrint, User, X, RefreshCw, Search, ArrowLeft, ArrowRight } from "lucide-react";
+import { MessageCircle, UserPlus, PawPrint, User, X, RefreshCw, Search, ArrowLeft, ArrowRight } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 const SAMPLE_STORIES: FeedStory[] = [
