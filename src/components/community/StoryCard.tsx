@@ -321,13 +321,12 @@ function CommentBubble({ c, user, currentReaction, onReact, onDelete, onEdit, on
           {c.updated_at !== c.created_at && (
             <span className="text-[10px] italic text-muted-foreground">(edited)</span>
           )}
-          <button
-            onClick={onLike}
-            className={`flex items-center gap-0.5 text-[10px] font-medium transition-colors ${liked ? "text-amber-500" : "text-muted-foreground hover:text-foreground"}`}
-          >
-            <PrayingHands className={`h-2.5 w-2.5 transition-opacity ${liked ? "opacity-100" : "opacity-50"}`} />
-            {c.likes_count > 0 && <span>{c.likes_count}</span>}
-          </button>
+          <ReactionPicker
+            currentReaction={currentReaction}
+            onReact={onReact}
+            totalCount={c.likes_count}
+            size="sm"
+          />
           {user && (
             <button onClick={onReply} className="text-[10px] font-medium text-muted-foreground hover:text-foreground">
               Reply
