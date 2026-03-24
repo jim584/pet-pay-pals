@@ -64,7 +64,7 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
         mixedBreedDetail: p.detail,
         date_of_birth: pet?.date_of_birth ? new Date(pet.date_of_birth + "T00:00:00") : undefined,
         weight_kg: pet?.weight_kg?.toString() ?? "",
-        gender: (pet as any)?.gender ?? "",
+        gender: pet?.gender ?? "",
         notes: pet?.notes ?? "",
       });
       setPhotoPreview(pet?.photo_url ?? null);
