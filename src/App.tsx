@@ -24,6 +24,7 @@ import HelpProtectPage from "./pages/HelpProtectPage";
 import FearFreedPage from "./pages/FearFreedPage";
 import VettedPage from "./pages/VettedPage";
 import HelpBehavePage from "./pages/HelpBehavePage";
+import HelpOvercomePage from "./pages/HelpOvercomePage";
 
 const queryClient = new QueryClient();
 
