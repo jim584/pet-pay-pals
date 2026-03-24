@@ -34,10 +34,16 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [removePhoto, setRemovePhoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const parseMixedBreed = (breed: string | null | undefined) => {
+    if (breed?.startsWith("Mixed Breed - ")) return { breed: "Mixed Breed", detail: breed.slice(14) };
+    return { breed: breed ?? "", detail: "" };
+  };
+  const parsed = parseMixedBreed(pet?.breed);
   const [form, setForm] = useState({
     name: pet?.name ?? "",
     species: pet?.species ?? "dog",
-    breed: pet?.breed ?? "",
+    breed: parsed.breed,
+    mixedBreedDetail: parsed.detail,
     date_of_birth: pet?.date_of_birth ? new Date(pet.date_of_birth + "T00:00:00") : undefined as Date | undefined,
     weight_kg: pet?.weight_kg?.toString() ?? "",
     notes: pet?.notes ?? "",
