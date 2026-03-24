@@ -244,7 +244,7 @@ export function PublicFeed({ search, category }: { search?: string; category?: s
   const { user } = useAuth();
   const qc = useQueryClient();
   const [followedSet, setFollowedSet] = useState<Set<string>>(new Set());
-  const [likedSet, setLikedSet] = useState<Set<string>>(new Set());
+  const [reactionsMap, setReactionsMap] = useState<Map<string, string>>(new Map());
 
   const {
     data,
