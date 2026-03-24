@@ -230,7 +230,9 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
                   <BreedCombobox
                     breeds={getBreedsForSpecies(form.species)}
                     value={form.breed}
-                    onChange={(v) => setForm({ ...form, breed: v })}
+                    onChange={(v) => setForm({ ...form, breed: v, mixedBreedDetail: v === "Mixed Breed" ? form.mixedBreedDetail : "" })}
+                    mixedBreedDetail={form.mixedBreedDetail}
+                    onMixedBreedDetailChange={(d) => setForm({ ...form, mixedBreedDetail: d })}
                   />
                 ) : (
                   <Input value={form.breed} onChange={(e) => setForm({ ...form, breed: e.target.value })} />

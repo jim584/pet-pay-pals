@@ -142,6 +142,8 @@ export function CreateAdoptionDialog() {
                   breeds={getBreedsForSpecies(form.species)}
                   value={form.breed}
                   onChange={(v) => set("breed", v)}
+                  mixedBreedDetail={form.mixedBreedDetail}
+                  onMixedBreedDetailChange={(d) => setForm((f) => ({ ...f, mixedBreedDetail: d }))}
                 />
               ) : (
                 <Input value={form.breed} onChange={(e) => set("breed", e.target.value)} placeholder="e.g. Breed name" />
