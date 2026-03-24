@@ -31,9 +31,11 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
   const [donating, setDonating] = useState(false);
   const [replyingTo, setReplyingTo] = useState<StoryComment | null>(null);
   const [commentReactionsMap, setCommentReactionsMap] = useState<Map<string, string>>(new Map());
+  const [reactionSummary, setReactionSummary] = useState<{ type: string; count: number }[]>([]);
 
   useEffect(() => {
     if (user) checkUserReaction(story.id, user.id).then((r) => setCurrentReaction(r as ReactionType | null));
+    batchFetchReactionSummaries([story.id]).then((m) => setReactionSummary(m.get(story.id) || []));
   }, [story.id, user]);
 
   const handleReact = async (type: ReactionType) => {
