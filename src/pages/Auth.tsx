@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/components/ui/sonner";
-import { ArrowLeft, PawPrint } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import logoColor from "@/assets/logo-color.png";
 
 export default function Auth() {
   const [isSignUp, setIsSignUp] = useState(false);
