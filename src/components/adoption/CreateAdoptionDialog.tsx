@@ -28,6 +28,7 @@ export function CreateAdoptionDialog() {
     pet_name: "",
     species: "dog",
     breed: "",
+    mixedBreedDetail: "",
     age_text: "",
     gender: "",
     description: "",
