@@ -272,7 +272,7 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
   );
 }
 
-function CommentBubble({ c, user, liked, onLike, onDelete, onEdit, onReply }: { c: StoryComment; user: any; liked: boolean; onLike: () => void; onDelete: () => void; onEdit: (content: string) => void; onReply: () => void }) {
+function CommentBubble({ c, user, currentReaction, onReact, onDelete, onEdit, onReply }: { c: StoryComment; user: any; currentReaction: ReactionType | null; onReact: (type: ReactionType) => void; onDelete: () => void; onEdit: (content: string) => void; onReply: () => void }) {
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState(c.content);
 
