@@ -97,6 +97,19 @@ export async function deleteBehavePost(id: string) {
   if (error) throw error;
 }
 
+export async function updateBehavePost(id: string, updates: {
+  title?: string;
+  content?: string;
+  excerpt?: string;
+  featured_image_url?: string;
+  category?: string;
+  tags?: string[];
+  is_published?: boolean;
+}) {
+  const { error } = await supabase.from("behave_posts").update(updates as any).eq("id", id);
+  if (error) throw error;
+}
+
 // ─── Images ─────────────────────────────────────────────
 export async function fetchBehaveImages(page = 0, search?: string, category?: string) {
   const from = page * BEHAVE_PAGE_SIZE;
@@ -132,6 +145,15 @@ export async function createBehaveImage(img: {
 
 export async function deleteBehaveImage(id: string) {
   const { error } = await supabase.from("behave_images").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function updateBehaveImage(id: string, updates: {
+  title?: string;
+  description?: string;
+  category?: string;
+}) {
+  const { error } = await supabase.from("behave_images").update(updates as any).eq("id", id);
   if (error) throw error;
 }
 
@@ -171,6 +193,17 @@ export async function createBehaveVideo(vid: {
 
 export async function deleteBehaveVideo(id: string) {
   const { error } = await supabase.from("behave_videos").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function updateBehaveVideo(id: string, updates: {
+  title?: string;
+  description?: string;
+  video_url?: string;
+  thumbnail_url?: string;
+  category?: string;
+}) {
+  const { error } = await supabase.from("behave_videos").update(updates as any).eq("id", id);
   if (error) throw error;
 }
 

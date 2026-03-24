@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Dog, Search } from "lucide-react";
+import { ArrowLeft, Dog, Search, ShieldCheck } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAuth } from "@/contexts/AuthContext";
 import { BEHAVE_CATEGORIES, categoryLabel } from "@/lib/behave-api";
 import { ImageGallery } from "@/components/behave/ImageGallery";
 import { VideoLibrary } from "@/components/behave/VideoLibrary";
@@ -13,6 +14,8 @@ import { TrainingBlog } from "@/components/behave/TrainingBlog";
 
 export default function HelpBehavePage() {
   const isMobile = useIsMobile();
+  const { role } = useAuth();
+  const isAdmin = role === "admin";
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [category, setCategory] = useState("");
@@ -33,10 +36,15 @@ export default function HelpBehavePage() {
           <Button variant="ghost" size="icon" asChild>
             <Link to="/"><ArrowLeft className="h-4 w-4" /></Link>
           </Button>
-          <div className="flex items-center gap-2 ml-3">
-            <Dog className="h-5 w-5 text-primary" />
-            <span className="text-lg font-bold font-display text-foreground">Help A Pet Behave™</span>
-          </div>
+            <div className="flex items-center gap-2 ml-3">
+              <Dog className="h-5 w-5 text-primary" />
+              <span className="text-lg font-bold font-display text-foreground">Help A Pet Behave™</span>
+              {isAdmin && (
+                <Badge variant="outline" className="gap-1 text-xs border-primary/40 text-primary">
+                  <ShieldCheck className="h-3 w-3" /> Admin
+                </Badge>
+              )}
+            </div>
         </div>
       </header>
 
