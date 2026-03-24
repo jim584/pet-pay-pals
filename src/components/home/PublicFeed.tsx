@@ -218,7 +218,7 @@ function FeedCard({ story, isFollowing, currentReaction, reactionSummary, onFoll
             {!user && <TooltipContent>Log in to comment</TooltipContent>}
           </Tooltip>
 
-          <ShareButton storyId={story.id} title={`${story.pets.name} — ${story.title}`} />
+          {/* <ShareButton storyId={story.id} title={`${story.pets.name} — ${story.title}`} /> */}
         </div>
 
         <div>
