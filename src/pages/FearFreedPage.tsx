@@ -5,6 +5,10 @@ import { Input } from "@/components/ui/input";
 import { ArrowLeft, ShieldOff, Search } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { BlogCard, type BlogPost } from "@/components/fearfreed/BlogCard";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { CompassMenu } from "@/components/home/CompassMenu";
+import { SuggestedPets } from "@/components/home/SuggestedPets";
+import { MobileSuggestedPets } from "@/components/home/MobileSuggestedPets";
 
 const DUMMY_POSTS: BlogPost[] = [
   {
@@ -107,7 +111,7 @@ export default function FearFreedPage() {
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="max-w-5xl mx-auto flex items-center h-14 px-4">
+        <div className="max-w-7xl mx-auto flex items-center h-14 px-4">
           <Button variant="ghost" size="icon" asChild>
             <Link to="/"><ArrowLeft className="h-4 w-4" /></Link>
           </Button>
@@ -118,41 +122,61 @@ export default function FearFreedPage() {
         </div>
       </header>
 
-      <main className={`max-w-5xl mx-auto ${isMobile ? "px-3 py-4 pb-24" : "px-6 py-6"}`}>
-        {/* Hero */}
-        <div className="rounded-xl bg-primary/5 border border-primary/20 p-5 mb-6 text-center">
-          <h1 className="text-2xl font-bold font-display text-foreground">Overcome Fear, Anxiety & Phobias</h1>
-          <p className="text-muted-foreground mt-1 text-sm max-w-lg mx-auto">
-            Expert-backed guides to help pets and their owners conquer fears — one step at a time.
-          </p>
-        </div>
-
-        {/* Search */}
-        <div className="relative mb-6">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search articles..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-
-        {/* Grid */}
-        {filtered.length > 0 ? (
-          <div className="grid grid-cols-1 gap-5 max-w-2xl mx-auto">
-            {filtered.map((post) => (
-              <BlogCard key={post.id} post={post} />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-16">
-            <ShieldOff className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
-            <h2 className="text-lg font-semibold text-foreground">No articles found</h2>
-            <p className="text-muted-foreground text-sm mt-1">Try a different search term.</p>
-          </div>
+      <div className="max-w-7xl mx-auto flex">
+        {!isMobile && (
+          <aside className="w-60 shrink-0 sticky top-14 h-[calc(100vh-3.5rem)]">
+            <ScrollArea className="h-full">
+              <CompassMenu />
+            </ScrollArea>
+          </aside>
         )}
-      </main>
+
+        <main className={`flex-1 min-w-0 ${isMobile ? "px-3 py-4 pb-24" : "border-x px-6 py-6"}`}>
+          {isMobile && <MobileSuggestedPets />}
+
+          {/* Hero */}
+          <div className="rounded-xl bg-primary/5 border border-primary/20 p-5 mb-6 text-center">
+            <h1 className="text-2xl font-bold font-display text-foreground">Overcome Fear, Anxiety & Phobias</h1>
+            <p className="text-muted-foreground mt-1 text-sm max-w-lg mx-auto">
+              Expert-backed guides to help pets and their owners conquer fears — one step at a time.
+            </p>
+          </div>
+
+          {/* Search */}
+          <div className="relative mb-6">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search articles..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+
+          {/* Grid */}
+          {filtered.length > 0 ? (
+            <div className="grid grid-cols-1 gap-5 max-w-2xl mx-auto">
+              {filtered.map((post) => (
+                <BlogCard key={post.id} post={post} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-16">
+              <ShieldOff className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
+              <h2 className="text-lg font-semibold text-foreground">No articles found</h2>
+              <p className="text-muted-foreground text-sm mt-1">Try a different search term.</p>
+            </div>
+          )}
+        </main>
+
+        {!isMobile && (
+          <aside className="w-72 shrink-0 sticky top-14 h-[calc(100vh-3.5rem)]">
+            <ScrollArea className="h-full">
+              <SuggestedPets />
+            </ScrollArea>
+          </aside>
+        )}
+      </div>
     </div>
   );
 }
