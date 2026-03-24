@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchComments, addComment, deleteComment, editComment, toggleCommentLike, batchCheckCommentLiked, type StoryComment } from "@/lib/community-api";
+import { fetchComments, addComment, deleteComment, editComment, toggleCommentReaction, batchCheckCommentReactions, type StoryComment } from "@/lib/community-api";
+import { ReactionPicker } from "@/components/shared/ReactionPicker";
+import type { ReactionType } from "@/lib/reactions";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
