@@ -136,8 +136,8 @@ export function StoryComments({ storyId, isOpen }: Props) {
                   <CommentRow
                     comment={reply}
                     isOwn={user?.id === reply.user_id}
-                    liked={likedSet.has(reply.id)}
-                    onLike={() => handleLikeComment(reply.id)}
+                    currentReaction={(reactionsMap.get(reply.id) as ReactionType) ?? null}
+                    onReact={(type) => handleReactComment(reply.id, type)}
                     onDelete={() => deleteMutation.mutate(reply.id)}
                     onEdit={(content) => editMutation.mutate({ id: reply.id, content })}
                     onReply={() => setReplyingTo(reply)}
