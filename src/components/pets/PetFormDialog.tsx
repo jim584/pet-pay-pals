@@ -242,6 +242,16 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
                 )}
               </div>
             </div>
+            <div className="space-y-2">
+              <Label>Gender</Label>
+              <Select value={form.gender} onValueChange={(v) => setForm({ ...form, gender: v })}>
+                <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="male">Male</SelectItem>
+                  <SelectItem value="female">Female</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Date of Birth</Label>
