@@ -131,10 +131,13 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
     try {
       const dobStr = form.date_of_birth ? format(form.date_of_birth, "yyyy-MM-dd") : null;
       const computedAge = dobStr ? calculateAge(dobStr).years : null;
+      const finalBreed = form.breed === "Mixed Breed" && form.mixedBreedDetail?.trim()
+        ? `Mixed Breed - ${form.mixedBreedDetail.trim()}`
+        : form.breed || null;
       const payload = {
         name: form.name,
         species: form.species,
-        breed: form.breed || null,
+        breed: finalBreed,
         date_of_birth: dobStr,
         age_years: computedAge,
         weight_kg: form.weight_kg ? parseFloat(form.weight_kg) : null,
