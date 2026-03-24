@@ -143,6 +143,7 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
         date_of_birth: dobStr,
         age_years: computedAge,
         weight_kg: form.weight_kg ? parseFloat(form.weight_kg) : null,
+        gender: form.gender || null,
         notes: form.notes || null,
         owner_id: user.id,
         photo_url: removePhoto ? null : (pet?.photo_url ?? null),
