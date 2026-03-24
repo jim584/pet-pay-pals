@@ -178,6 +178,7 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
           <p className="text-sm text-foreground/80 leading-relaxed">{story.content}</p>
         </div>
 
+        {reactionSummary.length > 0 && <ReactionSummary summary={reactionSummary} />}
         {/* Action bar */}
         <div className="flex items-center gap-2 pt-2 border-t border-border/50">
           <ReactionPicker
