@@ -23,6 +23,7 @@ import HelpForeverPage from "./pages/HelpForeverPage";
 import HelpProtectPage from "./pages/HelpProtectPage";
 import FearFreedPage from "./pages/FearFreedPage";
 import VettedPage from "./pages/VettedPage";
+import HelpBehavePage from "./pages/HelpBehavePage";
 
 const queryClient = new QueryClient();
 
@@ -51,7 +52,7 @@ function AppRoutes() {
         <Route path="/fearfreed" element={<FearFreedPage />} />
         <Route path="/help-overcome" element={<PlaceholderSection title="Help A Pet Overcome™" />} />
         <Route path="/help-protect" element={<HelpProtectPage />} />
-        <Route path="/help-behave" element={<PlaceholderSection title="Help A Pet Behave™" />} />
+        <Route path="/help-behave" element={<HelpBehavePage />} />
         <Route path="/vetted" element={<VettedPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
