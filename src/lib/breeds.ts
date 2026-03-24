@@ -70,10 +70,36 @@ export const CAT_BREEDS = [
   "Somali","Sphynx","Thai","Tonkinese","Toyger","Turkish Angora","Turkish Van",
 ] as const;
 
+export const HORSE_BREEDS = [
+  "Akhal-Teke","Altai Horse","American Bashkir Curly","American Cream Draft","American Quarter Horse",
+  "American Saddlebred","Andalusian","Anglo-Arabian","Appaloosa","Arabian","Ardennes","Austrian Warmblood",
+  "Auxois","Azteca","Baise Horse","Balikun Horse","Barb","Belgian Draft","Belgian Warmblood","Berber",
+  "Bhutia Pony","Bosnian Mountain Horse","Boulonnais","Brandenburger","Breton","Camargue","Canadian Horse",
+  "Chincoteague Pony","Cleveland Bay","Colorado Ranger Horse","Comtois","Connemara Pony","Criollo",
+  "Czech Warmblood","Dales Pony","Danish Warmblood","Dartmoor Pony","Dutch Warmblood","Estonian Native",
+  "Exmoor Pony","Fell Pony","Finnhorse","Florida Cracker Horse","Freiberger","Friesian","Guizhou Horse",
+  "Gypsy Vanner","Hackney","Hackney Pony","Haflinger","Hanoverian","Hequ Horse","Highland Pony",
+  "Holsteiner","Hucul Pony","Icelandic Horse","Indian Marwari Pony","Irish Sport Horse",
+  "Italian Heavy Draft","Jianchang Horse","Jutland","Karabakh","Karachai","Kathiawari","Kazakh Horse",
+  "Kentucky Mountain Saddle Horse","Kiger Mustang","Kisber Felver","Kladruber","Knabstrupper",
+  "Latvian Horse","Lipizzaner","Lusitano","Mangalarga Marchador","Mangalarga Paulista","Manipuri Pony",
+  "Maremmano","Marwari","Mecklenburg Warmblood","Miniature Horse","Missouri Fox Trotter","Mongolian Horse",
+  "Morgan","Muraközi","Mustang","New Forest Pony","Noriker","North Swedish Horse",
+  "Norwegian Fjord","Oldenburg","Paint Horse","Paso Fino","Percheron","Peruvian Paso","Poitevin",
+  "Pura Raza Española","Quarter Pony","Racking Horse","Rhenish German Coldblood","Rocky Mountain Horse",
+  "Russian Don","Schwarzwälder Kaltblut","Selle Français","Shetland Pony","Shire","Sorraia",
+  "Spiti Pony","Spotted Saddle Horse","Standardbred","Suffolk Punch","Swedish Warmblood",
+  "Swiss Warmblood","Tennessee Walking Horse","Tersk","Thoroughbred","Tibetan Pony","Tokara Horse",
+  "Trait du Nord","Trakehner","Ukrainian Riding Horse","Vladimir Heavy Draft","Welsh Pony",
+  "Westphalian","Yakutian Horse","Yonaguni Horse","Yunnan Horse","Zaniskari Pony","Zangersheide",
+  "Zhemaichu",
+] as const;
+
 export function getBreedsForSpecies(species: string): readonly string[] {
   switch (species) {
     case "dog": return DOG_BREEDS;
     case "cat": return CAT_BREEDS;
+    case "horse": return HORSE_BREEDS;
     default: return [];
   }
 }

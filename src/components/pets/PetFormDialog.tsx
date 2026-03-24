@@ -206,6 +206,7 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
                   <SelectContent>
                     <SelectItem value="dog">Dog</SelectItem>
                     <SelectItem value="cat">Cat</SelectItem>
+                    <SelectItem value="horse">Horse</SelectItem>
                     <SelectItem value="bird">Bird</SelectItem>
                     <SelectItem value="rabbit">Rabbit</SelectItem>
                     <SelectItem value="other">Other</SelectItem>
