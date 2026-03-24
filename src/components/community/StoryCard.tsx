@@ -9,6 +9,7 @@ import { MessageCircle, DollarSign, Trash2, Send, PawPrint, User, Reply, X, Penc
 import { PhotoGrid } from "@/components/shared/PhotoGrid";
 import { ReactionPicker } from "@/components/shared/ReactionPicker";
 import { ReactionSummary } from "@/components/shared/ReactionSummary";
+import { ShareButton } from "@/components/shared/ShareButton";
 import { PrayingHands } from "@/components/icons/PrayingHands";
 import type { ReactionType } from "@/lib/reactions";
 import {
