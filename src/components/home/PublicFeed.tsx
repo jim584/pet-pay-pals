@@ -367,6 +367,7 @@ export function PublicFeed({ search, category }: { search?: string; category?: s
           story={story}
           isFollowing={followedSet.has(story.pet_id)}
           currentReaction={(reactionsMap.get(story.id) as ReactionType) ?? null}
+          reactionSummary={summariesMap.get(story.id)}
           onFollow={(petId) => followMutation.mutate(petId)}
           onReact={(storyId, type) => reactionMutation.mutate({ storyId, type })}
           user={user}
