@@ -191,7 +191,7 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
             <MessageCircle className="h-4 w-4" />
             {story.comments_count}
           </Button>
-          <ShareButton storyId={story.id} title={story.title} />
+          {/* <ShareButton storyId={story.id} title={story.title} /> */}
           {!isAuthor && (
             <Button
               size="sm"
