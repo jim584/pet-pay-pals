@@ -11,6 +11,10 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PawPrint, ArrowLeft, Heart, Search } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { CompassMenu } from "@/components/home/CompassMenu";
+import { SuggestedPets } from "@/components/home/SuggestedPets";
+import { MobileSuggestedPets } from "@/components/home/MobileSuggestedPets";
 
 const SPECIES_TABS = [
   { value: "all", label: "All" },
