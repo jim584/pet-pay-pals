@@ -139,6 +139,30 @@ export async function batchCheckReactions(storyIds: string[], userId: string): P
   return map;
 }
 
+export async function batchFetchReactionSummaries(storyIds: string[]): Promise<Map<string, { type: string; count: number }[]>> {
+  if (storyIds.length === 0) return new Map();
+  const { data } = await supabase
+    .from("story_likes")
+    .select("story_id, reaction_type")
+    .in("story_id", storyIds);
+  // Count per story+type
+  const counts = new Map<string, Map<string, number>>();
+  for (const r of (data || []) as any[]) {
+    if (!counts.has(r.story_id)) counts.set(r.story_id, new Map());
+    const m = counts.get(r.story_id)!;
+    m.set(r.reaction_type, (m.get(r.reaction_type) || 0) + 1);
+  }
+  const result = new Map<string, { type: string; count: number }[]>();
+  for (const [sid, typeMap] of counts) {
+    const sorted = [...typeMap.entries()]
+      .map(([type, count]) => ({ type, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3);
+    result.set(sid, sorted);
+  }
+  return result;
+}
+
 export async function batchCheckLiked(storyIds: string[], userId: string): Promise<Set<string>> {
   const map = await batchCheckReactions(storyIds, userId);
   return new Set(map.keys());
