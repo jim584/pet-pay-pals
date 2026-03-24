@@ -250,6 +250,7 @@ export function PublicFeed({ search, category }: { search?: string; category?: s
   const qc = useQueryClient();
   const [followedSet, setFollowedSet] = useState<Set<string>>(new Set());
   const [reactionsMap, setReactionsMap] = useState<Map<string, string>>(new Map());
+  const [summariesMap, setSummariesMap] = useState<Map<string, { type: string; count: number }[]>>(new Map());
 
   const {
     data,
