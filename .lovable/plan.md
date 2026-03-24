@@ -1,67 +1,46 @@
 
 
-## Plan: Build "Help a Pet Behave" Content Module
+## Plan: Admin Control for "Help a Pet Behave" Content
 
-Transform the placeholder page at `/help-behave` into a full content management module with three tabs: Images Gallery, Video Library, and Training Blog. Follows the same architectural patterns as FearFreed (blog) and HelpProtect (database-driven feed).
+Currently, users can only create/delete their own content. This plan adds full admin control so admins can add, edit, and delete **any** content across all three tabs (images, videos, blog posts).
 
-### Database Changes
+### Current Gaps
+- No edit functionality exists for any content type
+- Delete is restricted to content owners only (no admin override)
+- Create buttons only show for logged-in users, not admin-aware
+- No `update` API functions exist in `behave-api.ts`
 
-**1. New table: `behave_posts` (Training Blog)**
-- id, author_id, title, content (text), featured_image_url, category, tags (text[]), excerpt, is_published, created_at, updated_at
-- Categories: Behavior Issues, Training Tips, Beginner Guides, Aggression, Obedience, Puppy Training
-- RLS: anyone can read published posts, authors can CRUD own posts
+### Changes
 
-**2. New table: `behave_images` (Image Gallery)**
-- id, uploaded_by, title, description, image_url, category, created_at
-- RLS: anyone can view, uploaders can CRUD own images
+**1. Database: Add admin RLS policies for all 3 behave tables**
+- Add admin SELECT/UPDATE/DELETE policies on `behave_posts`, `behave_images`, `behave_videos` so admins can manage any content (using the existing `has_role(auth.uid(), 'admin')` function)
 
-**3. New table: `behave_videos` (Video Library)**
-- id, uploaded_by, title, description, video_url (YouTube/Vimeo embed or storage URL), thumbnail_url, category, created_at
-- RLS: anyone can view, uploaders can CRUD own videos
+**2. API layer (`src/lib/behave-api.ts`)**
+- Add `updateBehavePost`, `updateBehaveImage`, `updateBehaveVideo` functions
+- Add `fetchAllBehavePosts` variant that includes unpublished posts (for admin view)
 
-**4. New storage bucket: `behave-media` (public)**
-- For image uploads and optional video uploads
+**3. Update `ImageGallery.tsx`**
+- Add edit dialog (pre-fills title, description, category) triggered by an Edit button
+- Show Edit and Delete buttons for admins on all images (not just own)
+- Pass `role` from AuthContext to check admin status
 
-### Frontend Changes
+**4. Update `VideoLibrary.tsx`**
+- Add edit dialog for title, description, video URL, category
+- Show Edit and Delete buttons for admins on all videos
 
-**5. Create `src/pages/HelpBehavePage.tsx`**
-- Header with back button and Dog icon (matches compass menu)
-- Hero banner describing the section
-- Tab navigation: Images | Videos | Blog
-- Search bar filtering across the active tab
-- Each tab renders its respective content component
+**5. Update `TrainingBlog.tsx`**
+- Add edit dialog for title, content, excerpt, category, tags, featured image
+- Show Edit and Delete buttons for admins on all posts
+- Admin can toggle `is_published` status
 
-**6. Create `src/components/behave/ImageGallery.tsx`**
-- Grid layout of image cards with title, description, category badge
-- Upload dialog for authenticated users (multi-image upload via storage bucket)
-- Edit/delete options for own images
-- Category filter chips
-
-**7. Create `src/components/behave/VideoLibrary.tsx`**
-- Card layout with embedded video players (YouTube/Vimeo iframe or native video)
-- Upload/embed dialog: paste a YouTube/Vimeo URL or upload a video file
-- Title, description, category per video
-- Responsive video embeds
-
-**8. Create `src/components/behave/TrainingBlog.tsx`**
-- Blog card list (reuses `BlogCard` pattern from FearFreed)
-- "Create Post" dialog for authenticated users with title, featured image upload, rich text content (textarea), category select, tags input
-- "Read More" expands to full post view (dialog or inline)
-- Category/tag filter chips + search
-
-**9. Create API layer: `src/lib/behave-api.ts`**
-- CRUD functions for behave_posts, behave_images, behave_videos
-- Paginated fetches with search/category filters
-
-**10. Update `src/App.tsx`**
-- Replace placeholder route with new `HelpBehavePage` component
+**6. Update `HelpBehavePage.tsx`**
+- Show admin badge/indicator when admin is viewing
+- No structural changes needed; admin controls live inside each tab component
 
 ### Technical Details
-
-- Uses Tabs component for Images/Videos/Blog navigation
-- Image uploads go to `behave-media` storage bucket
-- Video section prioritizes YouTube/Vimeo URL embedding (extracts embed URL from paste); direct upload as fallback
-- Blog uses textarea for content (not a full rich text editor) to keep scope manageable
-- All three content types share the same category taxonomy for consistency
-- Infinite scroll or "Load More" pagination pattern (matches HelpProtect)
+- Admin check: `role === "admin"` from `useAuth()` — already available in AuthContext
+- Edit dialogs reuse the same form structure as create dialogs, pre-filled with existing data
+- The `isAdmin` flag is computed once per component: `const isAdmin = role === "admin"`
+- Delete actions for admin users will show a confirmation dialog (follows existing deletion safety pattern)
+- All three components get an identical pattern: `{(isAdmin || user?.id === item.owner_id) && <EditDeleteButtons />}`
 
