@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/components/ui/sonner";
-import { ArrowLeft, PawPrint } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import logoColor from "@/assets/logo-color.png";
 
 export default function Auth() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -43,9 +44,7 @@ export default function Auth() {
       </Button>
       <Card className="w-full max-w-md shadow-2xl border-0">
         <CardHeader className="text-center space-y-2">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
-            <PawPrint className="h-7 w-7" />
-          </div>
+          <img src={logoColor} alt="Help A Pet" className="h-16 w-auto mx-auto" />
           <CardTitle className="text-2xl font-bold tracking-tight">
             {isSignUp ? "Create Account" : "Welcome Back"}
           </CardTitle>

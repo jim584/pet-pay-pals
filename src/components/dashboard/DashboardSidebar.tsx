@@ -1,4 +1,5 @@
-import { PawPrint, LayoutDashboard, LogOut, Users, Wallet, Stethoscope, Briefcase, Calendar, UserCog, Home } from "lucide-react";
+import { LayoutDashboard, LogOut, Users, Wallet, Stethoscope, Briefcase, Calendar, UserCog, Home, PawPrint } from "lucide-react";
+import logoDark from "@/assets/logo-dark.png";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -59,11 +60,8 @@ export function DashboardSidebar() {
     <Sidebar className="border-r-0">
       <SidebarHeader className="p-4 border-b border-sidebar-border">
         <Link to="/" className="flex items-center gap-3 group">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sidebar-primary text-sidebar-primary-foreground group-hover:scale-105 transition-transform">
-            <PawPrint className="h-5 w-5" />
-          </div>
+          <img src={logoDark} alt="Help A Pet" className="h-10 w-auto group-hover:scale-105 transition-transform" />
           <div className="min-w-0">
-            <p className="font-display font-bold text-sm truncate">Help A Pet</p>
             <p className="text-xs text-sidebar-foreground/60 capitalize truncate">
               {role?.replace("_", " ")}
             </p>
