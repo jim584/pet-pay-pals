@@ -189,8 +189,8 @@ export function StoryComments({ storyId, isOpen }: Props) {
 function CommentRow({
   comment,
   isOwn,
-  liked,
-  onLike,
+  currentReaction,
+  onReact,
   onDelete,
   onEdit,
   onReply,
@@ -199,8 +199,8 @@ function CommentRow({
 }: {
   comment: StoryComment;
   isOwn: boolean;
-  liked: boolean;
-  onLike: () => void;
+  currentReaction: ReactionType | null;
+  onReact: (type: ReactionType) => void;
   onDelete: () => void;
   onEdit: (content: string) => void;
   onReply: () => void;
