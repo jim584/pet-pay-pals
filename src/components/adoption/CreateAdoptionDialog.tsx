@@ -72,10 +72,13 @@ export function CreateAdoptionDialog() {
         photo_urls.push(url);
       }
 
+      const finalBreed = form.breed === "Mixed Breed" && form.mixedBreedDetail?.trim()
+        ? `Mixed Breed - ${form.mixedBreedDetail.trim()}`
+        : form.breed || null;
       await createAdoptionListing({
         pet_name: form.pet_name,
         species: form.species,
-        breed: form.breed || null,
+        breed: finalBreed,
         age_text: dob ? computedAgeText : (form.age_text || null),
         gender: form.gender || null,
         description: form.description || null,
