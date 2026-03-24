@@ -14,6 +14,8 @@ import { TrainingBlog } from "@/components/behave/TrainingBlog";
 
 export default function HelpBehavePage() {
   const isMobile = useIsMobile();
+  const { role } = useAuth();
+  const isAdmin = role === "admin";
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [category, setCategory] = useState("");
