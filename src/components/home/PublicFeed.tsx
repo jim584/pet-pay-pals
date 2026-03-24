@@ -3,6 +3,7 @@ import { fetchPublicFeed, followPet, unfollowPet, checkFollowing, FEED_PAGE_SIZE
 import { toggleReaction, batchCheckReactions, batchFetchReactionSummaries, STORY_CATEGORIES } from "@/lib/community-api";
 import { ReactionPicker } from "@/components/shared/ReactionPicker";
 import { ReactionSummary } from "@/components/shared/ReactionSummary";
+import { ShareButton } from "@/components/shared/ShareButton";
 import type { ReactionType } from "@/lib/reactions";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -17,7 +18,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 import { PetProfilePreview } from "./PetProfilePreview";
 import { StoryComments } from "./StoryComments";
-import { MessageCircle, Share2, UserPlus, PawPrint, User, X, RefreshCw, Search, ArrowLeft, ArrowRight } from "lucide-react";
+import { MessageCircle, UserPlus, PawPrint, User, X, RefreshCw, Search, ArrowLeft, ArrowRight } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 const SAMPLE_STORIES: FeedStory[] = [
@@ -217,9 +218,7 @@ function FeedCard({ story, isFollowing, currentReaction, reactionSummary, onFoll
             {!user && <TooltipContent>Log in to comment</TooltipContent>}
           </Tooltip>
 
-          <button className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
-            <Share2 className="h-5 w-5" />
-          </button>
+          <ShareButton storyId={story.id} title={`${story.pets.name} — ${story.title}`} />
         </div>
 
         <div>
