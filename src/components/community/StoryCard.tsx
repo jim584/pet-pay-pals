@@ -20,7 +20,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 
 export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: () => void }) {
   const { user } = useAuth();
-  const [liked, setLiked] = useState(false);
+  const [currentReaction, setCurrentReaction] = useState<ReactionType | null>(null);
   const [likesCount, setLikesCount] = useState(story.likes_count);
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<StoryComment[]>([]);
