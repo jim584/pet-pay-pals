@@ -58,7 +58,7 @@ export default function HelpForeverPage() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="max-w-4xl mx-auto flex items-center justify-between h-14 px-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between h-14 px-4">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" asChild>
               <Link to="/"><ArrowLeft className="h-4 w-4" /></Link>
@@ -72,80 +72,102 @@ export default function HelpForeverPage() {
         </div>
       </header>
 
-      <main className={`max-w-4xl mx-auto ${isMobile ? "px-3 py-4 pb-24" : "px-6 py-6"}`}>
-        {/* Hero banner */}
-        <div className="rounded-xl bg-primary/5 border border-primary/20 p-5 mb-6 text-center">
-          <h1 className="text-2xl font-bold font-display text-foreground">Adopt a Pet, Change a Life</h1>
-          <p className="text-muted-foreground mt-1 text-sm max-w-md mx-auto">
-            Browse dogs, cats, and other animals looking for their forever home. Every pet deserves love.
-          </p>
-        </div>
-
-        {/* Search bar */}
-        <div className="relative mb-4">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by pet name, breed, or location..."
-            value={search}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-
-
-        <Tabs value={species} onValueChange={setSpecies} className="mb-6">
-          <TabsList className="w-full justify-start">
-            {SPECIES_TABS.map((tab) => (
-              <TabsTrigger key={tab.value} value={tab.value}>{tab.label}</TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-
-        {/* Loading */}
-        {isLoading && (
-          <div className="flex flex-col gap-4 max-w-2xl mx-auto">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="rounded-lg border overflow-hidden sm:flex">
-                <Skeleton className="aspect-[4/3] sm:aspect-auto sm:w-56 sm:shrink-0 w-full sm:h-auto h-48" />
-                <div className="p-4 space-y-2 flex-1">
-                  <Skeleton className="h-5 w-1/2" />
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-4 w-full" />
-                </div>
-              </div>
-            ))}
-          </div>
+      <div className="max-w-7xl mx-auto flex">
+        {/* Left Sidebar — Compass Menu */}
+        {!isMobile && (
+          <aside className="w-60 shrink-0 sticky top-14 h-[calc(100vh-3.5rem)]">
+            <ScrollArea className="h-full">
+              <CompassMenu />
+            </ScrollArea>
+          </aside>
         )}
 
-        {/* Empty state */}
-        {!isLoading && listings.length === 0 && (
-          <div className="text-center py-16">
-            <PawPrint className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
-            <h2 className="text-lg font-semibold text-foreground">No pets available yet</h2>
-            <p className="text-muted-foreground text-sm mt-1">
-              {user ? "Be the first to post an adoption listing!" : "Check back soon for pets looking for homes."}
+        {/* Center Feed */}
+        <main className={`flex-1 min-w-0 ${isMobile ? 'px-3 py-4 pb-24' : 'border-x px-6 py-6'}`}>
+          {isMobile && <MobileSuggestedPets />}
+
+          {/* Hero banner */}
+          <div className="rounded-xl bg-primary/5 border border-primary/20 p-5 mb-6 text-center">
+            <h1 className="text-2xl font-bold font-display text-foreground">Adopt a Pet, Change a Life</h1>
+            <p className="text-muted-foreground mt-1 text-sm max-w-md mx-auto">
+              Browse dogs, cats, and other animals looking for their forever home. Every pet deserves love.
             </p>
           </div>
-        )}
 
-        {/* Listings grid */}
-        {listings.length > 0 && (
-          <div className="flex flex-col gap-4 max-w-2xl mx-auto">
-            {listings.map((listing) => (
-              <AdoptionCard key={listing.id} listing={listing} />
-            ))}
+          {/* Search bar */}
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by pet name, breed, or location..."
+              value={search}
+              onChange={(e) => handleSearch(e.target.value)}
+              className="pl-9"
+            />
           </div>
-        )}
 
-        {/* Load more */}
-        {hasNextPage && (
-          <div className="text-center mt-6">
-            <Button variant="outline" onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
-              {isFetchingNextPage ? "Loading..." : "Load More"}
-            </Button>
-          </div>
+          <Tabs value={species} onValueChange={setSpecies} className="mb-6">
+            <TabsList className="w-full justify-start">
+              {SPECIES_TABS.map((tab) => (
+                <TabsTrigger key={tab.value} value={tab.value}>{tab.label}</TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+
+          {/* Loading */}
+          {isLoading && (
+            <div className="flex flex-col gap-4 max-w-2xl mx-auto">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="rounded-lg border overflow-hidden sm:flex">
+                  <Skeleton className="aspect-[4/3] sm:aspect-auto sm:w-56 sm:shrink-0 w-full sm:h-auto h-48" />
+                  <div className="p-4 space-y-2 flex-1">
+                    <Skeleton className="h-5 w-1/2" />
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-4 w-full" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Empty state */}
+          {!isLoading && listings.length === 0 && (
+            <div className="text-center py-16">
+              <PawPrint className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
+              <h2 className="text-lg font-semibold text-foreground">No pets available yet</h2>
+              <p className="text-muted-foreground text-sm mt-1">
+                {user ? "Be the first to post an adoption listing!" : "Check back soon for pets looking for homes."}
+              </p>
+            </div>
+          )}
+
+          {/* Listings grid */}
+          {listings.length > 0 && (
+            <div className="flex flex-col gap-4 max-w-2xl mx-auto">
+              {listings.map((listing) => (
+                <AdoptionCard key={listing.id} listing={listing} />
+              ))}
+            </div>
+          )}
+
+          {/* Load more */}
+          {hasNextPage && (
+            <div className="text-center mt-6">
+              <Button variant="outline" onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
+                {isFetchingNextPage ? "Loading..." : "Load More"}
+              </Button>
+            </div>
+          )}
+        </main>
+
+        {/* Right Sidebar — Suggested Pets */}
+        {!isMobile && (
+          <aside className="w-72 shrink-0 sticky top-14 h-[calc(100vh-3.5rem)]">
+            <ScrollArea className="h-full">
+              <SuggestedPets />
+            </ScrollArea>
+          </aside>
         )}
-      </main>
+      </div>
     </div>
   );
 }
