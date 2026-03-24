@@ -97,6 +97,19 @@ export async function deleteBehavePost(id: string) {
   if (error) throw error;
 }
 
+export async function updateBehavePost(id: string, updates: {
+  title?: string;
+  content?: string;
+  excerpt?: string;
+  featured_image_url?: string;
+  category?: string;
+  tags?: string[];
+  is_published?: boolean;
+}) {
+  const { error } = await supabase.from("behave_posts").update(updates as any).eq("id", id);
+  if (error) throw error;
+}
+
 // ─── Images ─────────────────────────────────────────────
 export async function fetchBehaveImages(page = 0, search?: string, category?: string) {
   const from = page * BEHAVE_PAGE_SIZE;
