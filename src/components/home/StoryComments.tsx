@@ -74,21 +74,24 @@ export function StoryComments({ storyId, isOpen }: Props) {
     },
   });
 
-  const handleLikeComment = async (commentId: string) => {
+  const handleReactComment = async (commentId: string, type: ReactionType) => {
     if (!user) { navigate("/auth"); return; }
-    const wasLiked = likedSet.has(commentId);
-    setLikedSet((prev) => {
-      const next = new Set(prev);
-      wasLiked ? next.delete(commentId) : next.add(commentId);
+    const prev = reactionsMap.get(commentId) as ReactionType | undefined;
+    // Optimistic
+    setReactionsMap((m) => {
+      const next = new Map(m);
+      if (prev === type) next.delete(commentId);
+      else next.set(commentId, type);
       return next;
     });
     try {
-      await toggleCommentLike(commentId, user.id);
+      await toggleCommentReaction(commentId, user.id, type);
       qc.invalidateQueries({ queryKey: ["storyComments", storyId] });
     } catch {
-      setLikedSet((prev) => {
-        const next = new Set(prev);
-        wasLiked ? next.add(commentId) : next.delete(commentId);
+      setReactionsMap((m) => {
+        const next = new Map(m);
+        if (prev) next.set(commentId, prev);
+        else next.delete(commentId);
         return next;
       });
     }
