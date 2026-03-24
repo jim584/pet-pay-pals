@@ -34,10 +34,16 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [removePhoto, setRemovePhoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const parseMixedBreed = (breed: string | null | undefined) => {
+    if (breed?.startsWith("Mixed Breed - ")) return { breed: "Mixed Breed", detail: breed.slice(14) };
+    return { breed: breed ?? "", detail: "" };
+  };
+  const parsed = parseMixedBreed(pet?.breed);
   const [form, setForm] = useState({
     name: pet?.name ?? "",
     species: pet?.species ?? "dog",
-    breed: pet?.breed ?? "",
+    breed: parsed.breed,
+    mixedBreedDetail: parsed.detail,
     date_of_birth: pet?.date_of_birth ? new Date(pet.date_of_birth + "T00:00:00") : undefined as Date | undefined,
     weight_kg: pet?.weight_kg?.toString() ?? "",
     notes: pet?.notes ?? "",
@@ -49,10 +55,12 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
 
   useEffect(() => {
     if (open) {
+      const p = parseMixedBreed(pet?.breed);
       setForm({
         name: pet?.name ?? "",
         species: pet?.species ?? "dog",
-        breed: pet?.breed ?? "",
+        breed: p.breed,
+        mixedBreedDetail: p.detail,
         date_of_birth: pet?.date_of_birth ? new Date(pet.date_of_birth + "T00:00:00") : undefined,
         weight_kg: pet?.weight_kg?.toString() ?? "",
         notes: pet?.notes ?? "",
@@ -123,10 +131,13 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
     try {
       const dobStr = form.date_of_birth ? format(form.date_of_birth, "yyyy-MM-dd") : null;
       const computedAge = dobStr ? calculateAge(dobStr).years : null;
+      const finalBreed = form.breed === "Mixed Breed" && form.mixedBreedDetail?.trim()
+        ? `Mixed Breed - ${form.mixedBreedDetail.trim()}`
+        : form.breed || null;
       const payload = {
         name: form.name,
         species: form.species,
-        breed: form.breed || null,
+        breed: finalBreed,
         date_of_birth: dobStr,
         age_years: computedAge,
         weight_kg: form.weight_kg ? parseFloat(form.weight_kg) : null,
@@ -201,7 +212,7 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Species</Label>
-                <Select value={form.species} onValueChange={(v) => setForm({ ...form, species: v, breed: "" })}>
+                <Select value={form.species} onValueChange={(v) => setForm({ ...form, species: v, breed: "", mixedBreedDetail: "" })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="dog">Dog</SelectItem>
@@ -219,7 +230,9 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
                   <BreedCombobox
                     breeds={getBreedsForSpecies(form.species)}
                     value={form.breed}
-                    onChange={(v) => setForm({ ...form, breed: v })}
+                    onChange={(v) => setForm({ ...form, breed: v, mixedBreedDetail: v === "Mixed Breed" ? form.mixedBreedDetail : "" })}
+                    mixedBreedDetail={form.mixedBreedDetail}
+                    onMixedBreedDetailChange={(d) => setForm({ ...form, mixedBreedDetail: d })}
                   />
                 ) : (
                   <Input value={form.breed} onChange={(e) => setForm({ ...form, breed: e.target.value })} />

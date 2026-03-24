@@ -28,6 +28,7 @@ export function CreateAdoptionDialog() {
     pet_name: "",
     species: "dog",
     breed: "",
+    mixedBreedDetail: "",
     age_text: "",
     gender: "",
     description: "",
@@ -48,7 +49,12 @@ export function CreateAdoptionDialog() {
       })()
     : "";
 
-  const set = (key: string, value: string) => setForm((f) => ({ ...f, [key]: value, ...(key === "species" ? { breed: "" } : {}) }));
+  const set = (key: string, value: string) => setForm((f) => ({
+    ...f,
+    [key]: value,
+    ...(key === "species" ? { breed: "", mixedBreedDetail: "" } : {}),
+    ...(key === "breed" && value !== "Mixed Breed" ? { mixedBreedDetail: "" } : {}),
+  }));
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -66,10 +72,13 @@ export function CreateAdoptionDialog() {
         photo_urls.push(url);
       }
 
+      const finalBreed = form.breed === "Mixed Breed" && form.mixedBreedDetail?.trim()
+        ? `Mixed Breed - ${form.mixedBreedDetail.trim()}`
+        : form.breed || null;
       await createAdoptionListing({
         pet_name: form.pet_name,
         species: form.species,
-        breed: form.breed || null,
+        breed: finalBreed,
         age_text: dob ? computedAgeText : (form.age_text || null),
         gender: form.gender || null,
         description: form.description || null,
@@ -85,7 +94,7 @@ export function CreateAdoptionDialog() {
       toast({ title: "Adoption listing posted!" });
       queryClient.invalidateQueries({ queryKey: ["adoption-listings"] });
       setOpen(false);
-      setForm({ pet_name: "", species: "dog", breed: "", age_text: "", gender: "", description: "", shelter_name: "", shelter_location: "", contact_phone: "", contact_email: "", contact_website: "" });
+      setForm({ pet_name: "", species: "dog", breed: "", mixedBreedDetail: "", age_text: "", gender: "", description: "", shelter_name: "", shelter_location: "", contact_phone: "", contact_email: "", contact_website: "" });
       setDob(undefined);
       setPhotos([]);
     } catch (err: any) {
@@ -133,6 +142,8 @@ export function CreateAdoptionDialog() {
                   breeds={getBreedsForSpecies(form.species)}
                   value={form.breed}
                   onChange={(v) => set("breed", v)}
+                  mixedBreedDetail={form.mixedBreedDetail}
+                  onMixedBreedDetailChange={(d) => setForm((f) => ({ ...f, mixedBreedDetail: d }))}
                 />
               ) : (
                 <Input value={form.breed} onChange={(e) => set("breed", e.target.value)} placeholder="e.g. Breed name" />
