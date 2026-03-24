@@ -299,17 +299,18 @@ export function PublicFeed({ search, category }: { search?: string; category?: s
     },
   });
 
-  const likeMutation = useMutation({
-    mutationFn: async (storyId: string) => {
+  const reactionMutation = useMutation({
+    mutationFn: async ({ storyId, type }: { storyId: string; type: ReactionType }) => {
       if (!user) return;
       // Optimistic toggle
-      setLikedSet((prev) => {
-        const next = new Set(prev);
-        if (next.has(storyId)) next.delete(storyId);
-        else next.add(storyId);
+      setReactionsMap((prev) => {
+        const next = new Map(prev);
+        const current = next.get(storyId);
+        if (current === type) next.delete(storyId);
+        else next.set(storyId, type);
         return next;
       });
-      await toggleLike(storyId, user.id);
+      await toggleReaction(storyId, user.id, type);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["publicFeed"] });
