@@ -50,8 +50,7 @@ export default function HomePage() {
       <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="max-w-7xl mx-auto flex items-center justify-between h-14 px-4">
           <Link to="/" className="flex items-center gap-2">
-            <PawPrint className="h-6 w-6 text-primary" />
-            <span className="text-lg font-bold font-display text-foreground">Help A Pet</span>
+            <img src={logoColor} alt="Help A Pet" className="h-10 w-auto" />
           </Link>
           <div className="flex items-center gap-2">
             {user ? (
