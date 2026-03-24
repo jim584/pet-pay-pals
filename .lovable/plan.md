@@ -1,27 +1,21 @@
 
 
-## Plan: Add Text Input for Mixed Breed Details
+## Plan: Add Gender Field to Pet Profiles
 
-When the user selects "Mixed Breed" from the breed dropdown, show an additional text input below so they can describe the specific mix (e.g., "Golden Retriever / Poodle").
+The adoption form already has a gender field, but the pet profile form (`PetFormDialog`) and the `pets` database table do not. This plan adds gender support to pet profiles for consistency.
 
 ### Changes
 
-**1. Update `BreedCombobox` component (`src/components/pets/BreedCombobox.tsx`)**
-- Add an optional `onMixedBreedDetail` callback prop and `mixedBreedDetail` string prop
-- When the selected value is "Mixed Breed", render a text input below the combobox button with placeholder "Describe the mix (e.g. Golden Retriever / Poodle)"
+**1. Database migration**
+- Add a `gender` text column (nullable) to the `pets` table
 
-**2. Update `PetFormDialog.tsx`**
-- Add a `mixedBreedDetail` state field (or extend the form state)
-- Pass `mixedBreedDetail` and `onMixedBreedDetail` to `BreedCombobox`
-- When saving, if breed is "Mixed Breed" and detail is provided, store breed as `"Mixed Breed - {detail}"` (or store detail in the breed field)
-- Clear the detail when species or breed changes away from Mixed Breed
+**2. Update `src/components/pets/PetFormDialog.tsx`**
+- Add a `gender` field to the form state (default empty string)
+- Add a `Select` dropdown with options: Male, Female
+- Include gender in the save payload
 
-**3. Update `CreateAdoptionDialog.tsx`**
-- Same pattern: add mixed breed detail state, pass to `BreedCombobox`, combine on save
+**3. Update `src/components/pets/PetDetail.tsx`**
+- Display the pet's gender in the detail view if set
 
-### Technical Details
-
-- The mixed breed detail input appears conditionally only when value === "Mixed Breed"
-- Stored as a single string in the existing `breed` column: `"Mixed Breed - Golden Retriever / Poodle"`
-- No database changes needed
+No changes needed to `CreateAdoptionDialog` — it already has the gender field.
 
