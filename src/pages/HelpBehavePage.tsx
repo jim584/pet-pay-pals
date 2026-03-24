@@ -11,6 +11,10 @@ import { BEHAVE_CATEGORIES, categoryLabel } from "@/lib/behave-api";
 import { ImageGallery } from "@/components/behave/ImageGallery";
 import { VideoLibrary } from "@/components/behave/VideoLibrary";
 import { TrainingBlog } from "@/components/behave/TrainingBlog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { CompassMenu } from "@/components/home/CompassMenu";
+import { SuggestedPets } from "@/components/home/SuggestedPets";
+import { MobileSuggestedPets } from "@/components/home/MobileSuggestedPets";
 
 export default function HelpBehavePage() {
   const isMobile = useIsMobile();
