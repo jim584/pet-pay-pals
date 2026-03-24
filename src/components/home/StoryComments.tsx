@@ -46,7 +46,7 @@ export function StoryComments({ storyId, isOpen }: Props) {
 
   useEffect(() => {
     if (!user || comments.length === 0) return;
-    batchCheckCommentLiked(comments.map((c) => c.id), user.id).then(setLikedSet);
+    batchCheckCommentReactions(comments.map((c) => c.id), user.id).then(setReactionsMap);
   }, [comments, user]);
 
   const addMutation = useMutation({
