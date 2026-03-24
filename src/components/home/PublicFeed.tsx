@@ -3,6 +3,7 @@ import { fetchPublicFeed, followPet, unfollowPet, checkFollowing, FEED_PAGE_SIZE
 import { toggleReaction, batchCheckReactions, batchFetchReactionSummaries, STORY_CATEGORIES } from "@/lib/community-api";
 import { ReactionPicker } from "@/components/shared/ReactionPicker";
 import { ReactionSummary } from "@/components/shared/ReactionSummary";
+import { ShareButton } from "@/components/shared/ShareButton";
 import type { ReactionType } from "@/lib/reactions";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
