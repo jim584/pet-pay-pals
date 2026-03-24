@@ -46,6 +46,7 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
     mixedBreedDetail: parsed.detail,
     date_of_birth: pet?.date_of_birth ? new Date(pet.date_of_birth + "T00:00:00") : undefined as Date | undefined,
     weight_kg: pet?.weight_kg?.toString() ?? "",
+    gender: pet?.gender ?? "",
     notes: pet?.notes ?? "",
   });
 
@@ -63,6 +64,7 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
         mixedBreedDetail: p.detail,
         date_of_birth: pet?.date_of_birth ? new Date(pet.date_of_birth + "T00:00:00") : undefined,
         weight_kg: pet?.weight_kg?.toString() ?? "",
+        gender: pet?.gender ?? "",
         notes: pet?.notes ?? "",
       });
       setPhotoPreview(pet?.photo_url ?? null);
@@ -141,6 +143,7 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
         date_of_birth: dobStr,
         age_years: computedAge,
         weight_kg: form.weight_kg ? parseFloat(form.weight_kg) : null,
+        gender: form.gender || null,
         notes: form.notes || null,
         owner_id: user.id,
         photo_url: removePhoto ? null : (pet?.photo_url ?? null),
@@ -238,6 +241,16 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
                   <Input value={form.breed} onChange={(e) => setForm({ ...form, breed: e.target.value })} />
                 )}
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Gender</Label>
+              <Select value={form.gender} onValueChange={(v) => setForm({ ...form, gender: v })}>
+                <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="male">Male</SelectItem>
+                  <SelectItem value="female">Female</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">

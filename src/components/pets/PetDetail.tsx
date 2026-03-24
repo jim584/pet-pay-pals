@@ -94,6 +94,7 @@ export function PetDetail({ pet, onBack, onEdit }: PetDetailProps) {
         {[
           { label: "Age", value: formatAge(pet) },
           { label: "Weight", value: pet.weight_kg ? `${pet.weight_kg} lbs` : "—" },
+          { label: "Gender", value: pet.gender ? pet.gender.charAt(0).toUpperCase() + pet.gender.slice(1) : "—" },
           { label: "Species", value: pet.species },
           { label: "Breed", value: pet.breed || "—" },
         ].map((item) => (
