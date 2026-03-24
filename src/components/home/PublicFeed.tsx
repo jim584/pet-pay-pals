@@ -277,7 +277,7 @@ export function PublicFeed({ search, category }: { search?: string; category?: s
     const petIds = [...new Set(stories.map((s) => s.pet_id))];
     checkFollowing(petIds, user.id).then(setFollowedSet);
 
-    batchCheckLiked(stories.map((s) => s.id), user.id).then(setLikedSet);
+    batchCheckReactions(stories.map((s) => s.id), user.id).then(setReactionsMap);
   }, [user, storyIds]);
 
   const followMutation = useMutation({
