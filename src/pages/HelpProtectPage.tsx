@@ -10,6 +10,10 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, ShieldAlert, Search, Plus } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { CompassMenu } from "@/components/home/CompassMenu";
+import { SuggestedPets } from "@/components/home/SuggestedPets";
+import { MobileSuggestedPets } from "@/components/home/MobileSuggestedPets";
 
 export default function HelpProtectPage() {
   const { user } = useAuth();
