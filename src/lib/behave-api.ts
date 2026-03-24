@@ -196,6 +196,17 @@ export async function deleteBehaveVideo(id: string) {
   if (error) throw error;
 }
 
+export async function updateBehaveVideo(id: string, updates: {
+  title?: string;
+  description?: string;
+  video_url?: string;
+  thumbnail_url?: string;
+  category?: string;
+}) {
+  const { error } = await supabase.from("behave_videos").update(updates as any).eq("id", id);
+  if (error) throw error;
+}
+
 // ─── Upload helper ──────────────────────────────────────
 export async function uploadBehaveMedia(userId: string, file: File) {
   const ext = file.name.split(".").pop();
