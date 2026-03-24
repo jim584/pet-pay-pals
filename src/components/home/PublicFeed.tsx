@@ -359,9 +359,9 @@ export function PublicFeed({ search, category }: { search?: string; category?: s
           key={story.id}
           story={story}
           isFollowing={followedSet.has(story.pet_id)}
-          isLiked={likedSet.has(story.id)}
+          currentReaction={(reactionsMap.get(story.id) as ReactionType) ?? null}
           onFollow={(petId) => followMutation.mutate(petId)}
-          onLike={(storyId) => likeMutation.mutate(storyId)}
+          onReact={(storyId, type) => reactionMutation.mutate({ storyId, type })}
           user={user}
           isSample={isSampleData}
           onImageClick={(url, alt) => {
