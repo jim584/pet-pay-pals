@@ -104,3 +104,37 @@
     font-family: 'Space Grotesk', sans-serif;
   }
 }
+
+/* Reaction picker animations */
+@layer utilities {
+  .reaction-picker-enter {
+    animation: reactionPickerIn 0.2s ease-out forwards;
+  }
+
+  .reaction-emoji-item {
+    opacity: 0;
+    animation: reactionEmojiIn 0.25s ease-out forwards;
+  }
+
+  @keyframes reactionPickerIn {
+    from {
+      opacity: 0;
+      transform: translateY(4px) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes reactionEmojiIn {
+    from {
+      opacity: 0;
+      transform: translateY(6px) scale(0.7);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+}
