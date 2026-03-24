@@ -35,19 +35,20 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
     if (user) checkUserReaction(story.id, user.id).then((r) => setCurrentReaction(r as ReactionType | null));
   }, [story.id, user]);
 
-  const handleLike = async () => {
+  const handleReact = async (type: ReactionType) => {
     if (!user) return;
-    // Optimistic update
-    setLiked((prev) => !prev);
-    setLikesCount((c) => (liked ? Math.max(c - 1, 0) : c + 1));
+    const wasReacted = currentReaction;
+    const isSameReaction = currentReaction === type;
+    // Optimistic
+    setCurrentReaction(isSameReaction ? null : type);
+    setLikesCount((c) => isSameReaction ? Math.max(c - 1, 0) : (wasReacted ? c : c + 1));
     try {
-      await toggleLike(story.id, user.id);
+      await toggleReaction(story.id, user.id, type);
     } catch (err: any) {
-      // Revert on error
-      setLiked((prev) => !prev);
-      setLikesCount((c) => (liked ? c + 1 : Math.max(c - 1, 0)));
-      console.error("Like error:", err);
-      toast.error("Couldn't process like. Please try again.");
+      setCurrentReaction(wasReacted);
+      setLikesCount((c) => isSameReaction ? c + 1 : (wasReacted ? c : Math.max(c - 1, 0)));
+      console.error("Reaction error:", err);
+      toast.error("Couldn't process reaction. Please try again.");
     }
   };
 
