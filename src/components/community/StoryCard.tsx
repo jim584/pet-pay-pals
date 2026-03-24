@@ -29,10 +29,10 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
   const [donateAmount, setDonateAmount] = useState("");
   const [donating, setDonating] = useState(false);
   const [replyingTo, setReplyingTo] = useState<StoryComment | null>(null);
-  const [commentLikedSet, setCommentLikedSet] = useState<Set<string>>(new Set());
+  const [commentReactionsMap, setCommentReactionsMap] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
-    if (user) checkUserLiked(story.id, user.id).then(setLiked);
+    if (user) checkUserReaction(story.id, user.id).then((r) => setCurrentReaction(r as ReactionType | null));
   }, [story.id, user]);
 
   const handleLike = async () => {
