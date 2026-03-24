@@ -269,18 +269,21 @@ export type Database = {
           comment_id: string
           created_at: string
           id: string
+          reaction_type: string
           user_id: string
         }
         Insert: {
           comment_id: string
           created_at?: string
           id?: string
+          reaction_type?: string
           user_id: string
         }
         Update: {
           comment_id?: string
           created_at?: string
           id?: string
+          reaction_type?: string
           user_id?: string
         }
         Relationships: [
@@ -742,18 +745,21 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          reaction_type: string
           story_id: string
           user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
+          reaction_type?: string
           story_id: string
           user_id: string
         }
         Update: {
           created_at?: string
           id?: string
+          reaction_type?: string
           story_id?: string
           user_id?: string
         }
