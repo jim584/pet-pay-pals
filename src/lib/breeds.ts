@@ -1,5 +1,5 @@
 export const DOG_BREEDS = [
-  "Affenpinscher","Afghan Hound","Airedale Terrier","Akita","Alaskan Malamute",
+  "Mixed Breed","Affenpinscher","Afghan Hound","Airedale Terrier","Akita","Alaskan Malamute",
   "American Bulldog","American English Coonhound","American Eskimo Dog","American Foxhound",
   "American Hairless Terrier","American Leopard Hound","American Staffordshire Terrier",
   "American Water Spaniel","Anatolian Shepherd Dog","Appenzeller Sennenhund",
@@ -59,7 +59,7 @@ export const DOG_BREEDS = [
 ] as const;
 
 export const CAT_BREEDS = [
-  "Abyssinian","American Bobtail","American Curl","American Shorthair","American Wirehair",
+  "Mixed Breed","Abyssinian","American Bobtail","American Curl","American Shorthair","American Wirehair",
   "Balinese","Bengal","Birman","Bombay","British Longhair","British Shorthair","Burmese",
   "Burmilla","Chartreux","Chausie","Colorpoint Shorthair","Cornish Rex","Cymric","Devon Rex",
   "Donskoy","Egyptian Mau","European Burmese","Exotic Shorthair","Havana Brown","Himalayan",
@@ -71,7 +71,7 @@ export const CAT_BREEDS = [
 ] as const;
 
 export const HORSE_BREEDS = [
-  "Akhal-Teke","Altai Horse","American Bashkir Curly","American Cream Draft","American Quarter Horse",
+  "Mixed Breed","Akhal-Teke","Altai Horse","American Bashkir Curly","American Cream Draft","American Quarter Horse",
   "American Saddlebred","Andalusian","Anglo-Arabian","Appaloosa","Arabian","Ardennes","Austrian Warmblood",
   "Auxois","Azteca","Baise Horse","Balikun Horse","Barb","Belgian Draft","Belgian Warmblood","Berber",
   "Bhutia Pony","Bosnian Mountain Horse","Boulonnais","Brandenburger","Breton","Camargue","Canadian Horse",
