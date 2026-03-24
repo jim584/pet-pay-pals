@@ -183,18 +183,21 @@ function FeedCard({ story, isFollowing, currentReaction, onFollow, onReact, user
 
       <CardContent className="p-4 space-y-2">
         <div className="flex items-center gap-3">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                className="flex items-center gap-1 text-sm transition-colors hover:text-amber-500"
-                onClick={() => isSample ? navigate("/auth") : requireAuth(() => onLike(story.id))}
-              >
-                <PrayingHands className={`h-5 w-5 transition-opacity ${isLiked ? "opacity-100" : "opacity-50"}`} />
-                <span>{story.likes_count}</span>
-              </button>
-            </TooltipTrigger>
-            {!user && <TooltipContent>Log in to like this post</TooltipContent>}
-          </Tooltip>
+          {isSample ? (
+            <button
+              className="flex items-center gap-1 text-sm text-muted-foreground"
+              onClick={() => navigate("/auth")}
+            >
+              🙏 <span>{story.likes_count}</span>
+            </button>
+          ) : (
+            <ReactionPicker
+              currentReaction={currentReaction}
+              onReact={(type) => requireAuth(() => onReact(story.id, type))}
+              totalCount={story.likes_count}
+              disabled={!user}
+            />
+          )}
 
           <Tooltip>
             <TooltipTrigger asChild>
