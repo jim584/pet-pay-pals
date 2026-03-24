@@ -107,10 +107,11 @@ const SAMPLE_STORIES: FeedStory[] = [
   },
 ];
 
-function FeedCard({ story, isFollowing, currentReaction, onFollow, onReact, user, isSample, onImageClick }: {
+function FeedCard({ story, isFollowing, currentReaction, reactionSummary, onFollow, onReact, user, isSample, onImageClick }: {
   story: FeedStory;
   isFollowing: boolean;
   currentReaction: ReactionType | null;
+  reactionSummary?: { type: string; count: number }[];
   onFollow: (petId: string) => void;
   onReact: (storyId: string, type: ReactionType) => void;
   user: any;
