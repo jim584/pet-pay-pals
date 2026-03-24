@@ -277,13 +277,14 @@ export function PublicFeed({ search, category }: { search?: string; category?: s
   // Stable key to avoid infinite re-renders
   const storyIds = stories.map((s) => s.id).join(",");
 
-  // Check follows & likes for logged-in user
   useEffect(() => {
-    if (!user || stories.length === 0) return;
+    if (stories.length === 0) return;
+    const ids = stories.map((s) => s.id);
+    batchFetchReactionSummaries(ids).then(setSummariesMap);
+    if (!user) return;
     const petIds = [...new Set(stories.map((s) => s.pet_id))];
     checkFollowing(petIds, user.id).then(setFollowedSet);
-
-    batchCheckReactions(stories.map((s) => s.id), user.id).then(setReactionsMap);
+    batchCheckReactions(ids, user.id).then(setReactionsMap);
   }, [user, storyIds]);
 
   const followMutation = useMutation({
