@@ -5,6 +5,7 @@ import {
   fetchBehavePosts,
   createBehavePost,
   deleteBehavePost,
+  updateBehavePost,
   uploadBehaveMedia,
   BEHAVE_PAGE_SIZE,
   BEHAVE_CATEGORIES,
@@ -18,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -26,13 +28,23 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, BookOpen, ArrowRight, Trash2, Clock } from "lucide-react";
+import { Plus, BookOpen, ArrowRight, Trash2, Pencil, Clock, EyeOff } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
@@ -45,7 +57,8 @@ export function TrainingBlog({
   search: string;
   category: string;
 }) {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
+  const isAdmin = role === "admin";
   const qc = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [readPost, setReadPost] = useState<BehavePost | null>(null);
@@ -58,6 +71,18 @@ export function TrainingBlog({
     tags: "",
     imageFile: null as File | null,
   });
+  const [editPost, setEditPost] = useState<BehavePost | null>(null);
+  const [editForm, setEditForm] = useState({
+    title: "",
+    content: "",
+    excerpt: "",
+    category: "training-tips",
+    tags: "",
+    is_published: true,
+    imageFile: null as File | null,
+  });
+  const [editSaving, setEditSaving] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
     useInfiniteQuery({
@@ -70,6 +95,7 @@ export function TrainingBlog({
     });
 
   const posts = data?.pages.flat() ?? [];
+  const canManage = (post: BehavePost) => isAdmin || user?.id === post.author_id;
 
   const handleSubmit = async () => {
     if (!user || !form.title.trim() || !form.content.trim()) return;
@@ -79,10 +105,7 @@ export function TrainingBlog({
       if (form.imageFile) {
         featured_image_url = await uploadBehaveMedia(user.id, form.imageFile);
       }
-      const tags = form.tags
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean);
+      const tags = form.tags.split(",").map((t) => t.trim()).filter(Boolean);
       await createBehavePost({
         author_id: user.id,
         title: form.title.trim(),
@@ -103,13 +126,57 @@ export function TrainingBlog({
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async () => {
+    if (!deleteId) return;
     try {
-      await deleteBehavePost(id);
+      await deleteBehavePost(deleteId);
       qc.invalidateQueries({ queryKey: ["behave-posts"] });
       toast({ title: "Post deleted" });
     } catch {
       toast({ title: "Delete failed", variant: "destructive" });
+    } finally {
+      setDeleteId(null);
+    }
+  };
+
+  const openEdit = (post: BehavePost) => {
+    setEditPost(post);
+    setEditForm({
+      title: post.title,
+      content: post.content,
+      excerpt: post.excerpt || "",
+      category: post.category,
+      tags: (post.tags || []).join(", "),
+      is_published: post.is_published,
+      imageFile: null,
+    });
+  };
+
+  const handleEditSubmit = async () => {
+    if (!editPost || !editForm.title.trim() || !editForm.content.trim()) return;
+    setEditSaving(true);
+    try {
+      let featured_image_url: string | undefined;
+      if (editForm.imageFile && user) {
+        featured_image_url = await uploadBehaveMedia(user.id, editForm.imageFile);
+      }
+      const tags = editForm.tags.split(",").map((t) => t.trim()).filter(Boolean);
+      await updateBehavePost(editPost.id, {
+        title: editForm.title.trim(),
+        content: editForm.content.trim(),
+        excerpt: editForm.excerpt.trim() || editForm.content.trim().slice(0, 160),
+        category: editForm.category,
+        tags,
+        is_published: editForm.is_published,
+        ...(featured_image_url ? { featured_image_url } : {}),
+      });
+      qc.invalidateQueries({ queryKey: ["behave-posts"] });
+      setEditPost(null);
+      toast({ title: "Post updated!" });
+    } catch {
+      toast({ title: "Update failed", variant: "destructive" });
+    } finally {
+      setEditSaving(false);
     }
   };
 
@@ -152,18 +219,32 @@ export function TrainingBlog({
           {posts.map((post) => (
             <Card key={post.id} className="overflow-hidden group cursor-pointer hover:shadow-lg transition-shadow">
               {post.featured_image_url && (
-                <div className="aspect-video overflow-hidden" onClick={() => setReadPost(post)}>
+                <div className="aspect-video overflow-hidden relative" onClick={() => setReadPost(post)}>
                   <img
                     src={post.featured_image_url}
                     alt={post.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     loading="lazy"
                   />
+                  {!post.is_published && (
+                    <div className="absolute top-2 left-2">
+                      <Badge variant="destructive" className="gap-1 text-xs">
+                        <EyeOff className="h-3 w-3" /> Draft
+                      </Badge>
+                    </div>
+                  )}
                 </div>
               )}
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <Badge variant="secondary" className="text-xs">{categoryLabel(post.category)}</Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="text-xs">{categoryLabel(post.category)}</Badge>
+                    {!post.is_published && !post.featured_image_url && (
+                      <Badge variant="destructive" className="gap-1 text-xs">
+                        <EyeOff className="h-3 w-3" /> Draft
+                      </Badge>
+                    )}
+                  </div>
                   <span className="flex items-center gap-1 text-xs text-muted-foreground">
                     <Clock className="h-3 w-3" />
                     {readTime(post.content)} min read
@@ -183,10 +264,15 @@ export function TrainingBlog({
                     {post.profiles?.full_name ?? "Unknown"} · {format(new Date(post.created_at), "MMM d, yyyy")}
                   </span>
                   <div className="flex items-center gap-1">
-                    {user?.id === post.author_id && (
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); handleDelete(post.id); }}>
-                        <Trash2 className="h-3 w-3 text-destructive" />
-                      </Button>
+                    {canManage(post) && (
+                      <>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); openEdit(post); }}>
+                          <Pencil className="h-3 w-3 text-muted-foreground" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setDeleteId(post.id); }}>
+                          <Trash2 className="h-3 w-3 text-destructive" />
+                        </Button>
+                      </>
                     )}
                     <Button variant="ghost" size="sm" className="gap-1 text-primary" onClick={() => setReadPost(post)}>
                       Read More <ArrowRight className="h-3 w-3" />
@@ -276,6 +362,72 @@ export function TrainingBlog({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Post Dialog */}
+      <Dialog open={!!editPost} onOpenChange={(o) => !o && setEditPost(null)}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Post</DialogTitle>
+            <DialogDescription>Update the training post.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Title *</Label>
+              <Input value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Replace Featured Image</Label>
+              <Input type="file" accept={ACCEPTED_IMAGE_TYPES} onChange={(e) => setEditForm({ ...editForm, imageFile: e.target.files?.[0] ?? null })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Content *</Label>
+              <Textarea value={editForm.content} onChange={(e) => setEditForm({ ...editForm, content: e.target.value })} rows={8} />
+            </div>
+            <div className="space-y-2">
+              <Label>Excerpt</Label>
+              <Textarea value={editForm.excerpt} onChange={(e) => setEditForm({ ...editForm, excerpt: e.target.value })} rows={2} />
+            </div>
+            <div className="space-y-2">
+              <Label>Category</Label>
+              <Select value={editForm.category} onValueChange={(v) => setEditForm({ ...editForm, category: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {BEHAVE_CATEGORIES.map((c) => (
+                    <SelectItem key={c} value={c}>{categoryLabel(c)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Tags</Label>
+              <Input value={editForm.tags} onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })} />
+            </div>
+            {isAdmin && (
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <Label>Published</Label>
+                <Switch checked={editForm.is_published} onCheckedChange={(v) => setEditForm({ ...editForm, is_published: v })} />
+              </div>
+            )}
+            <Button className="w-full" disabled={editSaving || !editForm.title.trim() || !editForm.content.trim()} onClick={handleEditSubmit}>
+              {editSaving ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Post</AlertDialogTitle>
+            <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

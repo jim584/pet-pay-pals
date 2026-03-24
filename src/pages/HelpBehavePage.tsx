@@ -36,10 +36,15 @@ export default function HelpBehavePage() {
           <Button variant="ghost" size="icon" asChild>
             <Link to="/"><ArrowLeft className="h-4 w-4" /></Link>
           </Button>
-          <div className="flex items-center gap-2 ml-3">
-            <Dog className="h-5 w-5 text-primary" />
-            <span className="text-lg font-bold font-display text-foreground">Help A Pet Behave™</span>
-          </div>
+            <div className="flex items-center gap-2 ml-3">
+              <Dog className="h-5 w-5 text-primary" />
+              <span className="text-lg font-bold font-display text-foreground">Help A Pet Behave™</span>
+              {isAdmin && (
+                <Badge variant="outline" className="gap-1 text-xs border-primary/40 text-primary">
+                  <ShieldCheck className="h-3 w-3" /> Admin
+                </Badge>
+              )}
+            </div>
         </div>
       </header>
 

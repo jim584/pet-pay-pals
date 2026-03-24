@@ -5,6 +5,7 @@ import {
   fetchBehaveImages,
   createBehaveImage,
   deleteBehaveImage,
+  updateBehaveImage,
   uploadBehaveMedia,
   BEHAVE_PAGE_SIZE,
   BEHAVE_CATEGORIES,
@@ -26,13 +27,23 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2, ImageIcon } from "lucide-react";
+import { Plus, Trash2, Pencil, ImageIcon } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 const ACCEPTED_IMAGE_TYPES = ".jpg,.jpeg,.png,.webp,.gif";
@@ -44,11 +55,16 @@ export function ImageGallery({
   search: string;
   category: string;
 }) {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
+  const isAdmin = role === "admin";
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [form, setForm] = useState({ title: "", description: "", category: "general", file: null as File | null });
+  const [editItem, setEditItem] = useState<BehaveImage | null>(null);
+  const [editForm, setEditForm] = useState({ title: "", description: "", category: "general" });
+  const [editSaving, setEditSaving] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
     useInfiniteQuery({
@@ -61,6 +77,8 @@ export function ImageGallery({
     });
 
   const images = data?.pages.flat() ?? [];
+
+  const canManage = (item: BehaveImage) => isAdmin || user?.id === item.uploaded_by;
 
   const handleSubmit = async () => {
     if (!user || !form.file || !form.title.trim()) return;
@@ -85,13 +103,40 @@ export function ImageGallery({
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async () => {
+    if (!deleteId) return;
     try {
-      await deleteBehaveImage(id);
+      await deleteBehaveImage(deleteId);
       qc.invalidateQueries({ queryKey: ["behave-images"] });
       toast({ title: "Image deleted" });
     } catch {
       toast({ title: "Delete failed", variant: "destructive" });
+    } finally {
+      setDeleteId(null);
+    }
+  };
+
+  const openEdit = (img: BehaveImage) => {
+    setEditItem(img);
+    setEditForm({ title: img.title, description: img.description || "", category: img.category });
+  };
+
+  const handleEditSubmit = async () => {
+    if (!editItem || !editForm.title.trim()) return;
+    setEditSaving(true);
+    try {
+      await updateBehaveImage(editItem.id, {
+        title: editForm.title.trim(),
+        description: editForm.description.trim() || undefined,
+        category: editForm.category,
+      });
+      qc.invalidateQueries({ queryKey: ["behave-images"] });
+      setEditItem(null);
+      toast({ title: "Image updated!" });
+    } catch {
+      toast({ title: "Update failed", variant: "destructive" });
+    } finally {
+      setEditSaving(false);
     }
   };
 
@@ -138,10 +183,15 @@ export function ImageGallery({
               <CardContent className="p-3 space-y-1">
                 <div className="flex items-start justify-between gap-1">
                   <h3 className="font-medium text-sm text-foreground line-clamp-1">{img.title}</h3>
-                  {user?.id === img.uploaded_by && (
-                    <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDelete(img.id)}>
-                      <Trash2 className="h-3 w-3 text-destructive" />
-                    </Button>
+                  {canManage(img) && (
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => openEdit(img)}>
+                        <Pencil className="h-3 w-3 text-muted-foreground" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setDeleteId(img.id)}>
+                        <Trash2 className="h-3 w-3 text-destructive" />
+                      </Button>
+                    </div>
                   )}
                 </div>
                 {img.description && (
@@ -200,6 +250,55 @@ export function ImageGallery({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editItem} onOpenChange={(o) => !o && setEditItem(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Image</DialogTitle>
+            <DialogDescription>Update image details.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Title *</Label>
+              <Input value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Textarea value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} rows={2} />
+            </div>
+            <div className="space-y-2">
+              <Label>Category</Label>
+              <Select value={editForm.category} onValueChange={(v) => setEditForm({ ...editForm, category: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="general">General</SelectItem>
+                  {BEHAVE_CATEGORIES.map((c) => (
+                    <SelectItem key={c} value={c}>{categoryLabel(c)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button className="w-full" disabled={editSaving || !editForm.title.trim()} onClick={handleEditSubmit}>
+              {editSaving ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Image</AlertDialogTitle>
+            <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

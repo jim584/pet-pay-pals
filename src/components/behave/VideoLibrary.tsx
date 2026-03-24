@@ -5,9 +5,11 @@ import {
   fetchBehaveVideos,
   createBehaveVideo,
   deleteBehaveVideo,
+  updateBehaveVideo,
   BEHAVE_PAGE_SIZE,
   BEHAVE_CATEGORIES,
   categoryLabel,
+  type BehaveVideo,
 } from "@/lib/behave-api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,22 +26,30 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2, Video } from "lucide-react";
+import { Plus, Trash2, Pencil, Video } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 function extractEmbedUrl(url: string): string | null {
-  // YouTube
   const ytMatch = url.match(
     /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/
   );
   if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}`;
-  // Vimeo
   const vmMatch = url.match(/vimeo\.com\/(\d+)/);
   if (vmMatch) return `https://player.vimeo.com/video/${vmMatch[1]}`;
   return null;
@@ -60,12 +70,17 @@ export function VideoLibrary({
   search: string;
   category: string;
 }) {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
+  const isAdmin = role === "admin";
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [form, setForm] = useState({ title: "", description: "", videoUrl: "", category: "general" });
+  const [editItem, setEditItem] = useState<BehaveVideo | null>(null);
+  const [editForm, setEditForm] = useState({ title: "", description: "", videoUrl: "", category: "general" });
+  const [editSaving, setEditSaving] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
     useInfiniteQuery({
@@ -78,6 +93,7 @@ export function VideoLibrary({
     });
 
   const videos = data?.pages.flat() ?? [];
+  const canManage = (vid: BehaveVideo) => isAdmin || user?.id === vid.uploaded_by;
 
   const handleSubmit = async () => {
     if (!user || !form.title.trim() || !form.videoUrl.trim()) return;
@@ -107,13 +123,51 @@ export function VideoLibrary({
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async () => {
+    if (!deleteId) return;
     try {
-      await deleteBehaveVideo(id);
+      await deleteBehaveVideo(deleteId);
       qc.invalidateQueries({ queryKey: ["behave-videos"] });
       toast({ title: "Video deleted" });
     } catch {
       toast({ title: "Delete failed", variant: "destructive" });
+    } finally {
+      setDeleteId(null);
+    }
+  };
+
+  const openEdit = (vid: BehaveVideo) => {
+    setEditItem(vid);
+    setEditForm({ title: vid.title, description: vid.description || "", videoUrl: vid.video_url, category: vid.category });
+  };
+
+  const handleEditSubmit = async () => {
+    if (!editItem || !editForm.title.trim()) return;
+    setEditSaving(true);
+    try {
+      const updates: any = {
+        title: editForm.title.trim(),
+        description: editForm.description.trim() || undefined,
+        category: editForm.category,
+      };
+      if (editForm.videoUrl !== editItem.video_url) {
+        const embedUrl = extractEmbedUrl(editForm.videoUrl);
+        if (!embedUrl) {
+          toast({ title: "Invalid URL", variant: "destructive" });
+          setEditSaving(false);
+          return;
+        }
+        updates.video_url = embedUrl;
+        updates.thumbnail_url = getThumbnail(editForm.videoUrl) || undefined;
+      }
+      await updateBehaveVideo(editItem.id, updates);
+      qc.invalidateQueries({ queryKey: ["behave-videos"] });
+      setEditItem(null);
+      toast({ title: "Video updated!" });
+    } catch {
+      toast({ title: "Update failed", variant: "destructive" });
+    } finally {
+      setEditSaving(false);
     }
   };
 
@@ -179,10 +233,15 @@ export function VideoLibrary({
               <CardContent className="p-3 space-y-1">
                 <div className="flex items-start justify-between gap-1">
                   <h3 className="font-medium text-sm text-foreground line-clamp-1">{vid.title}</h3>
-                  {user?.id === vid.uploaded_by && (
-                    <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDelete(vid.id)}>
-                      <Trash2 className="h-3 w-3 text-destructive" />
-                    </Button>
+                  {canManage(vid) && (
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => openEdit(vid)}>
+                        <Pencil className="h-3 w-3 text-muted-foreground" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setDeleteId(vid.id)}>
+                        <Trash2 className="h-3 w-3 text-destructive" />
+                      </Button>
+                    </div>
                   )}
                 </div>
                 {vid.description && (
@@ -241,6 +300,59 @@ export function VideoLibrary({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Video Dialog */}
+      <Dialog open={!!editItem} onOpenChange={(o) => !o && setEditItem(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Video</DialogTitle>
+            <DialogDescription>Update video details.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Title *</Label>
+              <Input value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Video URL</Label>
+              <Input value={editForm.videoUrl} onChange={(e) => setEditForm({ ...editForm, videoUrl: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Textarea value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} rows={2} />
+            </div>
+            <div className="space-y-2">
+              <Label>Category</Label>
+              <Select value={editForm.category} onValueChange={(v) => setEditForm({ ...editForm, category: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="general">General</SelectItem>
+                  {BEHAVE_CATEGORIES.map((c) => (
+                    <SelectItem key={c} value={c}>{categoryLabel(c)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button className="w-full" disabled={editSaving || !editForm.title.trim()} onClick={handleEditSubmit}>
+              {editSaving ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Video</AlertDialogTitle>
+            <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
