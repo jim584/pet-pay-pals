@@ -59,7 +59,7 @@ export const DOG_BREEDS = [
 ] as const;
 
 export const CAT_BREEDS = [
-  "Abyssinian","American Bobtail","American Curl","American Shorthair","American Wirehair",
+  "Mixed Breed","Abyssinian","American Bobtail","American Curl","American Shorthair","American Wirehair",
   "Balinese","Bengal","Birman","Bombay","British Longhair","British Shorthair","Burmese",
   "Burmilla","Chartreux","Chausie","Colorpoint Shorthair","Cornish Rex","Cymric","Devon Rex",
   "Donskoy","Egyptian Mau","European Burmese","Exotic Shorthair","Havana Brown","Himalayan",
