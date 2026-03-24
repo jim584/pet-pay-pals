@@ -7,10 +7,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/components/ui/sonner";
 import { MessageCircle, DollarSign, Trash2, Send, PawPrint, User, Reply, X, Pencil, Check, AlertTriangle } from "lucide-react";
 import { PhotoGrid } from "@/components/shared/PhotoGrid";
+import { ReactionPicker } from "@/components/shared/ReactionPicker";
 import { PrayingHands } from "@/components/icons/PrayingHands";
+import type { ReactionType } from "@/lib/reactions";
 import {
-  PetStory, StoryComment, toggleLike, checkUserLiked,
-  fetchComments, addComment, deleteComment, editComment, toggleCommentLike, batchCheckCommentLiked, sendDonation, deleteStory, STORY_CATEGORIES
+  PetStory, StoryComment, toggleReaction, checkUserReaction,
+  fetchComments, addComment, deleteComment, editComment, toggleCommentReaction, batchCheckCommentReactions, sendDonation, deleteStory, STORY_CATEGORIES
 } from "@/lib/community-api";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
