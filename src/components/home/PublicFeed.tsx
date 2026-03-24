@@ -321,6 +321,9 @@ export function PublicFeed({ search, category }: { search?: string; category?: s
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["publicFeed"] });
+      if (stories.length > 0) {
+        batchFetchReactionSummaries(stories.map((s) => s.id)).then(setSummariesMap);
+      }
     },
   });
 
