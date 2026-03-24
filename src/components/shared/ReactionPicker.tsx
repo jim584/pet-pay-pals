@@ -1,9 +1,9 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { REACTION_TYPES, getReaction, type ReactionType } from "@/lib/reactions";
 import { PrayingHands } from "@/components/icons/PrayingHands";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
-
 interface ReactionPickerProps {
   currentReaction: ReactionType | null;
   onReact: (type: ReactionType) => void;
@@ -22,7 +22,9 @@ export function ReactionPicker({
   className,
 }: ReactionPickerProps) {
   const [showPicker, setShowPicker] = useState(false);
+  const [pickerPos, setPickerPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMobile = useIsMobile();
@@ -33,6 +35,15 @@ export function ReactionPicker({
   }, []);
 
   useEffect(() => clearTimers, [clearTimers]);
+
+  const updatePickerPos = useCallback(() => {
+    if (!buttonRef.current) return;
+    const rect = buttonRef.current.getBoundingClientRect();
+    setPickerPos({
+      top: rect.top - 8,
+      left: rect.left + rect.width / 2,
+    });
+  }, []);
 
   // Close on outside click for mobile
   useEffect(() => {
@@ -46,11 +57,15 @@ export function ReactionPicker({
     return () => document.removeEventListener("touchstart", handler);
   }, [showPicker, isMobile]);
 
+  const openPicker = useCallback(() => {
+    updatePickerPos();
+    setShowPicker(true);
+  }, [updatePickerPos]);
+
   const handleMouseEnter = () => {
     if (isMobile || disabled) return;
     clearTimers();
-    hideTimer.current = null;
-    setShowPicker(true);
+    openPicker();
   };
 
   const handleMouseLeave = () => {
@@ -61,7 +76,7 @@ export function ReactionPicker({
   const handleTouchStart = () => {
     if (!isMobile || disabled) return;
     longPressTimer.current = setTimeout(() => {
-      setShowPicker(true);
+      openPicker();
     }, 500);
   };
 
@@ -79,8 +94,7 @@ export function ReactionPicker({
 
   const handleClick = () => {
     if (disabled) return;
-    if (isMobile && !showPicker) return; // mobile uses long-press
-    // Simple click toggles pray reaction
+    if (isMobile && !showPicker) return;
     onReact("pray");
   };
 
@@ -94,10 +108,11 @@ export function ReactionPicker({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {/* Picker popup */}
-      {showPicker && (
+      {/* Picker popup via portal */}
+      {showPicker && createPortal(
         <div
-          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50"
+          className="fixed z-[9999]"
+          style={{ top: pickerPos.top, left: pickerPos.left, transform: "translate(-50%, -100%)" }}
           onMouseEnter={() => { if (hideTimer.current) { clearTimeout(hideTimer.current); hideTimer.current = null; } }}
           onMouseLeave={handleMouseLeave}
         >
@@ -121,11 +136,13 @@ export function ReactionPicker({
               </button>
             ))}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Main button */}
       <button
+        ref={buttonRef}
         className={cn(
           "flex items-center gap-1 transition-colors",
           isSm ? "text-[10px] font-medium" : "text-sm",
