@@ -1,7 +1,8 @@
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchPublicFeed, followPet, unfollowPet, checkFollowing, FEED_PAGE_SIZE, type FeedStory } from "@/lib/feed-api";
-import { toggleReaction, batchCheckReactions, STORY_CATEGORIES } from "@/lib/community-api";
+import { toggleReaction, batchCheckReactions, batchFetchReactionSummaries, STORY_CATEGORIES } from "@/lib/community-api";
 import { ReactionPicker } from "@/components/shared/ReactionPicker";
+import { ReactionSummary } from "@/components/shared/ReactionSummary";
 import type { ReactionType } from "@/lib/reactions";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -106,10 +107,11 @@ const SAMPLE_STORIES: FeedStory[] = [
   },
 ];
 
-function FeedCard({ story, isFollowing, currentReaction, onFollow, onReact, user, isSample, onImageClick }: {
+function FeedCard({ story, isFollowing, currentReaction, reactionSummary, onFollow, onReact, user, isSample, onImageClick }: {
   story: FeedStory;
   isFollowing: boolean;
   currentReaction: ReactionType | null;
+  reactionSummary?: { type: string; count: number }[];
   onFollow: (petId: string) => void;
   onReact: (storyId: string, type: ReactionType) => void;
   user: any;
@@ -182,6 +184,9 @@ function FeedCard({ story, isFollowing, currentReaction, onFollow, onReact, user
       )}
 
       <CardContent className="p-4 space-y-2">
+        {reactionSummary && reactionSummary.length > 0 && (
+          <ReactionSummary summary={reactionSummary} />
+        )}
         <div className="flex items-center gap-3">
           {isSample ? (
             <button
@@ -245,6 +250,7 @@ export function PublicFeed({ search, category }: { search?: string; category?: s
   const qc = useQueryClient();
   const [followedSet, setFollowedSet] = useState<Set<string>>(new Set());
   const [reactionsMap, setReactionsMap] = useState<Map<string, string>>(new Map());
+  const [summariesMap, setSummariesMap] = useState<Map<string, { type: string; count: number }[]>>(new Map());
 
   const {
     data,
@@ -271,13 +277,14 @@ export function PublicFeed({ search, category }: { search?: string; category?: s
   // Stable key to avoid infinite re-renders
   const storyIds = stories.map((s) => s.id).join(",");
 
-  // Check follows & likes for logged-in user
   useEffect(() => {
-    if (!user || stories.length === 0) return;
+    if (stories.length === 0) return;
+    const ids = stories.map((s) => s.id);
+    batchFetchReactionSummaries(ids).then(setSummariesMap);
+    if (!user) return;
     const petIds = [...new Set(stories.map((s) => s.pet_id))];
     checkFollowing(petIds, user.id).then(setFollowedSet);
-
-    batchCheckReactions(stories.map((s) => s.id), user.id).then(setReactionsMap);
+    batchCheckReactions(ids, user.id).then(setReactionsMap);
   }, [user, storyIds]);
 
   const followMutation = useMutation({
@@ -314,6 +321,9 @@ export function PublicFeed({ search, category }: { search?: string; category?: s
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["publicFeed"] });
+      if (stories.length > 0) {
+        batchFetchReactionSummaries(stories.map((s) => s.id)).then(setSummariesMap);
+      }
     },
   });
 
@@ -360,6 +370,7 @@ export function PublicFeed({ search, category }: { search?: string; category?: s
           story={story}
           isFollowing={followedSet.has(story.pet_id)}
           currentReaction={(reactionsMap.get(story.id) as ReactionType) ?? null}
+          reactionSummary={summariesMap.get(story.id)}
           onFollow={(petId) => followMutation.mutate(petId)}
           onReact={(storyId, type) => reactionMutation.mutate({ storyId, type })}
           user={user}

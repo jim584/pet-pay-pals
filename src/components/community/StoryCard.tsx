@@ -8,11 +8,12 @@ import { toast } from "@/components/ui/sonner";
 import { MessageCircle, DollarSign, Trash2, Send, PawPrint, User, Reply, X, Pencil, Check, AlertTriangle } from "lucide-react";
 import { PhotoGrid } from "@/components/shared/PhotoGrid";
 import { ReactionPicker } from "@/components/shared/ReactionPicker";
+import { ReactionSummary } from "@/components/shared/ReactionSummary";
 import { PrayingHands } from "@/components/icons/PrayingHands";
 import type { ReactionType } from "@/lib/reactions";
 import {
   PetStory, StoryComment, toggleReaction, checkUserReaction,
-  fetchComments, addComment, deleteComment, editComment, toggleCommentReaction, batchCheckCommentReactions, sendDonation, deleteStory, STORY_CATEGORIES
+  fetchComments, addComment, deleteComment, editComment, toggleCommentReaction, batchCheckCommentReactions, batchFetchReactionSummaries, sendDonation, deleteStory, STORY_CATEGORIES
 } from "@/lib/community-api";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -30,9 +31,11 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
   const [donating, setDonating] = useState(false);
   const [replyingTo, setReplyingTo] = useState<StoryComment | null>(null);
   const [commentReactionsMap, setCommentReactionsMap] = useState<Map<string, string>>(new Map());
+  const [reactionSummary, setReactionSummary] = useState<{ type: string; count: number }[]>([]);
 
   useEffect(() => {
     if (user) checkUserReaction(story.id, user.id).then((r) => setCurrentReaction(r as ReactionType | null));
+    batchFetchReactionSummaries([story.id]).then((m) => setReactionSummary(m.get(story.id) || []));
   }, [story.id, user]);
 
   const handleReact = async (type: ReactionType) => {
@@ -175,6 +178,7 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
           <p className="text-sm text-foreground/80 leading-relaxed">{story.content}</p>
         </div>
 
+        {reactionSummary.length > 0 && <ReactionSummary summary={reactionSummary} />}
         {/* Action bar */}
         <div className="flex items-center gap-2 pt-2 border-t border-border/50">
           <ReactionPicker
