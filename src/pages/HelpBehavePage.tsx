@@ -36,7 +36,7 @@ export default function HelpBehavePage() {
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="max-w-5xl mx-auto flex items-center h-14 px-4">
+        <div className="max-w-7xl mx-auto flex items-center h-14 px-4">
           <Button variant="ghost" size="icon" asChild>
             <Link to="/"><ArrowLeft className="h-4 w-4" /></Link>
           </Button>
@@ -52,59 +52,79 @@ export default function HelpBehavePage() {
         </div>
       </header>
 
-      <main className={`max-w-5xl mx-auto ${isMobile ? "px-3 py-4 pb-24" : "px-6 py-6"}`}>
-        {/* Hero */}
-        <div className="rounded-xl bg-primary/5 border border-primary/20 p-5 mb-6 text-center">
-          <h1 className="text-2xl font-bold font-display text-foreground">Training & Behavior Resources</h1>
-          <p className="text-muted-foreground mt-1 text-sm max-w-lg mx-auto">
-            Browse images, watch training videos, and read expert-backed articles to help your pet behave better.
-          </p>
-        </div>
+      <div className="max-w-7xl mx-auto flex">
+        {!isMobile && (
+          <aside className="w-60 shrink-0 sticky top-14 h-[calc(100vh-3.5rem)]">
+            <ScrollArea className="h-full">
+              <CompassMenu />
+            </ScrollArea>
+          </aside>
+        )}
 
-        {/* Search */}
-        <div className="relative mb-4">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search content..."
-            value={search}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="pl-9"
-          />
-        </div>
+        <main className={`flex-1 min-w-0 ${isMobile ? "px-3 py-4 pb-24" : "border-x px-6 py-6"}`}>
+          {isMobile && <MobileSuggestedPets />}
 
-        {/* Category chips */}
-        <div className="flex flex-wrap gap-2 mb-5">
-          {allCategories.map((c) => (
-            <Badge
-              key={c || "all"}
-              variant={category === c ? "default" : "outline"}
-              className="cursor-pointer"
-              onClick={() => setCategory(c)}
-            >
-              {c ? categoryLabel(c) : "All"}
-            </Badge>
-          ))}
-        </div>
+          {/* Hero */}
+          <div className="rounded-xl bg-primary/5 border border-primary/20 p-5 mb-6 text-center">
+            <h1 className="text-2xl font-bold font-display text-foreground">Training & Behavior Resources</h1>
+            <p className="text-muted-foreground mt-1 text-sm max-w-lg mx-auto">
+              Browse images, watch training videos, and read expert-backed articles to help your pet behave better.
+            </p>
+          </div>
 
-        {/* Tabs */}
-        <Tabs defaultValue="blog">
-          <TabsList className="w-full justify-start mb-4">
-            <TabsTrigger value="images">Images</TabsTrigger>
-            <TabsTrigger value="videos">Videos</TabsTrigger>
-            <TabsTrigger value="blog">Blog</TabsTrigger>
-          </TabsList>
+          {/* Search */}
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search content..."
+              value={search}
+              onChange={(e) => handleSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
 
-          <TabsContent value="images">
-            <ImageGallery search={debouncedSearch} category={category} />
-          </TabsContent>
-          <TabsContent value="videos">
-            <VideoLibrary search={debouncedSearch} category={category} />
-          </TabsContent>
-          <TabsContent value="blog">
-            <TrainingBlog search={debouncedSearch} category={category} />
-          </TabsContent>
-        </Tabs>
-      </main>
+          {/* Category chips */}
+          <div className="flex flex-wrap gap-2 mb-5">
+            {allCategories.map((c) => (
+              <Badge
+                key={c || "all"}
+                variant={category === c ? "default" : "outline"}
+                className="cursor-pointer"
+                onClick={() => setCategory(c)}
+              >
+                {c ? categoryLabel(c) : "All"}
+              </Badge>
+            ))}
+          </div>
+
+          {/* Tabs */}
+          <Tabs defaultValue="blog">
+            <TabsList className="w-full justify-start mb-4">
+              <TabsTrigger value="images">Images</TabsTrigger>
+              <TabsTrigger value="videos">Videos</TabsTrigger>
+              <TabsTrigger value="blog">Blog</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="images">
+              <ImageGallery search={debouncedSearch} category={category} />
+            </TabsContent>
+            <TabsContent value="videos">
+              <VideoLibrary search={debouncedSearch} category={category} />
+            </TabsContent>
+            <TabsContent value="blog">
+              <TrainingBlog search={debouncedSearch} category={category} />
+            </TabsContent>
+          </Tabs>
+        </main>
+
+        {!isMobile && (
+          <aside className="w-72 shrink-0 sticky top-14 h-[calc(100vh-3.5rem)]">
+            <ScrollArea className="h-full">
+              <SuggestedPets />
+            </ScrollArea>
+          </aside>
+        )}
+      </div>
     </div>
   );
 }
