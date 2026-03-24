@@ -5,6 +5,10 @@ import { Input } from "@/components/ui/input";
 import { ArrowLeft, ShieldOff, Search } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { BlogCard, type BlogPost } from "@/components/fearfreed/BlogCard";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { CompassMenu } from "@/components/home/CompassMenu";
+import { SuggestedPets } from "@/components/home/SuggestedPets";
+import { MobileSuggestedPets } from "@/components/home/MobileSuggestedPets";
 
 const DUMMY_POSTS: BlogPost[] = [
   {
