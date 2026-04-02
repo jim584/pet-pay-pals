@@ -47,7 +47,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Top Bar */}
-      <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="border-b bg-background">
         <div className="max-w-7xl mx-auto flex items-center justify-between px-4 py-0">
           <Link to="/" className="flex items-center gap-2">
             <img src={logoColor} alt="Help A Pet" className="object-contain" style={{ width: 100, height: 140 }} />
@@ -87,7 +87,7 @@ export default function HomePage() {
       <div className="max-w-7xl mx-auto flex">
         {/* Left Sidebar — Compass Menu */}
         {!isMobile && (
-          <aside className="w-60 shrink-0 sticky top-14 h-[calc(100vh-3.5rem)]">
+          <aside className="w-60 shrink-0 sticky top-0 h-screen">
             <ScrollArea className="h-full">
               <CompassMenu />
             </ScrollArea>
@@ -147,7 +147,7 @@ export default function HomePage() {
 
         {/* Right Sidebar — Suggested Pets */}
         {!isMobile && (
-          <aside className="w-72 shrink-0 sticky top-14 h-[calc(100vh-3.5rem)]">
+          <aside className="w-72 shrink-0 sticky top-0 h-screen">
             <ScrollArea className="h-full">
               <SuggestedPets />
             </ScrollArea>
