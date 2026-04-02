@@ -1,15 +1,15 @@
 
 
-## Plan: Increase Logo Size in Top Left
-
-The logo in the HomePage header (`src/pages/HomePage.tsx`) and dashboard sidebar (`src/components/dashboard/DashboardSidebar.tsx`) are both `h-10` (40px). I'll increase them for better visibility.
+## Plan: Set Logo to 80×112px
 
 ### Changes
 
 **1. `src/pages/HomePage.tsx` (line 53)**
-- Change logo from `h-10` to `h-14` (56px)
-- Also increase header height from `h-14` to `h-16` to accommodate
+- Change logo class from `h-14 w-auto` to inline style `width: 80px; height: 112px` (since Tailwind doesn't have exact 80/112px utilities)
+- Increase header height from `h-16` to accommodate (use `h-32` or inline style)
 
 **2. `src/components/dashboard/DashboardSidebar.tsx` (line 63)**
-- Change logo from `h-10` to `h-14` (56px)
+- Change logo class from `h-14 w-auto` to inline style `width: 80px; height: 112px`
+
+Both logos will use `style={{ width: 80, height: 112 }}` with `object-contain` to maintain aspect ratio.
 
