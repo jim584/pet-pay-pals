@@ -180,7 +180,7 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="flex flex-col items-center gap-1">
               <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-                <Avatar className="h-20 w-20 border-2 border-primary/20">
+                <Avatar className="h-16 w-16 sm:h-20 sm:w-20 border-2 border-primary/20">
                   <AvatarImage src={photoPreview ?? undefined} alt="Pet photo" />
                   <AvatarFallback className="bg-primary/10 text-primary">
                     <PawPrint className="h-8 w-8" />
@@ -212,7 +212,7 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
               <Label>Name *</Label>
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Species</Label>
                 <Select value={form.species} onValueChange={(v) => setForm({ ...form, species: v, breed: "", mixedBreedDetail: "" })}>
@@ -252,7 +252,7 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Date of Birth</Label>
                 <Popover>
