@@ -127,11 +127,7 @@ export function ReactionPicker({
                 style={{ animationDelay: `${i * 40}ms` }}
                 title={r.label}
               >
-                {r.key === "pray" ? (
-                  <PrayingHands className="h-6 w-6" />
-                ) : (
-                  <span className="text-xl leading-none select-none">{r.emoji}</span>
-                )}
+                <span className="text-xl leading-none select-none">{r.emoji}</span>
               </button>
             ))}
           </div>
