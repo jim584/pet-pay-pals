@@ -41,7 +41,7 @@ export function BreedCombobox({ breeds, value, onChange, mixedBreedDetail, onMix
               value={search}
               onValueChange={setSearch}
             />
-            <CommandList>
+            <CommandList className="max-h-60">
               <CommandEmpty>
                 {search.trim() ? (
                   <button
