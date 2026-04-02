@@ -180,7 +180,7 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="flex flex-col items-center gap-1">
               <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-                <Avatar className="h-20 w-20 border-2 border-primary/20">
+                <Avatar className="h-16 w-16 sm:h-20 sm:w-20 border-2 border-primary/20">
                   <AvatarImage src={photoPreview ?? undefined} alt="Pet photo" />
                   <AvatarFallback className="bg-primary/10 text-primary">
                     <PawPrint className="h-8 w-8" />
