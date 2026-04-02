@@ -151,13 +151,9 @@ export function ReactionPicker({
         disabled={disabled}
       >
         {reaction ? (
-          reaction.key === "pray" ? (
-            <PrayingHands className={cn(isSm ? "h-2.5 w-2.5" : "h-5 w-5", "transition-opacity opacity-100")} />
-          ) : (
-            <span className={cn(isSm ? "text-xs" : "text-base", "leading-none select-none")}>{reaction.emoji}</span>
-          )
+          <span className={cn(isSm ? "text-xs" : "text-base", "leading-none select-none")}>{reaction.emoji}</span>
         ) : (
-          <PrayingHands className={cn(isSm ? "h-2.5 w-2.5" : "h-5 w-5", "transition-opacity opacity-50")} />
+          <span className={cn(isSm ? "text-xs" : "text-base", "leading-none select-none opacity-50")}>🙏</span>
         )}
         {totalCount > 0 && <span>{totalCount}</span>}
       </button>
