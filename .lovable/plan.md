@@ -1,15 +1,11 @@
 
 
-## Plan: Set Logo to 80×112px
+## Plan: Reduce Header Height
+
+The logo is currently 80×112px, making the header very tall. I'll shrink the logo to **60×84px** (same aspect ratio) so the header feels compact while the logo stays prominent. The `py-1` padding is already minimal.
 
 ### Changes
 
-**1. `src/pages/HomePage.tsx` (line 53)**
-- Change logo class from `h-14 w-auto` to inline style `width: 80px; height: 112px` (since Tailwind doesn't have exact 80/112px utilities)
-- Increase header height from `h-16` to accommodate (use `h-32` or inline style)
-
-**2. `src/components/dashboard/DashboardSidebar.tsx` (line 63)**
-- Change logo class from `h-14 w-auto` to inline style `width: 80px; height: 112px`
-
-Both logos will use `style={{ width: 80, height: 112 }}` with `object-contain` to maintain aspect ratio.
+**`src/pages/HomePage.tsx` (line 53)**
+- Change logo dimensions from `{ width: 80, height: 112 }` to `{ width: 60, height: 84 }`
 
