@@ -1,14 +1,13 @@
 
 
-## Plan: Fix Mouse Wheel Scrolling in Breed Dropdown
+## Plan: Make Header Non-Sticky
 
-The previous fix consolidated scroll containers, but the `cmdk` library can still intercept wheel events. The fix is to add an explicit `onWheel` event handler on the `CommandList` to ensure native scrolling works, and add `overscroll-behavior-contain` to prevent scroll leaking.
+Remove the sticky positioning from the header in `HomePage.tsx`.
 
-### Changes
+### Change
 
-**`src/components/pets/BreedCombobox.tsx`**
-- Add an `onWheel` handler to the `CommandList` that calls `e.stopPropagation()` to prevent cmdk from swallowing wheel events
-- Add `overscroll-contain` class to keep scroll contained within the list
+**`src/pages/HomePage.tsx` (line ~50)**
+- Change `className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"` to `className="border-b bg-background"` — removing `sticky`, `top-0`, `z-40`, and the backdrop blur classes since they're only needed for sticky behavior.
 
-Single file change, ~3 lines added.
+Also update the sidebar `top-14` values to `top-0` since there's no sticky header to offset against.
 
