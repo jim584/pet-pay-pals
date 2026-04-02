@@ -212,7 +212,7 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
               <Label>Name *</Label>
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Species</Label>
                 <Select value={form.species} onValueChange={(v) => setForm({ ...form, species: v, breed: "", mixedBreedDetail: "" })}>
