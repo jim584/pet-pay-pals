@@ -48,7 +48,7 @@ export default function HomePage() {
     <div className="min-h-screen bg-background">
       {/* Top Bar */}
       <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="max-w-7xl mx-auto flex items-center justify-between px-4 py-2">
+        <div className="max-w-7xl mx-auto flex items-center justify-between px-4 py-0">
           <Link to="/" className="flex items-center gap-2">
             <img src={logoColor} alt="Help A Pet" className="object-contain" style={{ width: 100, height: 140 }} />
           </Link>
