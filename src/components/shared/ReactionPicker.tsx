@@ -1,7 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { REACTION_TYPES, getReaction, type ReactionType } from "@/lib/reactions";
-import { PrayingHands } from "@/components/icons/PrayingHands";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 interface ReactionPickerProps {
@@ -128,11 +127,7 @@ export function ReactionPicker({
                 style={{ animationDelay: `${i * 40}ms` }}
                 title={r.label}
               >
-                {r.key === "pray" ? (
-                  <PrayingHands className="h-6 w-6" />
-                ) : (
-                  <span className="text-xl leading-none select-none">{r.emoji}</span>
-                )}
+                <span className="text-xl leading-none select-none">{r.emoji}</span>
               </button>
             ))}
           </div>
@@ -156,13 +151,9 @@ export function ReactionPicker({
         disabled={disabled}
       >
         {reaction ? (
-          reaction.key === "pray" ? (
-            <PrayingHands className={cn(isSm ? "h-2.5 w-2.5" : "h-5 w-5", "transition-opacity opacity-100")} />
-          ) : (
-            <span className={cn(isSm ? "text-xs" : "text-base", "leading-none select-none")}>{reaction.emoji}</span>
-          )
+          <span className={cn(isSm ? "text-xs" : "text-base", "leading-none select-none")}>{reaction.emoji}</span>
         ) : (
-          <PrayingHands className={cn(isSm ? "h-2.5 w-2.5" : "h-5 w-5", "transition-opacity opacity-50")} />
+          <span className={cn(isSm ? "text-xs" : "text-base", "leading-none select-none opacity-50")}>🙏</span>
         )}
         {totalCount > 0 && <span>{totalCount}</span>}
       </button>
