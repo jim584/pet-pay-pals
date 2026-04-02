@@ -59,7 +59,7 @@ export function BreedCombobox({ breeds, value, onChange, mixedBreedDetail, onMix
                   "No breed found."
                 )}
               </CommandEmpty>
-              <CommandGroup className="max-h-60 overflow-y-auto">
+              <CommandGroup>
                 {breeds.map((breed) => (
                   <CommandItem
                     key={breed}
