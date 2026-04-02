@@ -60,7 +60,7 @@ export function DashboardSidebar() {
     <Sidebar className="border-r-0">
       <SidebarHeader className="p-4 border-b border-sidebar-border">
         <Link to="/" className="flex items-center gap-3 group">
-          <img src={logoDark} alt="Help A Pet" className="object-contain group-hover:scale-105 transition-transform" style={{ width: 80, height: 112 }} />
+          <img src={logoDark} alt="Help A Pet" className="object-contain group-hover:scale-105 transition-transform" style={{ width: 100, height: 140 }} />
           <div className="min-w-0">
             <p className="text-xs text-sidebar-foreground/60 capitalize truncate">
               {role?.replace("_", " ")}
