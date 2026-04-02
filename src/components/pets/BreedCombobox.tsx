@@ -41,7 +41,7 @@ export function BreedCombobox({ breeds, value, onChange, mixedBreedDetail, onMix
               value={search}
               onValueChange={setSearch}
             />
-            <CommandList className="max-h-60">
+            <CommandList className="max-h-60 overscroll-contain" onWheel={(e) => e.stopPropagation()}>
               <CommandEmpty>
                 {search.trim() ? (
                   <button
