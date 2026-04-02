@@ -147,7 +147,7 @@ export default function HomePage() {
 
         {/* Right Sidebar — Suggested Pets */}
         {!isMobile && (
-          <aside className="w-72 shrink-0 sticky top-14 h-[calc(100vh-3.5rem)]">
+          <aside className="w-72 shrink-0 sticky top-0 h-screen">
             <ScrollArea className="h-full">
               <SuggestedPets />
             </ScrollArea>
