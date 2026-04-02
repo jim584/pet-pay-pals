@@ -1,7 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { REACTION_TYPES, getReaction, type ReactionType } from "@/lib/reactions";
-import { PrayingHands } from "@/components/icons/PrayingHands";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 interface ReactionPickerProps {
