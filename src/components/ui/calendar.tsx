@@ -35,7 +35,7 @@ function CalendarCaption({ displayMonth }: CaptionProps) {
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {months.map((month, i) => (
+          {monthsShort.map((month, i) => (
             <SelectItem key={i} value={i.toString()} className="text-xs">
               {month}
             </SelectItem>
