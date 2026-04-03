@@ -50,7 +50,7 @@ export default function HomePage() {
       <header className="border-b bg-background">
         <div className="max-w-7xl mx-auto flex items-center justify-between px-4 py-0">
           <Link to="/" className="flex items-center gap-2">
-            <img src={logoColor} alt="Help A Pet" className="object-contain" style={{ width: 80, height: 100 }} />
+            <img src={logoColor} alt="Help A Pet" className="object-contain" style={{ width: 100, height: 140 }} />
           </Link>
           <div className="flex items-center gap-2">
             {user ? (
