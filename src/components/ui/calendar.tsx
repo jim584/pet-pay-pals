@@ -59,6 +59,14 @@ function CalendarCaption({ displayMonth }: CaptionProps) {
           ))}
         </SelectContent>
       </Select>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-7 px-2 text-xs font-medium text-muted-foreground hover:text-foreground"
+        onClick={() => goToMonth(new Date())}
+      >
+        Today
+      </Button>
     </div>
   );
 }
