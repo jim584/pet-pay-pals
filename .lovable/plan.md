@@ -1,14 +1,21 @@
 
 
-## Plan: Fix Calendar Month Size Inconsistency
+## Plan: Reduce Header-to-Border Gap
 
-Different months show 4, 5, or 6 rows of weeks, causing the calendar to jump in size when navigating. The fix is to force `fixedWeeks` on the `DayPicker` so every month always renders 6 rows, keeping the calendar height constant.
+The header already has `py-0`, so the vertical space between the logo and the bottom border comes from the logo image's own internal whitespace/padding baked into the PNG.
 
 ### Change
 
-**`src/components/ui/calendar.tsx`**
-- Add `fixedWeeks` prop to `DayPicker` — this ensures all months display exactly 6 rows of days, filling in outside days as needed
-- Since `showOutsideDays` is already `true` by default, the extra rows will show greyed-out days from adjacent months
+**`src/pages/HomePage.tsx`** — Add a negative vertical margin to the logo image to visually collapse the extra space without changing its rendered size:
 
-This is a one-line change that fixes the issue globally across the entire app wherever `Calendar` is used.
+```tsx
+<img 
+  src={logoColor} 
+  alt="Help A Pet" 
+  className="object-contain" 
+  style={{ width: 100, height: 140, marginTop: -20, marginBottom: -20 }} 
+/>
+```
+
+This clips the invisible padding in the PNG, pulling the border line closer to the visible logo content. The values (~20px) can be fine-tuned based on how the image looks.
 
