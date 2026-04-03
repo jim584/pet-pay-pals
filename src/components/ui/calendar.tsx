@@ -4,7 +4,7 @@ import { DayPicker, CaptionProps, useNavigation } from "react-day-picker";
 import { format, setMonth, setYear } from "date-fns";
 
 import { cn } from "@/lib/utils";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -59,6 +59,14 @@ function CalendarCaption({ displayMonth }: CaptionProps) {
           ))}
         </SelectContent>
       </Select>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-7 px-2 text-xs font-medium text-muted-foreground hover:text-foreground"
+        onClick={() => goToMonth(new Date())}
+      >
+        Today
+      </Button>
     </div>
   );
 }
