@@ -16,15 +16,15 @@ import {
 function CalendarCaption({ displayMonth }: CaptionProps) {
   const { goToMonth } = useNavigation();
 
-  const months = Array.from({ length: 12 }, (_, i) =>
-    format(new Date(2024, i), "MMMM")
+  const monthsShort = Array.from({ length: 12 }, (_, i) =>
+    format(new Date(2024, i), "MMM")
   );
 
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: currentYear - 1899 }, (_, i) => currentYear - i);
 
   return (
-    <div className="flex justify-center gap-1 items-center pt-1">
+    <div className="flex justify-center gap-0.5 items-center pt-1">
       <Select
         value={displayMonth.getMonth().toString()}
         onValueChange={(value) => {
@@ -35,7 +35,7 @@ function CalendarCaption({ displayMonth }: CaptionProps) {
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {months.map((month, i) => (
+          {monthsShort.map((month, i) => (
             <SelectItem key={i} value={i.toString()} className="text-xs">
               {month}
             </SelectItem>
