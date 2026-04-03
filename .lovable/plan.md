@@ -1,13 +1,14 @@
 
 
-## Plan: Make Header Non-Sticky
+## Plan: Fix Calendar Month Size Inconsistency
 
-Remove the sticky positioning from the header in `HomePage.tsx`.
+Different months show 4, 5, or 6 rows of weeks, causing the calendar to jump in size when navigating. The fix is to force `fixedWeeks` on the `DayPicker` so every month always renders 6 rows, keeping the calendar height constant.
 
 ### Change
 
-**`src/pages/HomePage.tsx` (line ~50)**
-- Change `className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"` to `className="border-b bg-background"` — removing `sticky`, `top-0`, `z-40`, and the backdrop blur classes since they're only needed for sticky behavior.
+**`src/components/ui/calendar.tsx`**
+- Add `fixedWeeks` prop to `DayPicker` — this ensures all months display exactly 6 rows of days, filling in outside days as needed
+- Since `showOutsideDays` is already `true` by default, the extra rows will show greyed-out days from adjacent months
 
-Also update the sidebar `top-14` values to `top-0` since there's no sticky header to offset against.
+This is a one-line change that fixes the issue globally across the entire app wherever `Calendar` is used.
 
