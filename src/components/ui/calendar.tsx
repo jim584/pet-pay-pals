@@ -24,7 +24,7 @@ function CalendarCaption({ displayMonth }: CaptionProps) {
   const years = Array.from({ length: currentYear - 1899 }, (_, i) => currentYear - i);
 
   return (
-    <div className="flex justify-center gap-1 items-center pt-1">
+    <div className="flex justify-center gap-0.5 items-center pt-1">
       <Select
         value={displayMonth.getMonth().toString()}
         onValueChange={(value) => {
