@@ -16,8 +16,8 @@ import {
 function CalendarCaption({ displayMonth }: CaptionProps) {
   const { goToMonth } = useNavigation();
 
-  const months = Array.from({ length: 12 }, (_, i) =>
-    format(new Date(2024, i), "MMMM")
+  const monthsShort = Array.from({ length: 12 }, (_, i) =>
+    format(new Date(2024, i), "MMM")
   );
 
   const currentYear = new Date().getFullYear();
