@@ -118,7 +118,7 @@ export default function HomePage() {
           {isMobile && <MobileSuggestedPets />}
 
           {/* Search & Category Filters */}
-          <div className="space-y-3 mb-4 sm:mb-6">
+          <div className="sm:hidden mb-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -128,6 +128,8 @@ export default function HomePage() {
                 className="pl-9 rounded-full"
               />
             </div>
+          </div>
+          <div className="space-y-3 mb-4 sm:mb-6">
             <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
               <Button
                 size="sm"
