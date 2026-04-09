@@ -49,9 +49,18 @@ export default function HomePage() {
       {/* Top Bar */}
       <header className="border-b bg-background">
         <div className="max-w-7xl mx-auto flex items-center justify-between px-4 py-0">
-          <Link to="/" className="flex items-center gap-2">
+          <Link to="/" className="flex items-center gap-2 shrink-0">
             <img src={logoColor} alt="Help A Pet" className="object-contain" style={{ width: 100, height: 140, marginTop: -30, marginBottom: -30 }} />
           </Link>
+          <div className="flex-1 max-w-md mx-4 relative hidden sm:block">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search stories..."
+              className="pl-9 rounded-full"
+            />
+          </div>
           <div className="flex items-center gap-2">
             {user ? (
               <>
@@ -109,7 +118,7 @@ export default function HomePage() {
           {isMobile && <MobileSuggestedPets />}
 
           {/* Search & Category Filters */}
-          <div className="space-y-3 mb-4 sm:mb-6">
+          <div className="sm:hidden mb-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -119,6 +128,8 @@ export default function HomePage() {
                 className="pl-9 rounded-full"
               />
             </div>
+          </div>
+          <div className="space-y-3 mb-4 sm:mb-6">
             <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
               <Button
                 size="sm"
