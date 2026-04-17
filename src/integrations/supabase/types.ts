@@ -296,6 +296,118 @@ export type Database = {
           },
         ]
       }
+      community_reserve: {
+        Row: {
+          balance: number
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          balance?: number
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          balance?: number
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      direct_pay_accruals: {
+        Row: {
+          accrual_month: string
+          amount: number
+          created_at: string
+          expired: boolean
+          expired_at: string | null
+          expires_at: string | null
+          id: string
+          membership_id: string
+          remaining_amount: number
+          stripe_invoice_id: string | null
+          user_id: string
+        }
+        Insert: {
+          accrual_month: string
+          amount: number
+          created_at?: string
+          expired?: boolean
+          expired_at?: string | null
+          expires_at?: string | null
+          id?: string
+          membership_id: string
+          remaining_amount: number
+          stripe_invoice_id?: string | null
+          user_id: string
+        }
+        Update: {
+          accrual_month?: string
+          amount?: number
+          created_at?: string
+          expired?: boolean
+          expired_at?: string | null
+          expires_at?: string | null
+          id?: string
+          membership_id?: string
+          remaining_amount?: number
+          stripe_invoice_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "direct_pay_accruals_membership_id_fkey"
+            columns: ["membership_id"]
+            isOneToOne: false
+            referencedRelation: "memberships"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dp_expiry_ledger: {
+        Row: {
+          accrual_id: string
+          admin_portion: number
+          community_reserve_portion: number
+          created_at: string
+          expired_amount: number
+          help_now_case_id: string | null
+          help_now_portion: number
+          id: string
+          reason: string
+        }
+        Insert: {
+          accrual_id: string
+          admin_portion: number
+          community_reserve_portion: number
+          created_at?: string
+          expired_amount: number
+          help_now_case_id?: string | null
+          help_now_portion: number
+          id?: string
+          reason?: string
+        }
+        Update: {
+          accrual_id?: string
+          admin_portion?: number
+          community_reserve_portion?: number
+          created_at?: string
+          expired_amount?: number
+          help_now_case_id?: string | null
+          help_now_portion?: number
+          id?: string
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dp_expiry_ledger_accrual_id_fkey"
+            columns: ["accrual_id"]
+            isOneToOne: false
+            referencedRelation: "direct_pay_accruals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       emergency_contacts: {
         Row: {
           contact_name: string
@@ -368,6 +480,144 @@ export type Database = {
             columns: ["pet_id"]
             isOneToOne: false
             referencedRelation: "pets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      membership_plans: {
+        Row: {
+          admin_portion: number
+          annual_price: number
+          created_at: string
+          direct_pay_portion: number
+          dp_window_months: number | null
+          fear_free_member_charge: number
+          id: string
+          is_active: boolean
+          max_dp_amount: number | null
+          membership_fee: number
+          plan_cap: number | null
+          plan_code: string
+          platform_fee: number
+          reserve_portion: number
+          species: string
+          stripe_platform_price_id_monthly: string | null
+          stripe_price_id_annual: string | null
+          stripe_price_id_monthly: string | null
+          tier: string
+          tier_label: string
+          updated_at: string
+        }
+        Insert: {
+          admin_portion: number
+          annual_price: number
+          created_at?: string
+          direct_pay_portion: number
+          dp_window_months?: number | null
+          fear_free_member_charge: number
+          id?: string
+          is_active?: boolean
+          max_dp_amount?: number | null
+          membership_fee: number
+          plan_cap?: number | null
+          plan_code: string
+          platform_fee: number
+          reserve_portion: number
+          species: string
+          stripe_platform_price_id_monthly?: string | null
+          stripe_price_id_annual?: string | null
+          stripe_price_id_monthly?: string | null
+          tier: string
+          tier_label: string
+          updated_at?: string
+        }
+        Update: {
+          admin_portion?: number
+          annual_price?: number
+          created_at?: string
+          direct_pay_portion?: number
+          dp_window_months?: number | null
+          fear_free_member_charge?: number
+          id?: string
+          is_active?: boolean
+          max_dp_amount?: number | null
+          membership_fee?: number
+          plan_cap?: number | null
+          plan_code?: string
+          platform_fee?: number
+          reserve_portion?: number
+          species?: string
+          stripe_platform_price_id_monthly?: string | null
+          stripe_price_id_annual?: string | null
+          stripe_price_id_monthly?: string | null
+          tier?: string
+          tier_label?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      memberships: {
+        Row: {
+          billing_interval: string
+          cancelled_at: string | null
+          created_at: string
+          current_period_end: string | null
+          id: string
+          is_fear_free_member: boolean
+          pet_id: string | null
+          plan_id: string
+          started_at: string | null
+          status: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          billing_interval?: string
+          cancelled_at?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          id?: string
+          is_fear_free_member?: boolean
+          pet_id?: string | null
+          plan_id: string
+          started_at?: string | null
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          billing_interval?: string
+          cancelled_at?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          id?: string
+          is_fear_free_member?: boolean
+          pet_id?: string | null
+          plan_id?: string
+          started_at?: string | null
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "memberships_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: false
+            referencedRelation: "pets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "memberships_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "membership_plans"
             referencedColumns: ["id"]
           },
         ]
@@ -528,6 +778,7 @@ export type Database = {
           full_name: string
           id: string
           phone: string | null
+          stripe_customer_id: string | null
           updated_at: string
           user_id: string
         }
@@ -538,6 +789,7 @@ export type Database = {
           full_name?: string
           id?: string
           phone?: string | null
+          stripe_customer_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -548,6 +800,7 @@ export type Database = {
           full_name?: string
           id?: string
           phone?: string | null
+          stripe_customer_id?: string | null
           updated_at?: string
           user_id?: string
         }
