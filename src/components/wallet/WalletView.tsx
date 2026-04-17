@@ -1,27 +1,32 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Wallet as WalletIcon, ArrowDownRight, ArrowUpRight, CreditCard } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Wallet as WalletIcon, ArrowDownRight, ArrowUpRight, CreditCard, Shield, Clock } from "lucide-react";
 import { fetchWallet, fetchTransactions, Wallet, WalletTransaction } from "@/lib/community-api";
+import { fetchMyMembership, fetchMyDpSummary } from "@/lib/plans-api";
 
 export function WalletView() {
   const { user } = useAuth();
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
+  const [membership, setMembership] = useState<any>(null);
+  const [dpSummary, setDpSummary] = useState<{ available: number; expiringSoon: number }>({ available: 0, expiringSoon: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
     setLoading(true);
-    fetchWallet(user.id).then(async (w) => {
-      setWallet(w);
-      if (w) {
-        const txns = await fetchTransactions(w.id);
-        setTransactions(txns);
-      }
-      setLoading(false);
-    }).catch(() => setLoading(false));
+    Promise.all([
+      fetchWallet(user.id).then(async (w) => {
+        setWallet(w);
+        if (w) setTransactions(await fetchTransactions(w.id));
+      }),
+      fetchMyMembership(user.id).then(setMembership).catch(() => {}),
+      fetchMyDpSummary(user.id).then(setDpSummary).catch(() => {}),
+    ]).finally(() => setLoading(false));
   }, [user]);
 
   if (loading) return <div className="animate-pulse text-muted-foreground">Loading wallet...</div>;
@@ -31,10 +36,47 @@ export function WalletView() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold font-display">My Wallet</h1>
-        <p className="text-muted-foreground mt-1">Manage your funds and track transactions</p>
+      <div className="flex items-start justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-3xl font-bold font-display">My Wallet</h1>
+          <p className="text-muted-foreground mt-1">Manage your funds and track transactions</p>
+        </div>
+        {!membership && (
+          <Button asChild><Link to="/plans">Choose a plan</Link></Button>
+        )}
       </div>
+
+      {membership && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div>
+              <CardTitle className="text-lg font-display flex items-center gap-2">
+                <Shield className="h-5 w-5 text-primary" />
+                {membership.plan?.tier_label} <span className="text-sm font-normal text-muted-foreground capitalize">({membership.plan?.species})</span>
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-1 capitalize">
+                Status: {membership.status} · Billing: {membership.billing_interval}ly
+                {membership.is_fear_free_member && " · Fear Free"}
+              </p>
+            </div>
+            <Badge variant="secondary">
+              Cap: {membership.plan?.plan_cap ? `$${Number(membership.plan.plan_cap).toLocaleString()}` : "Unlimited"}
+            </Badge>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">Direct Pay Available</p>
+                <p className="text-2xl font-bold font-display">${dpSummary.available.toFixed(2)}</p>
+              </div>
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3" /> Expiring within 60 days</p>
+                <p className="text-2xl font-bold font-display">${dpSummary.expiringSoon.toFixed(2)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>
