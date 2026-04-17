@@ -1,4 +1,4 @@
-import { LayoutDashboard, LogOut, Users, Wallet, Stethoscope, Briefcase, Calendar, UserCog, Home, PawPrint } from "lucide-react";
+import { LayoutDashboard, LogOut, Users, Wallet, Stethoscope, Briefcase, Calendar, UserCog, Home, PawPrint, Shield } from "lucide-react";
 import logoDark from "@/assets/logo-dark.png";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
@@ -24,6 +24,7 @@ const ownerNav = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "My Pets", url: "/dashboard/pets", icon: PawPrint },
   { title: "Community", url: "/dashboard/community", icon: Users },
+  { title: "Plans", url: "/plans", icon: Shield },
   { title: "Wallet", url: "/dashboard/wallet", icon: Wallet },
   { title: "Profile", url: "/dashboard/profile", icon: UserCog },
 ];
