@@ -67,6 +67,13 @@ export async function fetchMyDpSummary(userId: string) {
   return { available, expiringSoon: soon };
 }
 
+export async function openCustomerPortal(): Promise<string> {
+  const { data, error } = await supabase.functions.invoke("customer-portal", { body: {} });
+  if (error) throw error;
+  if (!data?.url) throw new Error("No portal URL returned");
+  return data.url as string;
+}
+
 export async function startCheckout(args: {
   plan_id: string;
   pet_id?: string | null;

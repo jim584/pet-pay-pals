@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Wallet as WalletIcon, ArrowDownRight, ArrowUpRight, CreditCard, Shield, Clock } from "lucide-react";
 import { fetchWallet, fetchTransactions, Wallet, WalletTransaction } from "@/lib/community-api";
-import { fetchMyMembership, fetchMyDpSummary } from "@/lib/plans-api";
+import { fetchMyMembership, fetchMyDpSummary, openCustomerPortal } from "@/lib/plans-api";
+import { toast } from "@/hooks/use-toast";
 
 export function WalletView() {
   const { user } = useAuth();
@@ -15,6 +16,18 @@ export function WalletView() {
   const [membership, setMembership] = useState<any>(null);
   const [dpSummary, setDpSummary] = useState<{ available: number; expiringSoon: number }>({ available: 0, expiringSoon: 0 });
   const [loading, setLoading] = useState(true);
+  const [portalLoading, setPortalLoading] = useState(false);
+
+  const handleManageSubscription = async () => {
+    setPortalLoading(true);
+    try {
+      const url = await openCustomerPortal();
+      window.location.href = url;
+    } catch (e: any) {
+      toast({ title: "Couldn't open portal", description: e.message, variant: "destructive" });
+      setPortalLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -59,9 +72,14 @@ export function WalletView() {
                 {membership.is_fear_free_member && " · Fear Free"}
               </p>
             </div>
-            <Badge variant="secondary">
-              Cap: {membership.plan?.plan_cap ? `$${Number(membership.plan.plan_cap).toLocaleString()}` : "Unlimited"}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary">
+                Cap: {membership.plan?.plan_cap ? `$${Number(membership.plan.plan_cap).toLocaleString()}` : "Unlimited"}
+              </Badge>
+              <Button size="sm" variant="outline" onClick={handleManageSubscription} disabled={portalLoading}>
+                {portalLoading ? "Opening..." : "Manage subscription"}
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-2">
