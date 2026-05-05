@@ -121,3 +121,29 @@ export async function startMemberRemainderCheckout(ticket_id: string): Promise<s
   if (!data?.url) throw new Error("No checkout URL returned");
   return data.url as string;
 }
+
+export async function getTicket(ticket_id: string): Promise<VetTicket | null> {
+  const { data, error } = await supabase.from("vet_tickets").select("*").eq("id", ticket_id).maybeSingle();
+  if (error) throw error;
+  return (data as unknown as VetTicket) ?? null;
+}
+
+export async function getMyIssuedCards(userId: string): Promise<IssuedCard[]> {
+  const { data, error } = await supabase.from("issued_cards")
+    .select("*").eq("owner_id", userId).order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as unknown as IssuedCard[];
+}
+
+export async function requestPhysicalCard(): Promise<IssuedCard> {
+  const { data, error } = await supabase.functions.invoke("request-physical-vet-card", { body: {} });
+  if (error) throw error;
+  return data.card as IssuedCard;
+}
+
+export async function getCardEphemeralKey(card_id: string, nonce?: string): Promise<string> {
+  const { data, error } = await supabase.functions.invoke("get-card-ephemeral-key",
+    { body: { card_id, nonce } });
+  if (error) throw error;
+  return data.ephemeralKeySecret as string;
+}
