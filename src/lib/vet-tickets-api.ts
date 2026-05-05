@@ -71,6 +71,13 @@ export async function listMyTickets(userId: string): Promise<VetTicket[]> {
   return (data ?? []) as unknown as VetTicket[];
 }
 
+export async function listAllTicketsForAdmin(): Promise<VetTicket[]> {
+  const { data, error } = await supabase.from("vet_tickets")
+    .select("*").order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as unknown as VetTicket[];
+}
+
 export async function computeTicketCoverage(ticket_id: string): Promise<CoverageBreakdown> {
   const { data, error } = await supabase.functions.invoke("compute-ticket-coverage", { body: { ticket_id } });
   if (error) throw error;
