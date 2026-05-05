@@ -44,6 +44,8 @@ Deno.serve(async (req) => {
                 method: "manual_ach", status: "pending",
               });
             }
+            // Auto-issue card
+            await invokeIssueCard(ticketId);
           }
           break;
         }
