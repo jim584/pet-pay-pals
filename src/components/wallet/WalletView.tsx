@@ -54,9 +54,12 @@ export function WalletView() {
           <h1 className="text-3xl font-bold font-display">My Wallet</h1>
           <p className="text-muted-foreground mt-1">Manage your funds and track transactions</p>
         </div>
-        {!membership && (
-          <Button asChild><Link to="/plans">Choose a plan</Link></Button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline"><Link to="/dashboard/vet-tickets">Vet tickets</Link></Button>
+          {!membership && (
+            <Button asChild><Link to="/plans">Choose a plan</Link></Button>
+          )}
+        </div>
       </div>
 
       {membership && (

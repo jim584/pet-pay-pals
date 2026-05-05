@@ -28,6 +28,26 @@ Deno.serve(async (req) => {
       case "checkout.session.completed": {
         const s = event.data.object as Stripe.Checkout.Session;
         const md = s.metadata || {};
+
+        // Vet ticket member-remainder payment
+        if (md.kind === "vet_ticket_remainder" && md.vet_ticket_id) {
+          const ticketId = md.vet_ticket_id;
+          const { data: t } = await admin.from("vet_tickets")
+            .select("approved_amount, status").eq("id", ticketId).maybeSingle();
+          if (t && t.status === "approved") {
+            await admin.from("vet_tickets").update({
+              status: "funded", member_remainder_paid: true,
+            }).eq("id", ticketId);
+            if (Number(t.approved_amount ?? 0) > 0) {
+              await admin.from("vet_payouts").insert({
+                ticket_id: ticketId, amount: Number(t.approved_amount),
+                method: "manual_ach", status: "pending",
+              });
+            }
+          }
+          break;
+        }
+
         const subId = typeof s.subscription === "string" ? s.subscription : s.subscription?.id;
         if (!md.user_id || !md.plan_id || !subId) break;
 

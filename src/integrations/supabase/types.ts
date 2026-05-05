@@ -264,6 +264,48 @@ export type Database = {
           },
         ]
       }
+      bnpl_obligations: {
+        Row: {
+          created_at: string
+          external_ref: string | null
+          id: string
+          original_amount: number
+          outstanding_amount: number
+          owner_id: string
+          pet_id: string
+          provider: string
+          status: Database["public"]["Enums"]["bnpl_obligation_status"]
+          ticket_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          external_ref?: string | null
+          id?: string
+          original_amount: number
+          outstanding_amount: number
+          owner_id: string
+          pet_id: string
+          provider?: string
+          status?: Database["public"]["Enums"]["bnpl_obligation_status"]
+          ticket_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          external_ref?: string | null
+          id?: string
+          original_amount?: number
+          outstanding_amount?: number
+          owner_id?: string
+          pet_id?: string
+          provider?: string
+          status?: Database["public"]["Enums"]["bnpl_obligation_status"]
+          ticket_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       comment_likes: {
         Row: {
           comment_id: string
@@ -1026,6 +1068,33 @@ export type Database = {
           },
         ]
       }
+      ticket_dp_consumptions: {
+        Row: {
+          accrual_id: string
+          amount_consumed: number
+          created_at: string
+          id: string
+          released: boolean
+          ticket_id: string
+        }
+        Insert: {
+          accrual_id: string
+          amount_consumed: number
+          created_at?: string
+          id?: string
+          released?: boolean
+          ticket_id: string
+        }
+        Update: {
+          accrual_id?: string
+          amount_consumed?: number
+          created_at?: string
+          id?: string
+          released?: boolean
+          ticket_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1044,6 +1113,42 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      vet_payouts: {
+        Row: {
+          amount: number
+          created_at: string
+          external_ref: string | null
+          id: string
+          method: Database["public"]["Enums"]["vet_payout_method"]
+          notes: string | null
+          status: Database["public"]["Enums"]["vet_payout_status"]
+          ticket_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          external_ref?: string | null
+          id?: string
+          method?: Database["public"]["Enums"]["vet_payout_method"]
+          notes?: string | null
+          status?: Database["public"]["Enums"]["vet_payout_status"]
+          ticket_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          external_ref?: string | null
+          id?: string
+          method?: Database["public"]["Enums"]["vet_payout_method"]
+          notes?: string | null
+          status?: Database["public"]["Enums"]["vet_payout_status"]
+          ticket_id?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1086,6 +1191,87 @@ export type Database = {
           updated_at?: string
           user_id?: string
           website?: string | null
+        }
+        Relationships: []
+      }
+      vet_tickets: {
+        Row: {
+          admin_notes: string | null
+          approved_amount: number | null
+          attestation_url: string | null
+          authorized_until: string | null
+          card_id: string | null
+          clinic_merchant_id: string | null
+          clinic_name: string
+          coverage_breakdown: Json | null
+          created_at: string
+          estimate_amount: number
+          estimate_url: string | null
+          id: string
+          member_remainder_paid: boolean
+          member_remainder_stripe_session_id: string | null
+          membership_id: string | null
+          notes: string | null
+          owner_id: string
+          pet_id: string
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["vet_ticket_status"]
+          updated_at: string
+          vet_profile_id: string | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          approved_amount?: number | null
+          attestation_url?: string | null
+          authorized_until?: string | null
+          card_id?: string | null
+          clinic_merchant_id?: string | null
+          clinic_name: string
+          coverage_breakdown?: Json | null
+          created_at?: string
+          estimate_amount: number
+          estimate_url?: string | null
+          id?: string
+          member_remainder_paid?: boolean
+          member_remainder_stripe_session_id?: string | null
+          membership_id?: string | null
+          notes?: string | null
+          owner_id: string
+          pet_id: string
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["vet_ticket_status"]
+          updated_at?: string
+          vet_profile_id?: string | null
+        }
+        Update: {
+          admin_notes?: string | null
+          approved_amount?: number | null
+          attestation_url?: string | null
+          authorized_until?: string | null
+          card_id?: string | null
+          clinic_merchant_id?: string | null
+          clinic_name?: string
+          coverage_breakdown?: Json | null
+          created_at?: string
+          estimate_amount?: number
+          estimate_url?: string | null
+          id?: string
+          member_remainder_paid?: boolean
+          member_remainder_stripe_session_id?: string | null
+          membership_id?: string | null
+          notes?: string | null
+          owner_id?: string
+          pet_id?: string
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["vet_ticket_status"]
+          updated_at?: string
+          vet_profile_id?: string | null
         }
         Relationships: []
       }
@@ -1214,6 +1400,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      consume_dp_for_ticket: {
+        Args: {
+          _amount: number
+          _ticket_id: string
+          _user_id: string
+          _window_months: number
+        }
+        Returns: number
+      }
+      get_plan_year_window: {
+        Args: { _membership_id: string }
+        Returns: {
+          year_end: string
+          year_start: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1238,16 +1440,43 @@ export type Database = {
         }
         Returns: undefined
       }
+      release_ticket_allocations: {
+        Args: { _ticket_id: string }
+        Returns: undefined
+      }
       user_has_any_role: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "pet_owner" | "vet" | "admin"
+      bnpl_obligation_status:
+        | "pending"
+        | "active"
+        | "paid_off"
+        | "defaulted"
+        | "cancelled"
       transaction_type:
         | "donation_received"
         | "donation_sent"
         | "withdrawal"
         | "vet_payment"
         | "refund"
+      vet_payout_method: "manual_ach" | "issued_card" | "direct_charge"
+      vet_payout_status:
+        | "pending"
+        | "sent"
+        | "completed"
+        | "failed"
+        | "reversed"
+      vet_ticket_status:
+        | "submitted"
+        | "under_review"
+        | "approved"
+        | "rejected"
+        | "funded"
+        | "card_issued"
+        | "settled"
+        | "expired"
+        | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1376,12 +1605,32 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["pet_owner", "vet", "admin"],
+      bnpl_obligation_status: [
+        "pending",
+        "active",
+        "paid_off",
+        "defaulted",
+        "cancelled",
+      ],
       transaction_type: [
         "donation_received",
         "donation_sent",
         "withdrawal",
         "vet_payment",
         "refund",
+      ],
+      vet_payout_method: ["manual_ach", "issued_card", "direct_charge"],
+      vet_payout_status: ["pending", "sent", "completed", "failed", "reversed"],
+      vet_ticket_status: [
+        "submitted",
+        "under_review",
+        "approved",
+        "rejected",
+        "funded",
+        "card_issued",
+        "settled",
+        "expired",
+        "cancelled",
       ],
     },
   },
