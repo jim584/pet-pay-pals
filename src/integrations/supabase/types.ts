@@ -526,6 +526,90 @@ export type Database = {
           },
         ]
       }
+      issued_cards: {
+        Row: {
+          created_at: string
+          exp_month: number | null
+          exp_year: number | null
+          id: string
+          last4: string | null
+          owner_id: string
+          shipping_status: string | null
+          status: string
+          stripe_card_id: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          exp_month?: number | null
+          exp_year?: number | null
+          id?: string
+          last4?: string | null
+          owner_id: string
+          shipping_status?: string | null
+          status?: string
+          stripe_card_id: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          exp_month?: number | null
+          exp_year?: number | null
+          id?: string
+          last4?: string | null
+          owner_id?: string
+          shipping_status?: string | null
+          status?: string
+          stripe_card_id?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      issuing_authorizations: {
+        Row: {
+          amount: number | null
+          created_at: string
+          decline_reason: string | null
+          id: string
+          merchant_category: string | null
+          merchant_id: string | null
+          payload: Json | null
+          status: string
+          stripe_authorization_id: string
+          stripe_card_id: string | null
+          ticket_id: string | null
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string
+          decline_reason?: string | null
+          id?: string
+          merchant_category?: string | null
+          merchant_id?: string | null
+          payload?: Json | null
+          status: string
+          stripe_authorization_id: string
+          stripe_card_id?: string | null
+          ticket_id?: string | null
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string
+          decline_reason?: string | null
+          id?: string
+          merchant_category?: string | null
+          merchant_id?: string | null
+          payload?: Json | null
+          status?: string
+          stripe_authorization_id?: string
+          stripe_card_id?: string | null
+          ticket_id?: string | null
+        }
+        Relationships: []
+      }
       membership_plans: {
         Row: {
           admin_portion: number
@@ -821,6 +905,7 @@ export type Database = {
           id: string
           phone: string | null
           stripe_customer_id: string | null
+          stripe_issuing_cardholder_id: string | null
           updated_at: string
           user_id: string
         }
@@ -832,6 +917,7 @@ export type Database = {
           id?: string
           phone?: string | null
           stripe_customer_id?: string | null
+          stripe_issuing_cardholder_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -843,6 +929,7 @@ export type Database = {
           id?: string
           phone?: string | null
           stripe_customer_id?: string | null
+          stripe_issuing_cardholder_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -1208,9 +1295,12 @@ export type Database = {
           estimate_amount: number
           estimate_url: string | null
           id: string
+          issued_card_id: string | null
+          last_authorization_id: string | null
           member_remainder_paid: boolean
           member_remainder_stripe_session_id: string | null
           membership_id: string | null
+          merchant_lock_type: string | null
           notes: string | null
           owner_id: string
           pet_id: string
@@ -1234,9 +1324,12 @@ export type Database = {
           estimate_amount: number
           estimate_url?: string | null
           id?: string
+          issued_card_id?: string | null
+          last_authorization_id?: string | null
           member_remainder_paid?: boolean
           member_remainder_stripe_session_id?: string | null
           membership_id?: string | null
+          merchant_lock_type?: string | null
           notes?: string | null
           owner_id: string
           pet_id: string
@@ -1260,9 +1353,12 @@ export type Database = {
           estimate_amount?: number
           estimate_url?: string | null
           id?: string
+          issued_card_id?: string | null
+          last_authorization_id?: string | null
           member_remainder_paid?: boolean
           member_remainder_stripe_session_id?: string | null
           membership_id?: string | null
+          merchant_lock_type?: string | null
           notes?: string | null
           owner_id?: string
           pet_id?: string
@@ -1273,7 +1369,15 @@ export type Database = {
           updated_at?: string
           vet_profile_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "vet_tickets_issued_card_id_fkey"
+            columns: ["issued_card_id"]
+            isOneToOne: false
+            referencedRelation: "issued_cards"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vetted_products: {
         Row: {
@@ -1430,6 +1534,14 @@ export type Database = {
       is_vet_profile_owner: {
         Args: { _user_id: string; _vet_profile_id: string }
         Returns: boolean
+      }
+      mark_ticket_settled: {
+        Args: {
+          _authorization_id: string
+          _settled_amount: number
+          _ticket_id: string
+        }
+        Returns: undefined
       }
       process_donation: {
         Args: {

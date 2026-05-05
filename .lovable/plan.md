@@ -1,162 +1,147 @@
-# Vet Payment Ticket System — Help A Pet
+## Stripe Issuing — Phase 3: merchant-locked vet cards
 
-End-to-end flow: pet owner uploads vet estimate + attestation → system computes coverage from the payment stack → issues a merchant-locked, time-boxed virtual/physical card tied to the pet → owner taps card at clinic.
+Wire Stripe Issuing into the existing vet ticket flow so that when a ticket reaches `funded`, we automatically provision a virtual card (and optionally a physical card) that is locked to the clinic, capped at the approved amount, and only valid for 6 hours.
 
-## Critical infrastructure dependency
+### Prerequisite (must be confirmed before building)
 
-This design requires **Stripe Issuing**, a separate Stripe product from regular payments. It is the only way to programmatically create virtual + physical cards with merchant-lock, amount-lock, and time-window spend controls.
+Stripe Issuing must be activated on your Stripe account (Dashboard → Issuing → Get started). Until that's approved by Stripe, all Issuing API calls return 400. The build can ship behind a feature flag and stay dormant until Issuing is live — but no card will actually issue until you confirm activation.
 
-You must apply for Stripe Issuing in your Stripe dashboard (Issuing → Get started). Approval typically takes a few business days and requires a US-based Stripe account (UK/EU is also supported but with a separate flow). This is a pre-requisite — the build can proceed without it for the ticket workflow + ledger, but the actual card-issuing step will be stubbed until Issuing is approved.
-
-I'll structure the build in phases so you get value immediately and the card piece slots in cleanly when Stripe Issuing is approved.
+If Issuing is not yet approved, I'll still build everything end-to-end and stub the actual `stripe.issuing.cards.create` call behind an `ISSUING_ENABLED` env flag so the rest of the flow (UI, webhooks, expiry job) is testable now.
 
 ---
 
-## Phase 1 — Ticket workflow + payment-stack engine (no cards yet)
+### Database changes
 
-### Database schema
+**Extend `profiles`**: add `stripe_issuing_cardholder_id text` (cached per owner so we don't recreate cardholders).
 
-**`vet_tickets`** — owner-submitted reimbursement requests
-- `id`, `pet_id`, `owner_id`, `vet_profile_id` (nullable, free-text fallback), `clinic_name`, `clinic_merchant_id` (nullable, captured later)
-- `estimate_amount` numeric, `estimate_url` text (storage), `attestation_url` text (storage)
-- `status` enum: `submitted | under_review | approved | rejected | funded | card_issued | settled | expired | cancelled`
-- `coverage_breakdown` jsonb — { direct_pay, bnpl, reserve, member_remainder }
-- `approved_amount`, `card_id` (nullable, Phase 3), `authorized_until` timestamptz
-- `admin_notes`, `rejection_reason`, timestamps
+**New table `issued_cards`**: persistent cards that survive across tickets (one physical + one virtual per owner).
+- `id`, `owner_id`, `stripe_card_id`, `type` (`virtual | physical`), `last4`, `exp_month`, `exp_year`, `status` (`active | inactive | canceled`), `shipping_status` (for physical), `created_at`, `updated_at`.
 
-**`ticket_dp_consumptions`** — which DP accruals fed which ticket (oldest-first FIFO)
-- `id`, `ticket_id`, `accrual_id`, `amount_consumed`, `created_at`
+**Extend `vet_tickets`**: already has `card_id`, `authorized_until`. Add:
+- `issued_card_id uuid` (FK to `issued_cards`) — which physical/virtual card this ticket is bound to
+- `merchant_lock_type text` (`merchant_id | mcc_only`) — records the trade-off when clinic merchant ID is unknown
+- `last_authorization_id text` — most recent `iauth_...` for reconciliation
 
-**`bnpl_obligations`** — outstanding BNPL balances per pet (reduces future capacity)
-- `id`, `pet_id`, `ticket_id`, `provider` (e.g. `affirm | klarna | stripe_capital`), `original_amount`, `outstanding_amount`, `status`, timestamps
+**New table `issuing_authorizations`**: append-only log of every Stripe `issuing_authorization.*` event for reconciliation and audit.
+- `id`, `ticket_id`, `stripe_authorization_id`, `stripe_card_id`, `amount`, `merchant_id`, `merchant_category`, `status` (`pending | approved | declined | reversed | closed`), `decline_reason`, `payload jsonb`, `created_at`.
 
-**`reserve_pool`** — community reserve balance (already partially exists as `community_reserve`; add a per-pet eligibility view)
+**New DB function `release_ticket_allocations` is already in place** — re-used by the expiry job to roll DP back when a card window expires unused.
 
-**`vet_payouts`** — record of money sent to vets (card auths in Phase 3, manual in Phase 1)
-- `id`, `ticket_id`, `amount`, `method` enum: `manual_ach | issued_card | direct_charge`, `external_ref`, `status`, timestamps
+**New DB function `mark_ticket_settled(_ticket_id, _settled_amount, _authorization_id)`**: in one transaction, sets ticket to `settled`, freezes spending limits to `0` on the card via a side-effect column flag, creates a `vet_payouts` row with `method='issued_card'`, and if `_settled_amount < approved_amount`, refunds the delta back to DP via `release_ticket_allocations` (partial — only the unused portion).
 
-Add storage bucket `vet-tickets` (private) for estimates/attestations.
+---
 
 ### Edge functions
 
-**`submit-vet-ticket`** — owner uploads, creates ticket in `submitted` state, validates pet ownership.
+**`issue-vet-card`** (called automatically by `stripe-webhook` when ticket transitions to `funded`, and also exposed for manual retry by admin)
+1. Look up ticket; require `status = 'funded'` and no existing `card_id`.
+2. Ensure `profiles.stripe_issuing_cardholder_id` exists; if not, create a Stripe Issuing Cardholder (`type=individual`, name from profile, billing address from profile or fall back to a configured business address).
+3. Reuse owner's existing virtual card from `issued_cards` if one exists and is `active`; otherwise create a new virtual card via `stripe.issuing.cards.create({ type: 'virtual', cardholder, currency: 'usd', status: 'active' })`.
+4. Apply per-ticket spending controls via `stripe.issuing.cards.update`:
+   - `spending_controls.spending_limits = [{ amount: approved_amount_cents, interval: 'all_time' }]`
+   - If `clinic_merchant_id` known → `spending_controls.allowed_merchants = [clinic_merchant_id]`, set `merchant_lock_type='merchant_id'`
+   - Else → `spending_controls.allowed_categories = ['veterinary_services']` (MCC 0742), set `merchant_lock_type='mcc_only'` and record the looser-lock note in `admin_notes`
+   - `metadata = { ticket_id, pet_id, owner_id, authorized_until }`
+5. Persist `card_id`, `last4`, `exp`, `authorized_until = now() + 6h`, `issued_card_id`, `merchant_lock_type` on the ticket. Move ticket to `card_issued`.
+6. Return non-sensitive card metadata. **PAN/CVC are never returned by this function** — the client fetches them separately using a Stripe ephemeral key (see UI section).
 
-**`compute-ticket-coverage`** — pure calculator (callable from review UI):
-1. Pull pet's active membership + plan.
-2. **Plan-year cap check**: sum approved+funded+settled tickets in the current membership year, ensure (sum + new) ≤ plan_cap (Bronze $10k, Silver $15k, Gold $20k, Platinum unlimited).
-3. **DP availability**: sum `direct_pay_accruals.remaining_amount` for user (already FIFO sorted by accrual_month asc), capped by plan's DP accrual window (Bronze 1y, Silver 2y, Gold 3y, Platinum unlimited).
-4. **BNPL capacity**: estimate – DP, minus existing outstanding `bnpl_obligations` for that pet, clamped by plan rules.
-5. **Reserve eligibility**: only if member has been active ≥ X months and plan tier qualifies (Ryan to confirm rules; placeholder threshold).
-6. **Member remainder**: anything left over.
-Returns the breakdown JSON for admin review and member display.
+**`request-physical-vet-card`** (one-time, owner-initiated)
+- Creates a physical card shipped to owner's address.
+- Stored in `issued_cards`. Reused for all future tickets — same card, different spending controls per ticket.
+- Owner UI shows shipping status (`pending`, `shipped`, `delivered`).
 
-**`approve-vet-ticket`** (admin) — locks coverage breakdown, transitions to `approved`, decrements DP accruals via FIFO into `ticket_dp_consumptions`, creates `bnpl_obligations` rows in `pending` state, holds member remainder for Stripe/ACH collection.
+**`get-card-ephemeral-key`** (owner-only, called from card display screen)
+- Verifies the caller owns the ticket / card.
+- Calls `stripe.ephemeralKeys.create({ issuing_card: card_id }, { apiVersion })` and returns the key.
+- Client uses this key with Stripe.js to render the actual PAN/CVC. Server never sees or logs them.
 
-**`reject-vet-ticket`** (admin) — sets reason, notifies owner.
+**`expire-vet-card-auth`** (cron, runs every 15 min)
+- Find tickets where `status='card_issued'` and `authorized_until < now()` and no successful auth recorded.
+- For each: update Stripe card spending limit to `[{ amount: 0, interval: 'all_time' }]` (neutralizes future charges without deleting the card).
+- Set ticket status to `expired`, call `release_ticket_allocations(ticket_id)` to roll DP and BNPL allocations back.
+- Cancel the related `vet_payouts` row.
 
-### Plan-year cap helper (DB function)
-`get_plan_year_window(membership_id)` → returns `(start_ts, end_ts)` based on `started_at` anniversary, used by both cap-check and reporting.
+**Extend `stripe-webhook`** (already exists) to handle Issuing events:
 
-### UI
+| Event | Handler |
+|---|---|
+| `issuing_authorization.request` | **Real-time approve/decline** — must respond in <2s. Look up ticket by `card.metadata.ticket_id`, verify `status='card_issued'`, `authorized_until > now()`, `amount ≤ approved_amount_cents`, and (if `merchant_lock_type='merchant_id'`) merchant matches. Approve or decline via response body. Log to `issuing_authorizations`. |
+| `issuing_authorization.created` (approved) | Mark ticket awaiting settlement. Capture `merchant_id` from payload if we didn't have one — store on `vet_tickets.clinic_merchant_id` for future tickets to the same vet to enable tighter locks. |
+| `issuing_authorization.updated` | Update auth status (e.g. reversed). |
+| `issuing_transaction.created` | Final settlement. Call `mark_ticket_settled(ticket_id, settled_amount, authorization_id)`. Update card spending limit to `0` to freeze the card. |
+| `issuing_card.updated` | Sync `status` and `shipping_status` into `issued_cards`. |
 
-- **Owner**: new `/vet-ticket/new` route with upload form (estimate file, attestation file, vet selector + free-text, estimate amount, notes). Ticket list at `/dashboard/vet-tickets` showing status timeline.
-- **Admin**: `/admin/vet-tickets` queue with file viewers, computed breakdown panel, Approve / Reject / Request more info actions.
-- **Wallet view**: section showing active tickets, plan-year cap remaining, DP available within window.
-
----
-
-## Phase 2 — Member-remainder collection + BNPL hand-off
-
-**`collect-member-remainder`** edge function — creates a Stripe Checkout (or PaymentIntent) for the member-responsible portion. Webhook moves ticket from `approved` → `funded` once member paid.
-
-**BNPL integration** — Phase 2a treats BNPL as manual: admin records the BNPL provider + amount externally and marks the obligation funded. Phase 2b (later) wires a real BNPL API (Affirm/Klarna/Stripe Capital) once provider is chosen.
-
-Once `coverage_breakdown.member_remainder` is collected and BNPL is confirmed, ticket moves to `funded` and is ready for card issuance (Phase 3).
-
-In the interim (before Phase 3 ships), `funded` tickets generate a `vet_payouts` row with method=`manual_ach` for admin to wire/check the vet directly. This unblocks real usage immediately.
-
----
-
-## Phase 3 — Stripe Issuing: merchant-locked virtual + physical cards
-
-Triggered automatically when a ticket reaches `funded`.
-
-**`issue-vet-card`** edge function:
-1. Ensure a Stripe Issuing **Cardholder** exists for the pet owner (cache `cardholder_id` on `profiles`).
-2. Create a **virtual card** immediately:
-   - `spending_controls.spending_limits`: `[{ amount: approved_amount_cents, interval: 'all_time' }]`
-   - `spending_controls.allowed_merchants`: `[clinic_merchant_id]` if known; else fall back to `allowed_categories: ['veterinary_services']` (MCC 0742) — note this is broader and we should record the trade-off.
-   - Metadata: `{ ticket_id, pet_id, authorized_until }`.
-3. If owner opted for a physical card too, also create a physical card shipped to owner's address (one-time, not per-ticket — re-used across future tickets with updated spending controls).
-4. Persist `card_id`, `last4`, `exp`, `authorized_until = now() + 6h` on the ticket.
-5. Return card details (PAN/CVC retrieved client-side via Stripe.js `issuing.cards.retrieve` with ephemeral key — never log full PAN server-side).
-
-**`expire-vet-card-auth`** — pg_cron job every 15 min:
-- For tickets where `authorized_until < now()` and status = `card_issued` and no successful auth yet → set `spending_controls.spending_limits` to `[{ amount: 0 }]` to neutralize the card, mark ticket `expired`, return DP/reserve/BNPL allocations to their pools.
-
-**Stripe Issuing webhook handler** (extend `stripe-webhook`):
-- `issuing_authorization.request` → real-time approval hook: re-verify ticket is still `card_issued`, amount ≤ approved, merchant matches → approve; else decline.
-- `issuing_authorization.created` (approved) → mark ticket `settled`, create `vet_payouts` row with method=`issued_card`, freeze further auths on the card.
-- `issuing_transaction.created` → reconcile final settled amount; if less than authorized, refund the delta back to DP/reserve.
-
-**Owner card UI** (`/dashboard/vet-tickets/:id/card`):
-- Show "Card ready" screen with embedded Stripe Issuing card display (PAN + CVC fetched via ephemeral key, never persisted).
-- Apple Pay / Google Pay push-provisioning button (Stripe Issuing supports this).
-- Countdown timer to `authorized_until`.
-- Instructions: "Show this card to the clinic. Tap, swipe, or read the number aloud."
+The webhook handler must dispatch on event type quickly — heavy work happens after the response for `issuing_authorization.request`.
 
 ---
 
-## Phase 4 — Polish
+### Auto-trigger from `funded` → `card_issued`
 
-- Email/SMS notifications at each status transition (uses existing `auth-email-hook` infrastructure pattern).
-- Admin dashboard: outstanding BNPL obligations per pet, plan-cap utilization charts, expired-auth recovery report.
-- Audit log table `ticket_audit_log` capturing every status change + actor.
-- Reserve pool eligibility rules (Ryan to define exact qualifying criteria).
+Currently the existing `stripe-webhook` flips a ticket to `funded` after the member-remainder Checkout completes. Extend that branch to also `await fetch(...)` the `issue-vet-card` function (or run the issuing logic inline). For tickets that are `funded` immediately at approval time (no member remainder), modify `approve-vet-ticket` to call `issue-vet-card` after the status flip.
 
----
-
-## Technical details
-
-### Stripe Issuing key facts
-- Separate API surface from regular Stripe payments; same `STRIPE_SECRET_KEY` works once Issuing is enabled on the account.
-- **Real-time authorization webhook** must respond within 2 seconds — keep the handler minimal (one DB read, one comparison, return decision). Heavier reconciliation happens on `issuing_authorization.created`.
-- Spending controls support: `allowed_categories` (MCC list), `blocked_categories`, `allowed_merchants` (specific merchant IDs from prior auths), `spending_limits` (amount + interval).
-- The `clinic_merchant_id` is only knowable after the *first* successful auth at that clinic — store it from the `issuing_authorization` payload so future tickets to the same vet can lock tighter.
-- Funding: Issuing cards spend from your Stripe Issuing balance, which you fund from your Stripe payments balance or an external bank — admin process, not user-facing.
-
-### Plan-year window
-Anchored to `memberships.started_at`. Year N = `[started_at + (N-1) years, started_at + N years)`. Renewals reset the cap on each anniversary.
-
-### DP accrual window enforcement
-When summing DP availability for a ticket, exclude accruals where `accrual_month < (today − plan.dp_window_months)`. Existing `process-dp-expiry` cron already expires them; this is a belt-and-suspenders check at coverage time.
-
-### FIFO consumption
-`SELECT … FROM direct_pay_accruals WHERE user_id=? AND expired=false AND remaining_amount>0 ORDER BY accrual_month ASC, created_at ASC FOR UPDATE` — atomically decrement `remaining_amount` and write `ticket_dp_consumptions` rows in one transaction (DB function `consume_dp_for_ticket`).
-
-### Rollback on expiry
-If a card auth window expires unused, a reverse DB function `release_ticket_allocations` re-credits the consumed accruals (only if the original accrual is still within its expiry window) and voids the BNPL obligation rows.
-
-### Security
-- RLS: owners see only their own tickets; admins see all; vets see none of this surface (they don't need an account here — they just accept the card).
-- Storage: `vet-tickets` bucket is private, signed-URL access only, scoped to ticket owner + admins.
-- Card PAN never logged; only `last4` + `card_id` persisted server-side.
+Idempotency: `issue-vet-card` is a no-op if the ticket already has `card_id`.
 
 ---
 
-## What I'll build in this first implementation pass
+### UI changes
 
-To keep scope manageable, the **first build** will deliver Phase 1 + Phase 2 stubs:
+**`/vet-tickets/:id/card` (new owner page)**
+- Loads ticket, requires `status='card_issued'`.
+- Countdown timer to `authorized_until` (turns red in last 30 min).
+- Card display:
+  - If owner has a physical card already, show "Use your physical card ending in ••XX at [Clinic]" plus the locked amount.
+  - Always show a virtual card panel: calls `get-card-ephemeral-key`, then uses Stripe.js `IssuingCard` element to render the actual PAN + CVC (Stripe-hosted, never touches our server).
+  - Apple Pay / Google Pay "Add to Wallet" button (Stripe Issuing supports push-provisioning via Stripe.js).
+- Plain instructions: "Show this card to the clinic. They run it like a normal card."
+- "Cancel ticket and refund my coverage" button — calls a cancel function that runs `release_ticket_allocations` and freezes the card.
 
-1. All DB tables, RLS, FIFO consumption function, plan-year window function.
-2. `submit-vet-ticket`, `compute-ticket-coverage`, `approve-vet-ticket`, `reject-vet-ticket` edge functions.
-3. Storage bucket + upload helpers.
-4. Owner submit form + ticket list.
-5. Admin review queue.
-6. Wallet integration showing plan-year cap remaining + active tickets.
-7. Member-remainder Stripe Checkout (Phase 2).
-8. Manual `vet_payouts` rows for `funded` tickets (admin pays vet out-of-band until Phase 3 ships).
+**`/vet-tickets` (existing)**: add a "View card" button on rows where `status='card_issued'`.
 
-Stripe Issuing wiring (Phase 3) ships in a follow-up message **once you confirm Stripe Issuing is approved on your account**. I'll flag the exact moment to apply.
+**`/dashboard/profile` or `/wallet`**: add a "Order physical card" CTA (one-time) that calls `request-physical-vet-card` and shows shipping status.
 
-Confirm and I'll start building Phase 1 + 2.
+**`/admin/vet-tickets` (existing)**: show card status, last authorization, settled amount, and a manual "Re-issue card" button for stuck tickets.
+
+---
+
+### Funding (admin-only, out of band)
+
+Stripe Issuing cards spend from the Stripe Issuing balance, not the payments balance. You'll need to either:
+- Enable automatic funding from your Stripe payments balance (Issuing settings), or
+- Push funds from a connected bank account.
+
+This is configured in the Stripe Dashboard, not in code. I'll add an admin doc note in `.lovable/plan.md`.
+
+---
+
+### Secrets / env
+
+- `STRIPE_SECRET_KEY` — already present.
+- `STRIPE_WEBHOOK_SECRET` — needed for Issuing webhook signature verification (same secret as the existing webhook if you're using one endpoint; or a separate one if you create a dedicated Issuing webhook in the Stripe Dashboard, which is recommended for the 2s latency budget).
+- `ISSUING_ENABLED` — feature flag (`'true'` once Stripe approves Issuing on your account). When `false`, `issue-vet-card` returns a stubbed response and the ticket stays `funded` with a `manual_ach` payout row, matching today's behavior.
+- `ISSUING_DEFAULT_AUTH_HOURS` — default `6`, overridable.
+- `ISSUING_BUSINESS_ADDRESS_*` — fallback billing address for cardholder creation when owner profile is incomplete.
+
+I'll request the missing ones via `add_secret` once you confirm.
+
+---
+
+### Webhook setup (manual step)
+
+After deploy, you'll add a new Stripe webhook endpoint pointing at the existing `stripe-webhook` URL with these additional events selected:
+- `issuing_authorization.request`
+- `issuing_authorization.created`
+- `issuing_authorization.updated`
+- `issuing_transaction.created`
+- `issuing_card.updated`
+
+I'll surface the exact URL and event list in the chat after deploy.
+
+---
+
+### Out of scope for this pass (flagged as Phase 3.5)
+
+- Real BNPL provider integration (Affirm/Klarna API). Still recorded as `manual` obligations.
+- Reserve-pool eligibility rules (need Ryan's exact threshold definition).
+- Receipt OCR on uploaded invoices.
+
+Confirm and I'll build it. I'll surface the Stripe Issuing activation status and ask you to confirm `ISSUING_ENABLED=true` once Stripe approves the account.
