@@ -28,6 +28,7 @@ import HelpOvercomePage from "./pages/HelpOvercomePage";
 import PlansPage from "./pages/PlansPage";
 import VetTicketsPage from "./pages/VetTicketsPage";
 import AdminVetTicketsPage from "./pages/AdminVetTicketsPage";
+import VetCardPage from "./pages/VetCardPage";
 
 const queryClient = new QueryClient();
 
