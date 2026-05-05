@@ -238,8 +238,16 @@ function TicketCard({ ticket, onChanged }: { ticket: VetTicket; onChanged: () =>
 
         {ticket.status === "funded" && (
           <p className="text-xs text-muted-foreground flex items-center gap-1">
-            <ExternalLink className="h-3 w-3" /> Funded — admin will release payment to the clinic.
+            <ExternalLink className="h-3 w-3" /> Funded — issuing your vet card now…
           </p>
+        )}
+
+        {(ticket.status === "card_issued" || ticket.status === "settled") && (
+          <Button asChild size="sm">
+            <a href={`/vet-tickets/${ticket.id}/card`}>
+              View vet card
+            </a>
+          </Button>
         )}
       </CardContent>
     </Card>
