@@ -134,7 +134,88 @@ Deno.serve(async (req) => {
           status: "cancelled",
           cancelled_at: new Date().toISOString(),
         }).eq("stripe_subscription_id", sub.id);
-        // Note: redistribution of unused DP on cancellation handled by process-dp-expiry
+        break;
+      }
+
+      // ===== Stripe Issuing =====
+      case "issuing_authorization.request": {
+        const a = event.data.object as Stripe.Issuing.Authorization;
+        const decision = await decideAuth(admin, a);
+        await admin.from("issuing_authorizations").insert({
+          ticket_id: decision.ticketId,
+          stripe_authorization_id: a.id,
+          stripe_card_id: a.card.id,
+          amount: a.amount / 100,
+          merchant_id: a.merchant_data?.network_id,
+          merchant_category: a.merchant_data?.category,
+          status: decision.approved ? "approved" : "declined",
+          decline_reason: decision.reason,
+          payload: a as any,
+        });
+        return new Response(JSON.stringify({
+          approved: decision.approved,
+          metadata: decision.ticketId ? { ticket_id: decision.ticketId } : undefined,
+        }), { status: 200, headers: { "Content-Type": "application/json" } });
+      }
+
+      case "issuing_authorization.created": {
+        const a = event.data.object as Stripe.Issuing.Authorization;
+        const ticketId = a.metadata?.ticket_id || a.card.metadata?.ticket_id;
+        if (ticketId && a.merchant_data?.network_id) {
+          await admin.from("vet_tickets").update({
+            clinic_merchant_id: a.merchant_data.network_id,
+            last_authorization_id: a.id,
+          }).eq("id", ticketId).is("clinic_merchant_id", null);
+        }
+        break;
+      }
+
+      case "issuing_authorization.updated": {
+        const a = event.data.object as Stripe.Issuing.Authorization;
+        await admin.from("issuing_authorizations").insert({
+          ticket_id: a.metadata?.ticket_id || a.card.metadata?.ticket_id || null,
+          stripe_authorization_id: a.id,
+          stripe_card_id: a.card.id,
+          amount: a.amount / 100,
+          status: a.status,
+          payload: a as any,
+        });
+        break;
+      }
+
+      case "issuing_transaction.created": {
+        const tx = event.data.object as Stripe.Issuing.Transaction;
+        const ticketId = (tx.metadata?.ticket_id as string)
+          || ((tx as any).card?.metadata?.ticket_id);
+        if (ticketId) {
+          const settled = Math.abs(tx.amount) / 100;
+          await admin.rpc("mark_ticket_settled", {
+            _ticket_id: ticketId,
+            _settled_amount: settled,
+            _authorization_id: (tx.authorization as string) || tx.id,
+          });
+          // Freeze card so no further auths succeed on this ticket
+          if (tx.card) {
+            const cardId = typeof tx.card === "string" ? tx.card : tx.card.id;
+            try {
+              await stripe.issuing.cards.update(cardId, {
+                spending_controls: {
+                  spending_limits: [{ amount: 0, interval: "all_time" }],
+                  allowed_categories: ["veterinary_services"],
+                },
+              });
+            } catch (e) { console.error("freeze card failed:", e); }
+          }
+        }
+        break;
+      }
+
+      case "issuing_card.updated": {
+        const c = event.data.object as Stripe.Issuing.Card;
+        await admin.from("issued_cards").update({
+          status: c.status === "active" ? "active" : c.status === "canceled" ? "canceled" : "inactive",
+          shipping_status: c.shipping?.status ?? null,
+        }).eq("stripe_card_id", c.id);
         break;
       }
     }
@@ -148,3 +229,44 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: (e as Error).message }), { status: 500 });
   }
 });
+
+// ===== Helpers =====
+
+async function invokeIssueCard(ticketId: string) {
+  try {
+    const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/issue-vet-card`;
+    await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+      },
+      body: JSON.stringify({
+        ticket_id: ticketId,
+        internal_secret: Deno.env.get("INTERNAL_FUNCTION_SECRET"),
+      }),
+    });
+  } catch (e) { console.error("invokeIssueCard failed:", e); }
+}
+
+async function decideAuth(admin: any, a: Stripe.Issuing.Authorization)
+  : Promise<{ approved: boolean; reason?: string; ticketId?: string }> {
+  const ticketId = (a.metadata?.ticket_id as string)
+    || (a.card?.metadata?.ticket_id as string);
+  if (!ticketId) return { approved: false, reason: "no_ticket_metadata" };
+
+  const { data: t } = await admin.from("vet_tickets")
+    .select("status, approved_amount, authorized_until, clinic_merchant_id, merchant_lock_type")
+    .eq("id", ticketId).maybeSingle();
+  if (!t) return { approved: false, reason: "ticket_not_found", ticketId };
+  if (t.status !== "card_issued") return { approved: false, reason: `ticket_status_${t.status}`, ticketId };
+  if (new Date(t.authorized_until) < new Date()) return { approved: false, reason: "auth_window_expired", ticketId };
+  if (a.amount > Math.round(Number(t.approved_amount) * 100)) {
+    return { approved: false, reason: "exceeds_approved_amount", ticketId };
+  }
+  if (t.merchant_lock_type === "merchant_id" && t.clinic_merchant_id
+    && a.merchant_data?.network_id !== t.clinic_merchant_id) {
+    return { approved: false, reason: "merchant_mismatch", ticketId };
+  }
+  return { approved: true, ticketId };
+}
