@@ -36,6 +36,24 @@ export type VetTicket = {
   member_remainder_paid: boolean;
   admin_notes: string | null;
   rejection_reason: string | null;
+  card_id: string | null;
+  authorized_until: string | null;
+  merchant_lock_type: string | null;
+  issued_card_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type IssuedCard = {
+  id: string;
+  owner_id: string;
+  stripe_card_id: string;
+  type: "virtual" | "physical";
+  last4: string | null;
+  exp_month: number | null;
+  exp_year: number | null;
+  status: "active" | "inactive" | "canceled";
+  shipping_status: string | null;
   created_at: string;
   updated_at: string;
 };
