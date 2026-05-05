@@ -26,6 +26,8 @@ import VettedPage from "./pages/VettedPage";
 import HelpBehavePage from "./pages/HelpBehavePage";
 import HelpOvercomePage from "./pages/HelpOvercomePage";
 import PlansPage from "./pages/PlansPage";
+import VetTicketsPage from "./pages/VetTicketsPage";
+import AdminVetTicketsPage from "./pages/AdminVetTicketsPage";
 
 const queryClient = new QueryClient();
 
@@ -46,7 +48,9 @@ function AppRoutes() {
           <Route path="vet-profile" element={<VetProfilePage />} />
           <Route path="vet-services" element={<VetServicesPage />} />
           <Route path="profile" element={<ProfileSettingsPage />} />
+          <Route path="vet-tickets" element={<VetTicketsPage />} />
         </Route>
+        <Route path="/admin/vet-tickets" element={<AdminVetTicketsPage />} />
         {/* Compass menu placeholder routes */}
         
         <Route path="/help-forever" element={<HelpForeverPage />} />
