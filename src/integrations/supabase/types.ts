@@ -306,6 +306,50 @@ export type Database = {
         }
         Relationships: []
       }
+      bnpl_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          external_ref: string | null
+          id: string
+          method: string
+          notes: string | null
+          obligation_id: string
+          paid_at: string
+          recorded_by: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          external_ref?: string | null
+          id?: string
+          method?: string
+          notes?: string | null
+          obligation_id: string
+          paid_at?: string
+          recorded_by?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          external_ref?: string | null
+          id?: string
+          method?: string
+          notes?: string | null
+          obligation_id?: string
+          paid_at?: string
+          recorded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bnpl_payments_obligation_id_fkey"
+            columns: ["obligation_id"]
+            isOneToOne: false
+            referencedRelation: "bnpl_obligations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comment_likes: {
         Row: {
           comment_id: string

@@ -1,82 +1,81 @@
-## Admin Vet Management
+## Admin Payment Plans (BNPL) Management
 
-Replace the placeholder `/admin/vets` route with a full vet management module covering approvals, services, and consultations (appointments).
+Build an admin section to review and manage every Buy-Now-Pay-Later obligation (`bnpl_obligations`), including agreement statuses, outstanding balances, and payment history.
 
-### Pages & Routes
+### Current Model
 
-- `/admin/vets` — Vets list (default tab: Pending approvals)
-- `/admin/vets/:vetProfileId` — Vet detail page with sub-tabs: Profile · Services · Consultations · Tickets
+- Table `bnpl_obligations`: one row per obligation tied to a `vet_ticket`. Fields: `provider`, `original_amount`, `outstanding_amount`, `status` (enum: `pending | active | paid_off | defaulted | cancelled`), `external_ref`.
+- Today obligations are auto-created when a vet ticket is approved (`approve-vet-ticket` edge function) and released back via `release_ticket_allocations`. There is no per-installment ledger.
 
-### Vets List Page (`AdminVetsPage.tsx`)
-
-Tabs: **Pending** (`is_approved=false`) · **Approved** · **All**.
-
-Each row shows: clinic name, owner name/avatar, location, phone, specializations, signup date, status badge.
-
-Row actions:
-- **Approve** / **Revoke approval** (toggles `vet_profiles.is_approved`)
-- **View details** → opens detail page
-- Search by clinic name / owner name
-
-### Vet Detail Page (`AdminVetDetailPage.tsx`)
-
-Header: clinic name, owner, contact info, approval toggle, "Open public profile" link.
-
-Tabs:
-- **Profile** — read-only summary + admin can edit `is_approved`, location, phone, website, specializations, bio (admin-only update policy already exists).
-- **Services** — table of `services` for this vet (name, price, duration, active). Read-only view with toggle to deactivate (admin can update via new admin RLS policy on services).
-- **Consultations** — list of `appointments` for this vet with pet, owner, service, scheduled time, status. Filter by status (pending/confirmed/completed/cancelled). Admin can update appointment status or cancel.
-- **Vet Tickets** — quick link to `/admin/vet-tickets?vetProfileId=...`.
-
-### API Layer (`src/lib/admin-api.ts` additions)
-
-- `fetchAdminVets(filter: 'pending' | 'approved' | 'all', search?)` — joins `profiles` for owner name.
-- `fetchAdminVetDetail(vetProfileId)` — vet profile + owner profile.
-- `setVetApproval(vetProfileId, approved)` — direct UPDATE (admin RLS already allows).
-- `fetchAdminVetServices(vetProfileId)` — list services.
-- `setVetServiceActive(serviceId, active)` — admin update.
-- `fetchAdminVetAppointments(vetProfileId, statusFilter?)` — joins pet, owner profile, service.
-- `updateAdminAppointment(id, { status, notes? })`.
-
-### Database Migration
-
-Current RLS gaps: admin cannot update/delete `services` or update/delete `appointments`. Add:
+### Database Migration — add a payment-history sub-table
 
 ```sql
--- Admins can fully manage services
-create policy "Admins can manage services"
-  on public.services for all to authenticated
-  using (has_role(auth.uid(), 'admin'))
-  with check (has_role(auth.uid(), 'admin'));
+CREATE TABLE public.bnpl_payments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  obligation_id UUID NOT NULL REFERENCES public.bnpl_obligations(id) ON DELETE CASCADE,
+  amount NUMERIC NOT NULL CHECK (amount > 0),
+  paid_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  method TEXT NOT NULL DEFAULT 'manual',
+  external_ref TEXT,
+  notes TEXT,
+  recorded_by UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+ALTER TABLE public.bnpl_payments ENABLE ROW LEVEL SECURITY;
 
--- Admins can update/delete appointments
-create policy "Admins can update any appointment"
-  on public.appointments for update to authenticated
-  using (has_role(auth.uid(), 'admin'))
-  with check (has_role(auth.uid(), 'admin'));
+CREATE POLICY "Admins manage bnpl payments" ON public.bnpl_payments
+  FOR ALL TO authenticated
+  USING (has_role(auth.uid(), 'admin')) WITH CHECK (has_role(auth.uid(), 'admin'));
 
-create policy "Admins can delete appointments"
-  on public.appointments for delete to authenticated
-  using (has_role(auth.uid(), 'admin'));
+CREATE POLICY "Owners view own bnpl payments" ON public.bnpl_payments
+  FOR SELECT TO authenticated
+  USING (EXISTS (
+    SELECT 1 FROM bnpl_obligations o
+    WHERE o.id = bnpl_payments.obligation_id AND o.owner_id = auth.uid()
+  ));
 ```
 
-(`vet_profiles` already has admin update + admin select via "Anyone authenticated can view".)
+Plus two SECURITY DEFINER triggers (`apply_bnpl_payment` on INSERT, `revert_bnpl_payment` on DELETE) that recompute `outstanding_amount = original − SUM(payments)` and flip status:
+- → `paid_off` when outstanding hits zero
+- `pending` → `active` on first payment
+- on delete: `paid_off` → `active` if outstanding becomes positive again
+
+### API Layer (`src/lib/admin-api.ts`)
+
+- `fetchAdminBnpl(filter, search)` — list obligations joined with owner profile, pet name, and originating ticket's clinic.
+- `fetchAdminBnplStats()` — total plans, active count, total outstanding, defaulted count, paid-off count.
+- `fetchBnplPayments(obligationId)` — payment history.
+- `recordBnplPayment(obligationId, { amount, method, external_ref?, notes? })` — INSERT; trigger recomputes status.
+- `deleteBnplPayment(paymentId)` — DELETE; trigger recomputes.
+- `updateAdminBnpl(id, { status?, outstanding_amount?, provider?, external_ref? })` — manual overrides.
+
+### UI
+
+**New route:** `/admin/payment-plans` → `AdminPaymentPlansPage.tsx`
+
+**Sidebar:** add "Payment Plans" entry between Payments and Wallet & Reserve (icon: `CalendarClock`).
+
+**Page layout:**
+- Header + 4 stat cards: Total plans · Outstanding (sum) · Defaulted · Paid off.
+- Status tabs: All / Pending / Active / Paid off / Defaulted / Cancelled.
+- Search by owner, pet, clinic, or external ref.
+- Plan rows with: owner avatar+name, pet, clinic, status badge, provider chip, created date, outstanding/original amounts, paid-progress bar.
+- Per-row actions: **Record payment**, **View payments**, **Edit** (status / outstanding / provider / ref), **Mark defaulted**, **Cancel plan**, **View ticket**.
+
+**Dialogs:**
+- *Record payment* — amount + method + optional external ref + notes.
+- *Payment history* — list of `bnpl_payments` with delete-per-row (admin only). Shows running balance.
+- *Edit plan* — status select, outstanding (number), provider, external ref.
+- AlertDialog confirmations for "Mark defaulted" and "Cancel plan".
 
 ### Wiring
 
-- Update `src/App.tsx`: replace the placeholder route with `<Route path="vets" element={<AdminVetsPage />} />` and add `<Route path="vets/:vetProfileId" element={<AdminVetDetailPage />} />`.
-- `AdminSidebar` already has the Vets entry — no change needed.
-- Optional: add a "Pending vets" KPI card to `AdminOverviewPage` (count of `is_approved=false`).
-
-### UX Details
-
-- Confirm dialogs (AlertDialog) before approval revoke, service deactivation, appointment cancellation.
-- Toast feedback on all mutations and React Query invalidation per affected list.
-- Status badges reuse existing color tokens (no new colors).
-- Empty states for each tab.
+- Update `src/App.tsx`: add `<Route path="payment-plans" element={<AdminPaymentPlansPage />} />` under the `/admin` group.
+- Update `src/components/admin/AdminSidebar.tsx` nav array.
+- All mutations show toasts and refresh the list.
 
 ### Out of Scope
 
-- No edits to vet payout flows (already in `/admin/vet-tickets`).
-- No new vet messaging features.
-- No changes to vet self-service pages.
+- Automatic recurring billing or Stripe webhook integration for BNPL providers (manual record-payment only for now).
+- Customer-facing payment plan portal (admin-only this loop).
+- Notifications/reminders for overdue plans.
