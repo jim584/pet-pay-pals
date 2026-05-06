@@ -30,7 +30,7 @@ export async function fetchAdminKpis(): Promise<AdminKpis> {
   const since7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const since30d = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-  const [profiles, roles, memberships, tickets, pets, signups, payments] = await Promise.all([
+  const [profiles, roles, memberships, tickets, pets, signups, payments, activeMemForMrr, donations, lastPayment] = await Promise.all([
     supabase.from("profiles").select("user_id", { count: "exact", head: true }),
     supabase.from("user_roles").select("role"),
     supabase.from("memberships").select("id", { count: "exact", head: true }).eq("status", "active"),
@@ -38,12 +38,21 @@ export async function fetchAdminKpis(): Promise<AdminKpis> {
     supabase.from("pets").select("id", { count: "exact", head: true }),
     supabase.from("profiles").select("user_id", { count: "exact", head: true }).gte("created_at", since7d),
     supabase.from("payment_history").select("amount").eq("status", "paid").gte("occurred_at", since30d),
+    supabase.from("memberships").select("billing_interval, plan:membership_plans(membership_fee, annual_price)").eq("status", "active"),
+    supabase.from("sponsorship_donations").select("amount").gte("created_at", since30d),
+    supabase.from("payment_history").select("occurred_at").order("occurred_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
 
   const roleCounts = { pet_owner: 0, vet: 0, admin: 0 };
   (roles.data ?? []).forEach((r: any) => {
     if (r.role in roleCounts) roleCounts[r.role as keyof typeof roleCounts]++;
   });
+
+  const mrr = (activeMemForMrr.data ?? []).reduce((sum: number, m: any) => {
+    const fee = Number(m.plan?.membership_fee ?? 0);
+    const annual = Number(m.plan?.annual_price ?? 0);
+    return sum + (m.billing_interval === "year" ? annual / 12 : fee);
+  }, 0);
 
   return {
     totalUsers: profiles.count ?? 0,
@@ -55,7 +64,16 @@ export async function fetchAdminKpis(): Promise<AdminKpis> {
     totalPets: pets.count ?? 0,
     newSignups7d: signups.count ?? 0,
     revenue30d: (payments.data ?? []).reduce((sum: number, p: any) => sum + Number(p.amount ?? 0), 0),
+    mrr,
+    donations30d: (donations.data ?? []).reduce((sum: number, d: any) => sum + Number(d.amount ?? 0), 0),
+    lastPaymentAt: (lastPayment.data as any)?.occurred_at ?? null,
   };
+}
+
+export async function triggerStripeBackfill(): Promise<{ synced: number; created: number }> {
+  const { data, error } = await supabase.functions.invoke("backfill-payment-history", { body: {} });
+  if (error) throw error;
+  return data as { synced: number; created: number };
 }
 
 export async function fetchRecentSignups(limit = 5) {
