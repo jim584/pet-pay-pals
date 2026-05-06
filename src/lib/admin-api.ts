@@ -458,6 +458,7 @@ export async function deleteAdminAppointment(id: string) {
 // ============ Admin BNPL Payment Plans ============
 
 export type BnplStatus = "pending" | "active" | "paid_off" | "defaulted" | "cancelled";
+export type BnplFilter = "all" | BnplStatus;
 
 export interface AdminBnplRow {
   id: string;
@@ -477,12 +478,32 @@ export interface AdminBnplRow {
   ticket_clinic_name: string | null;
 }
 
-export type BnplFilter = "all" | BnplStatus;
+export interface BnplPaymentRow {
+  id: string;
+  obligation_id: string;
+  amount: number;
+  paid_at: string;
+  method: string;
+  external_ref: string | null;
+  notes: string | null;
+  recorded_by: string | null;
+  created_at: string;
+}
+
+export interface BnplStats {
+  total_plans: number;
+  active_count: number;
+  outstanding_total: number;
+  defaulted_count: number;
+  paid_off_count: number;
+}
 
 export async function fetchAdminBnpl(filter: BnplFilter = "all", search?: string): Promise<AdminBnplRow[]> {
   let q = supabase
     .from("bnpl_obligations")
-    .select("*, profiles:owner_id(full_name, avatar_url), pets(name), vet_tickets:ticket_id(clinic_name)")
+    .select(
+      "*, profiles:owner_id(full_name, avatar_url), pets(name), vet_tickets:ticket_id(clinic_name)"
+    )
     .order("created_at", { ascending: false });
   if (filter !== "all") q = q.eq("status", filter);
 
@@ -520,40 +541,6 @@ export async function fetchAdminBnpl(filter: BnplFilter = "all", search?: string
   return rows;
 }
 
-export async function updateAdminBnpl(
-  id: string,
-  updates: { status?: BnplStatus; outstanding_amount?: number; external_ref?: string | null; provider?: string }
-) {
-  const { error } = await supabase.from("bnpl_obligations").update(updates).eq("id", id);
-  if (error) throw error;
-}
-
-export async function recordBnplPayment(id: string, paymentAmount: number) {
-  // Manual decrement of outstanding_amount; auto-flip to paid_off when zero
-  const { data: cur, error: e1 } = await supabase
-    .from("bnpl_obligations")
-    .select("outstanding_amount, status")
-    .eq("id", id)
-    .single();
-  if (e1) throw e1;
-  const newOutstanding = Math.max(0, Number(cur.outstanding_amount) - paymentAmount);
-  const newStatus: BnplStatus = newOutstanding <= 0 ? "paid_off" : cur.status === "pending" ? "active" : (cur.status as BnplStatus);
-  const { error } = await supabase
-    .from("bnpl_obligations")
-    .update({ outstanding_amount: newOutstanding, status: newStatus })
-    .eq("id", id);
-  if (error) throw error;
-  return { newOutstanding, newStatus };
-}
-
-export interface BnplStats {
-  total_plans: number;
-  active_count: number;
-  outstanding_total: number;
-  defaulted_count: number;
-  paid_off_count: number;
-}
-
 export async function fetchAdminBnplStats(): Promise<BnplStats> {
   const { data, error } = await supabase
     .from("bnpl_obligations")
@@ -567,4 +554,43 @@ export async function fetchAdminBnplStats(): Promise<BnplStats> {
     defaulted_count: rows.filter((r: any) => r.status === "defaulted").length,
     paid_off_count: rows.filter((r: any) => r.status === "paid_off").length,
   };
+}
+
+export async function updateAdminBnpl(
+  id: string,
+  updates: { status?: BnplStatus; outstanding_amount?: number; external_ref?: string | null; provider?: string }
+) {
+  const { error } = await supabase.from("bnpl_obligations").update(updates).eq("id", id);
+  if (error) throw error;
+}
+
+export async function fetchBnplPayments(obligationId: string): Promise<BnplPaymentRow[]> {
+  const { data, error } = await supabase
+    .from("bnpl_payments")
+    .select("*")
+    .eq("obligation_id", obligationId)
+    .order("paid_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as BnplPaymentRow[];
+}
+
+export async function recordBnplPayment(
+  obligationId: string,
+  payment: { amount: number; method?: string; external_ref?: string | null; notes?: string | null }
+) {
+  const user = (await supabase.auth.getUser()).data.user;
+  const { error } = await supabase.from("bnpl_payments").insert({
+    obligation_id: obligationId,
+    amount: payment.amount,
+    method: payment.method ?? "manual",
+    external_ref: payment.external_ref ?? null,
+    notes: payment.notes ?? null,
+    recorded_by: user?.id ?? null,
+  });
+  if (error) throw error;
+}
+
+export async function deleteBnplPayment(paymentId: string) {
+  const { error } = await supabase.from("bnpl_payments").delete().eq("id", paymentId);
+  if (error) throw error;
 }

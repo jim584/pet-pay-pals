@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Stethoscope, FileCheck, Wallet, CreditCard, Shield, LogOut, Home } from "lucide-react";
+import { LayoutDashboard, Users, Stethoscope, FileCheck, Wallet, CreditCard, Shield, LogOut, Home, CalendarClock } from "lucide-react";
 import logoDark from "@/assets/logo-dark.png";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,6 +23,7 @@ const adminNav = [
   { title: "Vet Tickets", url: "/admin/vet-tickets", icon: FileCheck },
   { title: "Memberships", url: "/admin/memberships", icon: Shield },
   { title: "Payments", url: "/admin/payments", icon: CreditCard },
+  { title: "Payment Plans", url: "/admin/payment-plans", icon: CalendarClock },
   { title: "Wallet & Reserve", url: "/admin/reserve", icon: Wallet },
 ];
 
