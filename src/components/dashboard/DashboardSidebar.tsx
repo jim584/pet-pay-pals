@@ -1,4 +1,4 @@
-import { LayoutDashboard, LogOut, Users, Wallet, Stethoscope, Briefcase, Calendar, UserCog, Home, PawPrint, Shield } from "lucide-react";
+import { LayoutDashboard, LogOut, Users, Wallet, Stethoscope, Briefcase, Calendar, UserCog, Home, PawPrint, Shield, ShieldCheck } from "lucide-react";
 import logoDark from "@/assets/logo-dark.png";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
@@ -41,7 +41,10 @@ const vetNav = [
 
 export function DashboardSidebar() {
   const { signOut, user, role } = useAuth();
-  const navItems = role === "vet" ? vetNav : ownerNav;
+  const baseNav = role === "vet" ? vetNav : ownerNav;
+  const navItems = role === "admin"
+    ? [...baseNav, { title: "Admin", url: "/admin", icon: ShieldCheck }]
+    : baseNav;
 
   const { data: profile } = useQuery({
     queryKey: ["sidebarProfile", user?.id],
