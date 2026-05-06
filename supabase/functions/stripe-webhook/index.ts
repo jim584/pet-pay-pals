@@ -82,6 +82,24 @@ Deno.serve(async (req) => {
         const { data: plan } = await admin.from("membership_plans").select("*").eq("id", m.plan_id).single();
         if (!plan) break;
 
+        // Record payment in user-visible history (idempotent via unique invoice id)
+        await admin.from("payment_history").upsert({
+          user_id: m.user_id,
+          membership_id: m.id,
+          kind: "membership_invoice",
+          status: "paid",
+          amount: (inv.amount_paid ?? 0) / 100,
+          currency: inv.currency || "usd",
+          description: inv.lines?.data?.[0]?.description || `${plan.tier_label} membership`,
+          stripe_invoice_id: inv.id,
+          stripe_charge_id: typeof inv.charge === "string" ? inv.charge : inv.charge?.id ?? null,
+          stripe_payment_intent_id: typeof inv.payment_intent === "string" ? inv.payment_intent : inv.payment_intent?.id ?? null,
+          stripe_subscription_id: subId,
+          hosted_invoice_url: inv.hosted_invoice_url ?? null,
+          invoice_pdf: inv.invoice_pdf ?? null,
+          occurred_at: new Date(((inv.status_transitions?.paid_at ?? inv.created) || Math.floor(Date.now() / 1000)) * 1000).toISOString(),
+        }, { onConflict: "stripe_invoice_id" });
+
         // Per-month DP accrual (annual still accrues monthly rows for rolling expiry)
         const monthlyDP = m.is_fear_free_member
           ? Number(plan.direct_pay_portion) * 0.95
@@ -115,6 +133,51 @@ Deno.serve(async (req) => {
         break;
       }
 
+      case "invoice.payment_failed": {
+        const inv = event.data.object as Stripe.Invoice;
+        const subId = typeof inv.subscription === "string" ? inv.subscription : inv.subscription?.id;
+        if (!subId) break;
+        const { data: m } = await admin.from("memberships")
+          .select("id, user_id").eq("stripe_subscription_id", subId).maybeSingle();
+        if (!m) break;
+        await admin.from("payment_history").upsert({
+          user_id: m.user_id,
+          membership_id: m.id,
+          kind: "membership_invoice",
+          status: "failed",
+          amount: (inv.amount_due ?? 0) / 100,
+          currency: inv.currency || "usd",
+          description: "Membership payment failed",
+          stripe_invoice_id: inv.id,
+          stripe_subscription_id: subId,
+          hosted_invoice_url: inv.hosted_invoice_url ?? null,
+        }, { onConflict: "stripe_invoice_id" });
+        await admin.from("memberships").update({ status: "past_due" }).eq("id", m.id);
+        break;
+      }
+
+      case "charge.refunded": {
+        const ch = event.data.object as Stripe.Charge;
+        const customerId = typeof ch.customer === "string" ? ch.customer : ch.customer?.id;
+        if (!customerId) break;
+        const { data: m } = await admin.from("memberships")
+          .select("id, user_id").eq("stripe_customer_id", customerId)
+          .order("created_at", { ascending: false }).limit(1).maybeSingle();
+        if (!m) break;
+        await admin.from("payment_history").insert({
+          user_id: m.user_id,
+          membership_id: m.id,
+          kind: "refund",
+          status: "refunded",
+          amount: (ch.amount_refunded ?? 0) / 100,
+          currency: ch.currency || "usd",
+          description: "Refund issued",
+          stripe_charge_id: ch.id,
+          stripe_payment_intent_id: typeof ch.payment_intent === "string" ? ch.payment_intent : ch.payment_intent?.id ?? null,
+        });
+        break;
+      }
+
       case "customer.subscription.updated": {
         const sub = event.data.object as Stripe.Subscription;
         const status = sub.status === "active" || sub.status === "trialing" ? "active"
@@ -124,6 +187,7 @@ Deno.serve(async (req) => {
         await admin.from("memberships").update({
           status,
           current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
+          cancelled_at: sub.cancel_at_period_end ? new Date().toISOString() : null,
         }).eq("stripe_subscription_id", sub.id);
         break;
       }
