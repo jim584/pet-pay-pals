@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Wallet as WalletIcon, ArrowDownRight, ArrowUpRight, CreditCard, Shield, Clock } from "lucide-react";
 import { fetchWallet, fetchTransactions, Wallet, WalletTransaction } from "@/lib/community-api";
-import { fetchMyMembership, fetchMyDpSummary, openCustomerPortal } from "@/lib/plans-api";
+import { fetchMyMembership, fetchMyDpSummary, openCustomerPortal, fetchPaymentHistory, PaymentHistoryRow } from "@/lib/plans-api";
 import { toast } from "@/hooks/use-toast";
 
 export function WalletView() {
