@@ -171,6 +171,52 @@ export function VetDashboardHome() {
           )}
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-display flex items-center gap-2">
+            <Ticket className="h-5 w-5 text-primary" />
+            Funding Tickets
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {tickets.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">No tickets assigned to your clinic yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {tickets.map((t) => (
+                <div key={t.id} className="flex flex-col gap-2 py-3 border-b last:border-0 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex-1">
+                    <p className="font-semibold text-sm">
+                      {t.pet_name || "Pet"} — {t.owner_name || "Owner"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {t.clinic_name} · Estimate ${Number(t.estimate_amount).toFixed(2)}
+                      {t.approved_amount != null && ` · Approved $${Number(t.approved_amount).toFixed(2)}`}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Submitted {new Date(t.created_at).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="secondary">{t.status}</Badge>
+                    {t.estimate_url && (
+                      <Button size="sm" variant="outline" onClick={() => openFile(t.estimate_url!)}>
+                        <FileText className="h-4 w-4 mr-1" /> Estimate
+                      </Button>
+                    )}
+                    {t.attestation_url && (
+                      <Button size="sm" variant="outline" onClick={() => openFile(t.attestation_url!)}>
+                        <FileText className="h-4 w-4 mr-1" /> Attestation
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
