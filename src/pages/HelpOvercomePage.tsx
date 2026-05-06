@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -28,7 +28,7 @@ import {
   createSponsorshipPet,
   updateSponsorshipPet,
   deleteSponsorshipPet,
-  submitDonation,
+  startDonationCheckout,
   type SponsorshipPet,
 } from "@/lib/overcome-api";
 
@@ -55,6 +55,20 @@ export default function HelpOvercomePage() {
     queryKey: ["sponsorship-pets"],
     queryFn: fetchSponsorshipPets,
   });
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const d = params.get("donation");
+    if (d === "success") {
+      toast({ title: "Thank you!", description: "Your donation was received." });
+      qc.invalidateQueries({ queryKey: ["sponsorship-pets"] });
+      params.delete("donation");
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (d === "cancelled") {
+      toast({ title: "Donation cancelled", description: "No charge was made." });
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [qc]);
 
   const filtered = filter === "all" ? pets : pets.filter((p) => p.species === filter);
 
@@ -330,26 +344,19 @@ function SponsorDialog({ pet, userId, onClose }: { pet: SponsorshipPet; userId?:
   const finalAmount = isCustom ? Number(customAmt) : (amount as number);
 
   const handleSubmit = async () => {
-    if (!userId) {
-      toast({ title: "Please sign in to sponsor a pet", variant: "destructive" });
-      return;
-    }
     if (!finalAmount || finalAmount <= 0) return;
     setSubmitting(true);
     try {
-      await submitDonation({
+      const url = await startDonationCheckout({
         pet_id: pet.id,
-        user_id: userId,
         amount: finalAmount,
         donor_name: donorName || undefined,
         donor_email: donorEmail || undefined,
         message: message || undefined,
       });
-      toast({ title: "Thank you!", description: `You sponsored ${pet.name} with $${finalAmount}.` });
-      onClose();
+      window.location.href = url;
     } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
-    } finally {
+      toast({ title: "Couldn't start checkout", description: e.message, variant: "destructive" });
       setSubmitting(false);
     }
   };

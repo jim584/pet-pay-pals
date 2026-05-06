@@ -67,16 +67,16 @@ export async function deleteSponsorshipPet(id: string) {
   if (error) throw error;
 }
 
-export async function submitDonation(donation: {
+export async function startDonationCheckout(args: {
   pet_id: string;
-  user_id: string;
   amount: number;
   donor_name?: string;
   donor_email?: string;
   message?: string;
-}) {
-  const { error } = await supabase
-    .from("sponsorship_donations" as any)
-    .insert(donation as any);
+}): Promise<string> {
+  const { data, error } = await supabase.functions.invoke("create-donation-checkout", { body: args });
   if (error) throw error;
+  if (!data?.url) throw new Error("No checkout URL returned");
+  return data.url as string;
 }
+
