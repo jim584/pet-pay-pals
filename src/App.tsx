@@ -32,6 +32,7 @@ import VetCardPage from "./pages/VetCardPage";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminOverviewPage from "./pages/admin/AdminOverviewPage";
 import AdminUsersPage from "./pages/admin/AdminUsersPage";
+import AdminMembershipsPage from "./pages/admin/AdminMembershipsPage";
 import AdminPlaceholder from "./pages/admin/AdminPlaceholder";
 
 const queryClient = new QueryClient();
