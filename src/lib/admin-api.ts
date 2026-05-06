@@ -545,14 +545,35 @@ export interface BnplStats {
 export async function fetchAdminBnpl(filter: BnplFilter = "all", search?: string): Promise<AdminBnplRow[]> {
   let q = supabase
     .from("bnpl_obligations")
-    .select(
-      "*, profiles:owner_id(full_name, avatar_url), pets(name), vet_tickets:ticket_id(clinic_name)"
-    )
+    .select("*")
     .order("created_at", { ascending: false });
   if (filter !== "all") q = q.eq("status", filter);
 
   const { data, error } = await q;
   if (error) throw error;
+
+  const ownerIds = Array.from(new Set((data ?? []).map((b: any) => b.owner_id).filter(Boolean)));
+  const petIds = Array.from(new Set((data ?? []).map((b: any) => b.pet_id).filter(Boolean)));
+  const ticketIds = Array.from(new Set((data ?? []).map((b: any) => b.ticket_id).filter(Boolean)));
+
+  const [profsRes, petsRes, ticketsRes] = await Promise.all([
+    ownerIds.length
+      ? supabase.from("profiles").select("user_id, full_name, avatar_url").in("user_id", ownerIds)
+      : Promise.resolve({ data: [], error: null } as any),
+    petIds.length
+      ? supabase.from("pets").select("id, name").in("id", petIds)
+      : Promise.resolve({ data: [], error: null } as any),
+    ticketIds.length
+      ? supabase.from("vet_tickets").select("id, clinic_name").in("id", ticketIds)
+      : Promise.resolve({ data: [], error: null } as any),
+  ]);
+  if (profsRes.error) throw profsRes.error;
+  if (petsRes.error) throw petsRes.error;
+  if (ticketsRes.error) throw ticketsRes.error;
+
+  const profileMap = new Map((profsRes.data ?? []).map((p: any) => [p.user_id, p]));
+  const petMap = new Map((petsRes.data ?? []).map((p: any) => [p.id, p]));
+  const ticketMap = new Map((ticketsRes.data ?? []).map((t: any) => [t.id, t]));
 
   let rows: AdminBnplRow[] = (data ?? []).map((b: any) => ({
     id: b.id,
@@ -566,10 +587,10 @@ export async function fetchAdminBnpl(filter: BnplFilter = "all", search?: string
     external_ref: b.external_ref,
     created_at: b.created_at,
     updated_at: b.updated_at,
-    owner_full_name: b.profiles?.full_name ?? null,
-    owner_avatar_url: b.profiles?.avatar_url ?? null,
-    pet_name: b.pets?.name ?? null,
-    ticket_clinic_name: b.vet_tickets?.clinic_name ?? null,
+    owner_full_name: (profileMap.get(b.owner_id) as any)?.full_name ?? null,
+    owner_avatar_url: (profileMap.get(b.owner_id) as any)?.avatar_url ?? null,
+    pet_name: (petMap.get(b.pet_id) as any)?.name ?? null,
+    ticket_clinic_name: (ticketMap.get(b.ticket_id) as any)?.clinic_name ?? null,
   }));
 
   if (search?.trim()) {
