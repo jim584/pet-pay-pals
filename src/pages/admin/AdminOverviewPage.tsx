@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Users, PawPrint, Shield, FileCheck, DollarSign, TrendingUp, Stethoscope, UserPlus } from "lucide-react";
-import { fetchAdminKpis, fetchRecentSignups, fetchRecentPayments, type AdminKpis } from "@/lib/admin-api";
+import { Button } from "@/components/ui/button";
+import { Users, PawPrint, Shield, FileCheck, DollarSign, TrendingUp, Stethoscope, UserPlus, RefreshCw, Heart, Repeat } from "lucide-react";
+import { fetchAdminKpis, fetchRecentSignups, fetchRecentPayments, triggerStripeBackfill, type AdminKpis } from "@/lib/admin-api";
+import { toast } from "sonner";
 
 const fmtMoney = (n: number) => `$${n.toFixed(2)}`;
 
