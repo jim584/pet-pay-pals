@@ -79,11 +79,13 @@ export default function AdminOverviewPage() {
       {kpis && kpis.activeMemberships > 0 && !kpis.lastPaymentAt && (
         <Card className="border-amber-500/50 bg-amber-500/5">
           <CardContent className="p-4 text-sm">
-            <p className="font-medium">Stripe webhook may not be wired up</p>
+            <p className="font-medium">No payments recorded yet</p>
             <p className="text-muted-foreground mt-1">
-              You have {kpis.activeMemberships} active membership(s) but no invoices recorded in payment history.
-              Click <strong>Sync Stripe payments</strong> above to backfill, and verify your webhook endpoint in Stripe
-              points at <code>/functions/v1/stripe-webhook</code> with <code>STRIPE_WEBHOOK_SECRET</code> configured.
+              You have {kpis.activeMemberships} active membership(s) but no invoices in payment history.
+              Click <strong>Sync Stripe payments</strong> above to import existing Stripe invoices.
+              If sync imports zero invoices, configure your Stripe webhook endpoint at{" "}
+              <code>/functions/v1/stripe-webhook</code> with <code>STRIPE_WEBHOOK_SECRET</code> so future
+              payments are recorded automatically.
             </p>
             <p className="text-xs text-muted-foreground mt-2">Last recorded payment: {lastPaymentLabel}</p>
           </CardContent>

@@ -82,8 +82,8 @@ Deno.serve(async (req) => {
         const { data: plan } = await admin.from("membership_plans").select("*").eq("id", m.plan_id).single();
         if (!plan) break;
 
-        // Record payment in user-visible history (idempotent via unique invoice id)
-        await admin.from("payment_history").upsert({
+        // Record payment in user-visible history (idempotent via select-then-write)
+        await upsertPaymentByInvoice(admin, inv.id, {
           user_id: m.user_id,
           membership_id: m.id,
           kind: "membership_invoice",
@@ -98,30 +98,40 @@ Deno.serve(async (req) => {
           hosted_invoice_url: inv.hosted_invoice_url ?? null,
           invoice_pdf: inv.invoice_pdf ?? null,
           occurred_at: new Date(((inv.status_transitions?.paid_at ?? inv.created) || Math.floor(Date.now() / 1000)) * 1000).toISOString(),
-        }, { onConflict: "stripe_invoice_id" });
+        });
 
-        // Per-month DP accrual (annual still accrues monthly rows for rolling expiry)
-        const monthlyDP = m.is_fear_free_member
-          ? Number(plan.direct_pay_portion) * 0.95
-          : Number(plan.direct_pay_portion);
+        // Per-month DP accrual (annual still accrues monthly rows for rolling expiry).
+        // Skip if accruals already exist for this invoice (idempotent on webhook retries).
+        const { data: existingAccrual } = await admin
+          .from("direct_pay_accruals")
+          .select("id")
+          .eq("stripe_invoice_id", inv.id)
+          .limit(1)
+          .maybeSingle();
 
-        const monthsCovered = m.billing_interval === "year" ? 12 : 1;
-        const now = new Date();
+        if (!existingAccrual) {
+          const monthlyDP = m.is_fear_free_member
+            ? Number(plan.direct_pay_portion) * 0.95
+            : Number(plan.direct_pay_portion);
 
-        for (let i = 0; i < monthsCovered; i++) {
-          const accrualMonth = new Date(now.getFullYear(), now.getMonth() + i, 1);
-          const expiresAt = plan.dp_window_months
-            ? new Date(accrualMonth.getFullYear(), accrualMonth.getMonth() + plan.dp_window_months, 1)
-            : null;
-          await admin.from("direct_pay_accruals").insert({
-            membership_id: m.id,
-            user_id: m.user_id,
-            accrual_month: accrualMonth.toISOString().slice(0, 10),
-            amount: monthlyDP,
-            remaining_amount: monthlyDP,
-            expires_at: expiresAt ? expiresAt.toISOString() : null,
-            stripe_invoice_id: inv.id,
-          });
+          const monthsCovered = m.billing_interval === "year" ? 12 : 1;
+          const now = new Date();
+
+          for (let i = 0; i < monthsCovered; i++) {
+            const accrualMonth = new Date(now.getFullYear(), now.getMonth() + i, 1);
+            const expiresAt = plan.dp_window_months
+              ? new Date(accrualMonth.getFullYear(), accrualMonth.getMonth() + plan.dp_window_months, 1)
+              : null;
+            await admin.from("direct_pay_accruals").insert({
+              membership_id: m.id,
+              user_id: m.user_id,
+              accrual_month: accrualMonth.toISOString().slice(0, 10),
+              amount: monthlyDP,
+              remaining_amount: monthlyDP,
+              expires_at: expiresAt ? expiresAt.toISOString() : null,
+              stripe_invoice_id: inv.id,
+            });
+          }
         }
 
         // Update period end
@@ -140,7 +150,7 @@ Deno.serve(async (req) => {
         const { data: m } = await admin.from("memberships")
           .select("id, user_id").eq("stripe_subscription_id", subId).maybeSingle();
         if (!m) break;
-        await admin.from("payment_history").upsert({
+        await upsertPaymentByInvoice(admin, inv.id, {
           user_id: m.user_id,
           membership_id: m.id,
           kind: "membership_invoice",
@@ -151,7 +161,7 @@ Deno.serve(async (req) => {
           stripe_invoice_id: inv.id,
           stripe_subscription_id: subId,
           hosted_invoice_url: inv.hosted_invoice_url ?? null,
-        }, { onConflict: "stripe_invoice_id" });
+        });
         await admin.from("memberships").update({ status: "past_due" }).eq("id", m.id);
         break;
       }
@@ -295,6 +305,21 @@ Deno.serve(async (req) => {
 });
 
 // ===== Helpers =====
+
+async function upsertPaymentByInvoice(admin: any, invoiceId: string, row: Record<string, unknown>) {
+  const { data: existing } = await admin
+    .from("payment_history")
+    .select("id")
+    .eq("stripe_invoice_id", invoiceId)
+    .maybeSingle();
+  if (existing) {
+    const { error } = await admin.from("payment_history").update(row).eq("id", existing.id);
+    if (error) console.error("update payment_history failed:", error);
+  } else {
+    const { error } = await admin.from("payment_history").insert(row);
+    if (error) console.error("insert payment_history failed:", error);
+  }
+}
 
 async function invokeIssueCard(ticketId: string) {
   try {
