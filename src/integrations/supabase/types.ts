@@ -682,8 +682,53 @@ export type Database = {
         }
         Relationships: []
       }
+      membership_status_changes: {
+        Row: {
+          changed_by: string | null
+          created_at: string
+          from_status: string | null
+          id: string
+          membership_id: string
+          notes: string | null
+          reason: string | null
+          source: string
+          to_status: string
+        }
+        Insert: {
+          changed_by?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          membership_id: string
+          notes?: string | null
+          reason?: string | null
+          source?: string
+          to_status: string
+        }
+        Update: {
+          changed_by?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          membership_id?: string
+          notes?: string | null
+          reason?: string | null
+          source?: string
+          to_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "membership_status_changes_membership_id_fkey"
+            columns: ["membership_id"]
+            isOneToOne: false
+            referencedRelation: "memberships"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       memberships: {
         Row: {
+          admin_notes: string | null
           billing_interval: string
           cancelled_at: string | null
           created_at: string
@@ -692,6 +737,8 @@ export type Database = {
           is_fear_free_member: boolean
           pet_id: string | null
           plan_id: string
+          rejection_reason: string | null
+          requires_admin_approval: boolean
           started_at: string | null
           status: string
           stripe_customer_id: string | null
@@ -700,6 +747,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          admin_notes?: string | null
           billing_interval?: string
           cancelled_at?: string | null
           created_at?: string
@@ -708,6 +756,8 @@ export type Database = {
           is_fear_free_member?: boolean
           pet_id?: string | null
           plan_id: string
+          rejection_reason?: string | null
+          requires_admin_approval?: boolean
           started_at?: string | null
           status?: string
           stripe_customer_id?: string | null
@@ -716,6 +766,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          admin_notes?: string | null
           billing_interval?: string
           cancelled_at?: string | null
           created_at?: string
@@ -724,6 +775,8 @@ export type Database = {
           is_fear_free_member?: boolean
           pet_id?: string | null
           plan_id?: string
+          rejection_reason?: string | null
+          requires_admin_approval?: boolean
           started_at?: string | null
           status?: string
           stripe_customer_id?: string | null
@@ -1611,6 +1664,10 @@ export type Database = {
       }
       release_ticket_allocations: {
         Args: { _ticket_id: string }
+        Returns: undefined
+      }
+      set_status_context: {
+        Args: { _changer: string; _source: string }
         Returns: undefined
       }
       user_has_any_role: { Args: { _user_id: string }; Returns: boolean }

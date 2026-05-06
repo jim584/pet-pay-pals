@@ -1,69 +1,89 @@
-# Admin Dashboard
+# Admin Membership Approval & Status Management
 
 ## Current state
 
-You have **one** admin-only page today: `/admin/vet-tickets` (review/approve/reject vet ticket claims). There is no unified admin shell, no user management, no content moderation, and no membership/payment oversight UI. Admins must use the database directly for everything else.
+Memberships today auto-activate via Stripe webhook the moment a user pays — there's no manual gate. Admins also can't currently:
+- Approve or decline pending applications (none exist as a concept)
+- Pause, cancel, or reactivate someone's membership
+- See a clear audit trail of status changes
+
+The `memberships` table already supports statuses (`pending`, `active`, `past_due`, `cancelled`, `paused`) and admin SELECT via RLS.
 
 ## What to build
 
-A dedicated `/admin` area with its own sidebar layout (separate from the user dashboard), gated by the `admin` role, containing the following modules:
+### A. Admin Memberships page (`/admin/memberships`)
 
-### 1. Admin shell
-- `/admin` route group with `AdminLayout` (sidebar + header), guarded so only `user_roles.role = 'admin'` can enter; everyone else redirected.
-- Sidebar links to all modules below; reuses brand styling (Navy/Gold, Space Grotesk).
+Replace the placeholder with a full management screen:
 
-### 2. Overview (`/admin`)
-- KPI cards: total users, pet owners, vets, active memberships, MRR (from `payment_history`), pending vet tickets, open protection cases, new signups (7d/30d).
-- Recent activity feed: latest signups, latest tickets, latest payments.
+- **Filter tabs**: All · Pending review · Active · Past due · Cancelled
+- **Search**: by user name or plan
+- **Table/cards** showing: user, plan tier (Bronze/Silver/Gold/Platinum + species), billing interval, status badge, started date, period end, last payment, accrued DP balance
+- **Per-row actions** (status-aware):
+  - `pending` → **Approve** (sets `active`, sets `started_at`) · **Decline** (sets `cancelled` with reason)
+  - `active` → **Pause** · **Cancel** · **Extend period end** (date picker)
+  - `past_due` → **Mark active** · **Cancel**
+  - `paused` → **Reactivate** · **Cancel**
+  - `cancelled` → **Reactivate** (re-opens, keeps history)
+  - All states → **View history** (modal of status changes + payments)
 
-### 3. Users & Roles (`/admin/users`)
-- Searchable/filterable list of users (from `profiles` joined with `user_roles`).
-- Actions: view profile, assign/remove roles (pet_owner, vet, admin), suspend (soft flag), view their pets/memberships.
+### B. Status change history
 
-### 4. Vets (`/admin/vets`)
-- List vet clinics, verification status, services, payout history.
-- Approve/verify vet profiles; view their tickets and payouts.
+New `membership_status_changes` table to record every admin action and webhook-driven status flip. Each row: membership_id, from_status, to_status, reason, changed_by (nullable for webhook), source (`admin` | `webhook` | `system`), notes, created_at.
 
-### 5. Vet Tickets (`/admin/vet-tickets`)
-- Keep existing page; move it under the new admin shell.
+A trigger on `memberships` UPDATE auto-logs status flips so we capture both webhook and admin changes uniformly.
 
-### 6. Memberships & Plans (`/admin/memberships`)
-- List all memberships with tier, status, period end, accrued DP.
-- Manage `membership_plans` (edit pricing, caps, DP windows).
-- Manual actions: cancel, extend, refund hooks.
+### C. Manual admin-created membership applications
 
-### 7. Payments (`/admin/payments`)
-- Full `payment_history` view with filters (status, date, kind).
-- Link to Stripe hosted invoice; export CSV.
+So "approve/decline" has something to approve, add a second entry path:
+- New "Request membership (admin review)" button on `/plans` that creates a membership row directly with `status='pending'` and **no Stripe checkout yet**.
+- After admin approves a pending row, the user receives a "Complete payment" CTA in their wallet that triggers the existing checkout flow. On successful payment, the webhook flips it to `active`.
+- Decline: sets status `cancelled` and stores `admin_notes` / `rejection_reason`.
 
-### 8. Content Moderation (`/admin/content`)
-- Tabs for: Stories, Adoption posts, Protection cases, Vetted shop products, FearFreed/Behave posts.
-- Actions: hide/unhide, delete, pin (for protection priority), feature.
+This preserves the existing self-serve Stripe path (still auto-activates) **and** adds an admin-gated path for cases that need review.
 
-### 9. Pets (`/admin/pets`)
-- Search all pets across the platform; view owner; soft-delete spam.
+### D. Admin sidebar entry on Wallet
 
-### 10. Settings (`/admin/settings`)
-- Platform toggles: feature flags (e.g., show/hide social sharing), default plan caps, membership financial rules display.
+For a member whose `pending` request was approved, surface a "Pay to activate membership" card on `/dashboard/wallet`.
 
 ## Technical details
 
-- **Routes**: add `<Route path="/admin" element={<AdminLayout />}>` with nested children in `src/App.tsx`. Move existing `/admin/vet-tickets` under it.
-- **Layout**: new `src/pages/admin/AdminLayout.tsx` mirroring `DashboardLayout` but with `AdminSidebar` listing all modules. Guard inline: redirect non-admins to `/`.
-- **Data access**: most admin reads need to bypass standard RLS (which scopes to `auth.uid()`). Add admin-scoped RLS policies using the existing `has_role(auth.uid(), 'admin')` function on tables that don't already permit admin select (profiles, memberships, payment_history, pets, stories, products, etc.). Destructive admin actions (role assignment, refunds, plan edits) go through new edge functions that verify admin via `has_role` server-side, mirroring `approve-vet-ticket`.
-- **API layer**: new `src/lib/admin-api.ts` with typed functions per module (listUsers, assignRole, listMemberships, listPayments, moderateStory, etc.).
-- **New edge functions**: `admin-assign-role`, `admin-update-membership`, `admin-moderate-content`, `admin-refund-payment` (calls Stripe). All use service-role client + admin check pattern from `approve-vet-ticket/index.ts`.
-- **Sidebar entry**: add an "Admin" link in `DashboardSidebar` that only appears when `role === 'admin'`, linking to `/admin`.
+### Migration
+- `ALTER TABLE memberships ADD COLUMN admin_notes text, rejection_reason text, requires_admin_approval boolean DEFAULT false`.
+- New table `public.membership_status_changes` with admin/owner SELECT RLS, no direct INSERT/UPDATE/DELETE from clients.
+- Trigger `on_membership_status_change` — `AFTER UPDATE OF status` — inserts into the history table when `OLD.status IS DISTINCT FROM NEW.status`. Source is read from a session GUC `app.status_source` (defaults to `system`); admin edge function sets it via `SET LOCAL`.
 
-## Out of scope (can add later)
+### Edge function `admin-update-membership`
+Mirrors the `admin-assign-role` pattern (auth + admin role check via `has_role`). Accepts:
+```
+{ membership_id, action: 'approve' | 'decline' | 'pause' | 'cancel' | 'reactivate' | 'mark_active' | 'extend',
+  reason?: string, admin_notes?: string, new_period_end?: ISO date }
+```
+- For `cancel` on an active subscription, also cancels in Stripe (`stripe.subscriptions.cancel`) so billing stops.
+- For `pause`, calls `stripe.subscriptions.update(..., { pause_collection: { behavior: 'mark_uncollectible' } })`.
+- For `reactivate` from paused, removes pause; from cancelled (no live sub), only flips DB status — user must re-pay to resume billing.
+- All DB writes wrapped in a single statement that calls `set_config('app.status_source','admin', true)` so the trigger logs `source='admin'`.
 
-- Audit log table for admin actions
-- Bulk operations / CSV import
-- Email broadcast tools
-- Analytics charts beyond basic KPIs
+### API layer
+`src/lib/admin-api.ts` adds:
+- `fetchAdminMemberships(filter, search)` — joins plans + profiles
+- `fetchMembershipHistory(membershipId)`
+- `adminMembershipAction(...)` (invokes edge function)
 
-## Suggested phasing
+### Pages / components
+- `src/pages/admin/AdminMembershipsPage.tsx` — list, tabs, search
+- `src/components/admin/MembershipRow.tsx` — single row with action menu and confirm dialogs
+- `src/components/admin/MembershipHistoryDialog.tsx` — timeline of status changes + payments
 
-If this feels large, I recommend Phase 1 = Shell + Overview + Users/Roles + Vet Tickets move; Phase 2 = Memberships + Payments; Phase 3 = Content Moderation + Pets + Settings.
+### Webhook updates
+Webhook continues to write status changes. The trigger logs them as `source='system'` automatically (no GUC set). No webhook code changes needed except setting the `requires_admin_approval` flag to false on auto-activated memberships.
 
-Want me to do all of it, or start with Phase 1?
+### Self-serve UI tweak
+In `WalletView`, if `membership.status === 'pending' && requires_admin_approval`, show "Awaiting admin approval"; if `pending && !requires_admin_approval`, show "Complete payment" with checkout button (after admin approves an admin-review application).
+
+## Out of scope (future)
+
+- Refunds from the admin UI (stays on Payments module)
+- Bulk approve/decline
+- Email notifications to user on status change
+
+Ready to build?
