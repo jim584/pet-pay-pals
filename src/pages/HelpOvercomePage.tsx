@@ -28,7 +28,7 @@ import {
   createSponsorshipPet,
   updateSponsorshipPet,
   deleteSponsorshipPet,
-  submitDonation,
+  startDonationCheckout,
   type SponsorshipPet,
 } from "@/lib/overcome-api";
 
