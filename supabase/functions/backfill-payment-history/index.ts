@@ -70,30 +70,36 @@ Deno.serve(async (req) => {
           .eq("stripe_invoice_id", inv.id)
           .maybeSingle();
 
-        const { error: upsertErr } = await admin
-          .from("payment_history")
-          .upsert({
-            user_id: m.user_id,
-            membership_id: m.id,
-            kind: "membership_invoice",
-            status,
-            amount: (inv.amount_paid ?? inv.amount_due ?? 0) / 100,
-            currency: inv.currency || "usd",
-            description: inv.lines?.data?.[0]?.description || `${plan?.tier_label ?? "Membership"} invoice`,
-            stripe_invoice_id: inv.id,
-            stripe_charge_id: typeof inv.charge === "string" ? inv.charge : inv.charge?.id ?? null,
-            stripe_payment_intent_id: typeof inv.payment_intent === "string" ? inv.payment_intent : inv.payment_intent?.id ?? null,
-            stripe_subscription_id: m.stripe_subscription_id,
-            hosted_invoice_url: inv.hosted_invoice_url ?? null,
-            invoice_pdf: inv.invoice_pdf ?? null,
-            occurred_at: new Date(((inv.status_transitions?.paid_at ?? inv.created) || Math.floor(Date.now() / 1000)) * 1000).toISOString(),
-          }, { onConflict: "stripe_invoice_id" });
+        const row = {
+          user_id: m.user_id,
+          membership_id: m.id,
+          kind: "membership_invoice",
+          status,
+          amount: (inv.amount_paid ?? inv.amount_due ?? 0) / 100,
+          currency: inv.currency || "usd",
+          description: inv.lines?.data?.[0]?.description || `${plan?.tier_label ?? "Membership"} invoice`,
+          stripe_invoice_id: inv.id,
+          stripe_charge_id: typeof inv.charge === "string" ? inv.charge : inv.charge?.id ?? null,
+          stripe_payment_intent_id: typeof inv.payment_intent === "string" ? inv.payment_intent : inv.payment_intent?.id ?? null,
+          stripe_subscription_id: m.stripe_subscription_id,
+          hosted_invoice_url: inv.hosted_invoice_url ?? null,
+          invoice_pdf: inv.invoice_pdf ?? null,
+          occurred_at: new Date(((inv.status_transitions?.paid_at ?? inv.created) || Math.floor(Date.now() / 1000)) * 1000).toISOString(),
+        };
 
-        if (upsertErr) {
-          console.error("upsert payment_history failed:", upsertErr);
+        let writeErr: any = null;
+        if (existing) {
+          const { error } = await admin.from("payment_history").update(row).eq("id", existing.id);
+          writeErr = error;
+        } else {
+          const { error } = await admin.from("payment_history").insert(row);
+          writeErr = error;
+          if (!error) created++;
+        }
+        if (writeErr) {
+          console.error("write payment_history failed:", writeErr);
           continue;
         }
-        if (!existing) created++;
 
         // Backfill DP accruals only for paid invoices that don't have rows yet
         if (status === "paid" && plan) {

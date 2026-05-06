@@ -82,8 +82,8 @@ Deno.serve(async (req) => {
         const { data: plan } = await admin.from("membership_plans").select("*").eq("id", m.plan_id).single();
         if (!plan) break;
 
-        // Record payment in user-visible history (idempotent via unique invoice id)
-        await admin.from("payment_history").upsert({
+        // Record payment in user-visible history (idempotent via select-then-write)
+        await upsertPaymentByInvoice(admin, inv.id, {
           user_id: m.user_id,
           membership_id: m.id,
           kind: "membership_invoice",
@@ -98,7 +98,7 @@ Deno.serve(async (req) => {
           hosted_invoice_url: inv.hosted_invoice_url ?? null,
           invoice_pdf: inv.invoice_pdf ?? null,
           occurred_at: new Date(((inv.status_transitions?.paid_at ?? inv.created) || Math.floor(Date.now() / 1000)) * 1000).toISOString(),
-        }, { onConflict: "stripe_invoice_id" });
+        });
 
         // Per-month DP accrual (annual still accrues monthly rows for rolling expiry)
         const monthlyDP = m.is_fear_free_member
@@ -140,7 +140,7 @@ Deno.serve(async (req) => {
         const { data: m } = await admin.from("memberships")
           .select("id, user_id").eq("stripe_subscription_id", subId).maybeSingle();
         if (!m) break;
-        await admin.from("payment_history").upsert({
+        await upsertPaymentByInvoice(admin, inv.id, {
           user_id: m.user_id,
           membership_id: m.id,
           kind: "membership_invoice",
@@ -151,7 +151,7 @@ Deno.serve(async (req) => {
           stripe_invoice_id: inv.id,
           stripe_subscription_id: subId,
           hosted_invoice_url: inv.hosted_invoice_url ?? null,
-        }, { onConflict: "stripe_invoice_id" });
+        });
         await admin.from("memberships").update({ status: "past_due" }).eq("id", m.id);
         break;
       }
