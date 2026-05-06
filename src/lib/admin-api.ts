@@ -12,6 +12,9 @@ export interface AdminKpis {
   totalPets: number;
   newSignups7d: number;
   revenue30d: number;
+  mrr: number;
+  donations30d: number;
+  lastPaymentAt: string | null;
 }
 
 export interface AdminUserRow {
