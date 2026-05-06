@@ -89,6 +89,13 @@ export async function listMyTickets(userId: string): Promise<VetTicket[]> {
   return (data ?? []) as unknown as VetTicket[];
 }
 
+export async function listTicketsForVet(vetProfileId: string): Promise<VetTicket[]> {
+  const { data, error } = await supabase.from("vet_tickets")
+    .select("*").eq("vet_profile_id", vetProfileId).order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as unknown as VetTicket[];
+}
+
 export async function listAllTicketsForAdmin(): Promise<VetTicket[]> {
   const { data, error } = await supabase.from("vet_tickets")
     .select("*").order("created_at", { ascending: false });
