@@ -74,6 +74,29 @@ export async function openCustomerPortal(): Promise<string> {
   return data.url as string;
 }
 
+export type PaymentHistoryRow = {
+  id: string;
+  kind: string;
+  status: string;
+  amount: number;
+  currency: string;
+  description: string | null;
+  hosted_invoice_url: string | null;
+  invoice_pdf: string | null;
+  occurred_at: string;
+};
+
+export async function fetchPaymentHistory(userId: string): Promise<PaymentHistoryRow[]> {
+  const { data, error } = await supabase
+    .from("payment_history")
+    .select("id, kind, status, amount, currency, description, hosted_invoice_url, invoice_pdf, occurred_at")
+    .eq("user_id", userId)
+    .order("occurred_at", { ascending: false })
+    .limit(50);
+  if (error) throw error;
+  return (data ?? []) as PaymentHistoryRow[];
+}
+
 export async function startCheckout(args: {
   plan_id: string;
   pet_id?: string | null;
