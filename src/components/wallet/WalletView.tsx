@@ -171,6 +171,50 @@ export function WalletView() {
           )}
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-display">Membership Payments</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {payments.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">No membership payments yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {payments.map((p) => (
+                <div key={p.id} className="flex items-center justify-between py-2 border-b last:border-0">
+                  <div className="flex items-center gap-3">
+                    <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${
+                      p.status === "paid" ? "bg-accent/10 text-accent"
+                      : p.status === "refunded" ? "bg-muted text-muted-foreground"
+                      : "bg-destructive/10 text-destructive"
+                    }`}>
+                      <CreditCard className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">{p.description || p.kind.replace(/_/g, " ")}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(p.occurred_at).toLocaleDateString()} · <span className="capitalize">{p.status}</span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className={`font-semibold ${p.status === "refunded" ? "text-muted-foreground" : ""}`}>
+                      {p.status === "refunded" ? "-" : ""}${Number(p.amount).toFixed(2)}
+                    </p>
+                    {p.hosted_invoice_url && (
+                      <a href={p.hosted_invoice_url} target="_blank" rel="noopener noreferrer"
+                        className="text-[10px] text-primary hover:underline">
+                        View invoice
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
