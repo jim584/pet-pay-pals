@@ -22,9 +22,10 @@ export function WalletView() {
     setPortalLoading(true);
     try {
       const url = await openCustomerPortal();
-      window.location.href = url;
+      window.open(url, "_blank", "noopener,noreferrer");
     } catch (e: any) {
       toast({ title: "Couldn't open portal", description: e.message, variant: "destructive" });
+    } finally {
       setPortalLoading(false);
     }
   };
