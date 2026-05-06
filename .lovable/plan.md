@@ -1,89 +1,82 @@
-# Admin Membership Approval & Status Management
+## Admin Vet Management
 
-## Current state
+Replace the placeholder `/admin/vets` route with a full vet management module covering approvals, services, and consultations (appointments).
 
-Memberships today auto-activate via Stripe webhook the moment a user pays — there's no manual gate. Admins also can't currently:
-- Approve or decline pending applications (none exist as a concept)
-- Pause, cancel, or reactivate someone's membership
-- See a clear audit trail of status changes
+### Pages & Routes
 
-The `memberships` table already supports statuses (`pending`, `active`, `past_due`, `cancelled`, `paused`) and admin SELECT via RLS.
+- `/admin/vets` — Vets list (default tab: Pending approvals)
+- `/admin/vets/:vetProfileId` — Vet detail page with sub-tabs: Profile · Services · Consultations · Tickets
 
-## What to build
+### Vets List Page (`AdminVetsPage.tsx`)
 
-### A. Admin Memberships page (`/admin/memberships`)
+Tabs: **Pending** (`is_approved=false`) · **Approved** · **All**.
 
-Replace the placeholder with a full management screen:
+Each row shows: clinic name, owner name/avatar, location, phone, specializations, signup date, status badge.
 
-- **Filter tabs**: All · Pending review · Active · Past due · Cancelled
-- **Search**: by user name or plan
-- **Table/cards** showing: user, plan tier (Bronze/Silver/Gold/Platinum + species), billing interval, status badge, started date, period end, last payment, accrued DP balance
-- **Per-row actions** (status-aware):
-  - `pending` → **Approve** (sets `active`, sets `started_at`) · **Decline** (sets `cancelled` with reason)
-  - `active` → **Pause** · **Cancel** · **Extend period end** (date picker)
-  - `past_due` → **Mark active** · **Cancel**
-  - `paused` → **Reactivate** · **Cancel**
-  - `cancelled` → **Reactivate** (re-opens, keeps history)
-  - All states → **View history** (modal of status changes + payments)
+Row actions:
+- **Approve** / **Revoke approval** (toggles `vet_profiles.is_approved`)
+- **View details** → opens detail page
+- Search by clinic name / owner name
 
-### B. Status change history
+### Vet Detail Page (`AdminVetDetailPage.tsx`)
 
-New `membership_status_changes` table to record every admin action and webhook-driven status flip. Each row: membership_id, from_status, to_status, reason, changed_by (nullable for webhook), source (`admin` | `webhook` | `system`), notes, created_at.
+Header: clinic name, owner, contact info, approval toggle, "Open public profile" link.
 
-A trigger on `memberships` UPDATE auto-logs status flips so we capture both webhook and admin changes uniformly.
+Tabs:
+- **Profile** — read-only summary + admin can edit `is_approved`, location, phone, website, specializations, bio (admin-only update policy already exists).
+- **Services** — table of `services` for this vet (name, price, duration, active). Read-only view with toggle to deactivate (admin can update via new admin RLS policy on services).
+- **Consultations** — list of `appointments` for this vet with pet, owner, service, scheduled time, status. Filter by status (pending/confirmed/completed/cancelled). Admin can update appointment status or cancel.
+- **Vet Tickets** — quick link to `/admin/vet-tickets?vetProfileId=...`.
 
-### C. Manual admin-created membership applications
+### API Layer (`src/lib/admin-api.ts` additions)
 
-So "approve/decline" has something to approve, add a second entry path:
-- New "Request membership (admin review)" button on `/plans` that creates a membership row directly with `status='pending'` and **no Stripe checkout yet**.
-- After admin approves a pending row, the user receives a "Complete payment" CTA in their wallet that triggers the existing checkout flow. On successful payment, the webhook flips it to `active`.
-- Decline: sets status `cancelled` and stores `admin_notes` / `rejection_reason`.
+- `fetchAdminVets(filter: 'pending' | 'approved' | 'all', search?)` — joins `profiles` for owner name.
+- `fetchAdminVetDetail(vetProfileId)` — vet profile + owner profile.
+- `setVetApproval(vetProfileId, approved)` — direct UPDATE (admin RLS already allows).
+- `fetchAdminVetServices(vetProfileId)` — list services.
+- `setVetServiceActive(serviceId, active)` — admin update.
+- `fetchAdminVetAppointments(vetProfileId, statusFilter?)` — joins pet, owner profile, service.
+- `updateAdminAppointment(id, { status, notes? })`.
 
-This preserves the existing self-serve Stripe path (still auto-activates) **and** adds an admin-gated path for cases that need review.
+### Database Migration
 
-### D. Admin sidebar entry on Wallet
+Current RLS gaps: admin cannot update/delete `services` or update/delete `appointments`. Add:
 
-For a member whose `pending` request was approved, surface a "Pay to activate membership" card on `/dashboard/wallet`.
+```sql
+-- Admins can fully manage services
+create policy "Admins can manage services"
+  on public.services for all to authenticated
+  using (has_role(auth.uid(), 'admin'))
+  with check (has_role(auth.uid(), 'admin'));
 
-## Technical details
+-- Admins can update/delete appointments
+create policy "Admins can update any appointment"
+  on public.appointments for update to authenticated
+  using (has_role(auth.uid(), 'admin'))
+  with check (has_role(auth.uid(), 'admin'));
 
-### Migration
-- `ALTER TABLE memberships ADD COLUMN admin_notes text, rejection_reason text, requires_admin_approval boolean DEFAULT false`.
-- New table `public.membership_status_changes` with admin/owner SELECT RLS, no direct INSERT/UPDATE/DELETE from clients.
-- Trigger `on_membership_status_change` — `AFTER UPDATE OF status` — inserts into the history table when `OLD.status IS DISTINCT FROM NEW.status`. Source is read from a session GUC `app.status_source` (defaults to `system`); admin edge function sets it via `SET LOCAL`.
-
-### Edge function `admin-update-membership`
-Mirrors the `admin-assign-role` pattern (auth + admin role check via `has_role`). Accepts:
+create policy "Admins can delete appointments"
+  on public.appointments for delete to authenticated
+  using (has_role(auth.uid(), 'admin'));
 ```
-{ membership_id, action: 'approve' | 'decline' | 'pause' | 'cancel' | 'reactivate' | 'mark_active' | 'extend',
-  reason?: string, admin_notes?: string, new_period_end?: ISO date }
-```
-- For `cancel` on an active subscription, also cancels in Stripe (`stripe.subscriptions.cancel`) so billing stops.
-- For `pause`, calls `stripe.subscriptions.update(..., { pause_collection: { behavior: 'mark_uncollectible' } })`.
-- For `reactivate` from paused, removes pause; from cancelled (no live sub), only flips DB status — user must re-pay to resume billing.
-- All DB writes wrapped in a single statement that calls `set_config('app.status_source','admin', true)` so the trigger logs `source='admin'`.
 
-### API layer
-`src/lib/admin-api.ts` adds:
-- `fetchAdminMemberships(filter, search)` — joins plans + profiles
-- `fetchMembershipHistory(membershipId)`
-- `adminMembershipAction(...)` (invokes edge function)
+(`vet_profiles` already has admin update + admin select via "Anyone authenticated can view".)
 
-### Pages / components
-- `src/pages/admin/AdminMembershipsPage.tsx` — list, tabs, search
-- `src/components/admin/MembershipRow.tsx` — single row with action menu and confirm dialogs
-- `src/components/admin/MembershipHistoryDialog.tsx` — timeline of status changes + payments
+### Wiring
 
-### Webhook updates
-Webhook continues to write status changes. The trigger logs them as `source='system'` automatically (no GUC set). No webhook code changes needed except setting the `requires_admin_approval` flag to false on auto-activated memberships.
+- Update `src/App.tsx`: replace the placeholder route with `<Route path="vets" element={<AdminVetsPage />} />` and add `<Route path="vets/:vetProfileId" element={<AdminVetDetailPage />} />`.
+- `AdminSidebar` already has the Vets entry — no change needed.
+- Optional: add a "Pending vets" KPI card to `AdminOverviewPage` (count of `is_approved=false`).
 
-### Self-serve UI tweak
-In `WalletView`, if `membership.status === 'pending' && requires_admin_approval`, show "Awaiting admin approval"; if `pending && !requires_admin_approval`, show "Complete payment" with checkout button (after admin approves an admin-review application).
+### UX Details
 
-## Out of scope (future)
+- Confirm dialogs (AlertDialog) before approval revoke, service deactivation, appointment cancellation.
+- Toast feedback on all mutations and React Query invalidation per affected list.
+- Status badges reuse existing color tokens (no new colors).
+- Empty states for each tab.
 
-- Refunds from the admin UI (stays on Payments module)
-- Bulk approve/decline
-- Email notifications to user on status change
+### Out of Scope
 
-Ready to build?
+- No edits to vet payout flows (already in `/admin/vet-tickets`).
+- No new vet messaging features.
+- No changes to vet self-service pages.
