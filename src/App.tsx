@@ -61,7 +61,7 @@ function AppRoutes() {
           <Route path="users" element={<AdminUsersPage />} />
           <Route path="vets" element={<AdminPlaceholder title="Vets" />} />
           <Route path="vet-tickets" element={<AdminVetTicketsPage />} />
-          <Route path="memberships" element={<AdminPlaceholder title="Memberships & Plans" />} />
+          <Route path="memberships" element={<AdminMembershipsPage />} />
           <Route path="payments" element={<AdminPlaceholder title="Payments" />} />
           <Route path="reserve" element={<AdminPlaceholder title="Wallet & Reserve" />} />
         </Route>
