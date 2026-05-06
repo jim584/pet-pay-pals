@@ -29,6 +29,42 @@ Deno.serve(async (req) => {
         const s = event.data.object as Stripe.Checkout.Session;
         const md = s.metadata || {};
 
+        // Sponsorship donation payment
+        if (md.kind === "sponsorship_donation" && md.pet_id && s.payment_status === "paid") {
+          const pi = typeof s.payment_intent === "string" ? s.payment_intent : s.payment_intent?.id ?? null;
+          // Idempotency: skip if we already recorded this PI
+          if (pi) {
+            const { data: dup } = await admin.from("payment_history")
+              .select("id").eq("stripe_payment_intent_id", pi).maybeSingle();
+            if (dup) break;
+          }
+          const amount = (s.amount_total ?? 0) / 100;
+          const userId = md.user_id && md.user_id.length > 0 ? md.user_id : null;
+
+          if (userId) {
+            await admin.from("sponsorship_donations").insert({
+              pet_id: md.pet_id,
+              user_id: userId,
+              amount,
+              donor_name: md.donor_name || null,
+              donor_email: md.donor_email || s.customer_details?.email || null,
+              message: md.message || null,
+            });
+          }
+
+          await admin.from("payment_history").insert({
+            user_id: userId,
+            kind: "donation",
+            status: "paid",
+            amount,
+            currency: s.currency || "usd",
+            description: `Sponsorship donation`,
+            stripe_payment_intent_id: pi,
+            occurred_at: new Date().toISOString(),
+          });
+          break;
+        }
+
         // Vet ticket member-remainder payment
         if (md.kind === "vet_ticket_remainder" && md.vet_ticket_id) {
           const ticketId = md.vet_ticket_id;
