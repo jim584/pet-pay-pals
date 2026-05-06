@@ -454,3 +454,117 @@ export async function deleteAdminAppointment(id: string) {
   const { error } = await supabase.from("appointments").delete().eq("id", id);
   if (error) throw error;
 }
+
+// ============ Admin BNPL Payment Plans ============
+
+export type BnplStatus = "pending" | "active" | "paid_off" | "defaulted" | "cancelled";
+
+export interface AdminBnplRow {
+  id: string;
+  pet_id: string;
+  owner_id: string;
+  ticket_id: string;
+  provider: string;
+  original_amount: number;
+  outstanding_amount: number;
+  status: BnplStatus;
+  external_ref: string | null;
+  created_at: string;
+  updated_at: string;
+  owner_full_name: string | null;
+  owner_avatar_url: string | null;
+  pet_name: string | null;
+  ticket_clinic_name: string | null;
+}
+
+export type BnplFilter = "all" | BnplStatus;
+
+export async function fetchAdminBnpl(filter: BnplFilter = "all", search?: string): Promise<AdminBnplRow[]> {
+  let q = supabase
+    .from("bnpl_obligations")
+    .select("*, profiles:owner_id(full_name, avatar_url), pets(name), vet_tickets:ticket_id(clinic_name)")
+    .order("created_at", { ascending: false });
+  if (filter !== "all") q = q.eq("status", filter);
+
+  const { data, error } = await q;
+  if (error) throw error;
+
+  let rows: AdminBnplRow[] = (data ?? []).map((b: any) => ({
+    id: b.id,
+    pet_id: b.pet_id,
+    owner_id: b.owner_id,
+    ticket_id: b.ticket_id,
+    provider: b.provider,
+    original_amount: Number(b.original_amount),
+    outstanding_amount: Number(b.outstanding_amount),
+    status: b.status,
+    external_ref: b.external_ref,
+    created_at: b.created_at,
+    updated_at: b.updated_at,
+    owner_full_name: b.profiles?.full_name ?? null,
+    owner_avatar_url: b.profiles?.avatar_url ?? null,
+    pet_name: b.pets?.name ?? null,
+    ticket_clinic_name: b.vet_tickets?.clinic_name ?? null,
+  }));
+
+  if (search?.trim()) {
+    const s = search.trim().toLowerCase();
+    rows = rows.filter(
+      (r) =>
+        (r.owner_full_name ?? "").toLowerCase().includes(s) ||
+        (r.pet_name ?? "").toLowerCase().includes(s) ||
+        (r.ticket_clinic_name ?? "").toLowerCase().includes(s) ||
+        (r.external_ref ?? "").toLowerCase().includes(s)
+    );
+  }
+  return rows;
+}
+
+export async function updateAdminBnpl(
+  id: string,
+  updates: { status?: BnplStatus; outstanding_amount?: number; external_ref?: string | null; provider?: string }
+) {
+  const { error } = await supabase.from("bnpl_obligations").update(updates).eq("id", id);
+  if (error) throw error;
+}
+
+export async function recordBnplPayment(id: string, paymentAmount: number) {
+  // Manual decrement of outstanding_amount; auto-flip to paid_off when zero
+  const { data: cur, error: e1 } = await supabase
+    .from("bnpl_obligations")
+    .select("outstanding_amount, status")
+    .eq("id", id)
+    .single();
+  if (e1) throw e1;
+  const newOutstanding = Math.max(0, Number(cur.outstanding_amount) - paymentAmount);
+  const newStatus: BnplStatus = newOutstanding <= 0 ? "paid_off" : cur.status === "pending" ? "active" : (cur.status as BnplStatus);
+  const { error } = await supabase
+    .from("bnpl_obligations")
+    .update({ outstanding_amount: newOutstanding, status: newStatus })
+    .eq("id", id);
+  if (error) throw error;
+  return { newOutstanding, newStatus };
+}
+
+export interface BnplStats {
+  total_plans: number;
+  active_count: number;
+  outstanding_total: number;
+  defaulted_count: number;
+  paid_off_count: number;
+}
+
+export async function fetchAdminBnplStats(): Promise<BnplStats> {
+  const { data, error } = await supabase
+    .from("bnpl_obligations")
+    .select("status, outstanding_amount");
+  if (error) throw error;
+  const rows = data ?? [];
+  return {
+    total_plans: rows.length,
+    active_count: rows.filter((r: any) => r.status === "active" || r.status === "pending").length,
+    outstanding_total: rows.reduce((s: number, r: any) => s + Number(r.outstanding_amount ?? 0), 0),
+    defaulted_count: rows.filter((r: any) => r.status === "defaulted").length,
+    paid_off_count: rows.filter((r: any) => r.status === "paid_off").length,
+  };
+}
