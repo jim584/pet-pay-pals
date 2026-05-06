@@ -44,10 +44,25 @@ Deno.serve(async (req) => {
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, { apiVersion: "2024-06-20" });
     const origin = req.headers.get("origin") || "https://example.com";
 
-    const session = await stripe.billingPortal.sessions.create({
-      customer: profile.stripe_customer_id,
-      return_url: `${origin}/dashboard/wallet`,
-    });
+    let session;
+    try {
+      session = await stripe.billingPortal.sessions.create({
+        customer: profile.stripe_customer_id,
+        return_url: `${origin}/dashboard/wallet`,
+      });
+    } catch (stripeErr: any) {
+      const msg = stripeErr?.message || "";
+      if (msg.toLowerCase().includes("no configuration") || msg.toLowerCase().includes("default configuration")) {
+        return new Response(
+          JSON.stringify({
+            error:
+              "Stripe Customer Portal is not configured. In your Stripe Dashboard, open Settings → Billing → Customer portal (test mode) and click Save to activate it, then try again.",
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      throw stripeErr;
+    }
 
     return new Response(JSON.stringify({ url: session.url }), {
       status: 200,

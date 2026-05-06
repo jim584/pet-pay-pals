@@ -1,62 +1,43 @@
-## Goal
-Take one real vet ticket through every stage of the pipeline in your live app and confirm — by reading the database after each step — that the status transitions exactly as expected:
+# Fix: "Manage Subscription" opens an empty page
+
+## Diagnosis
+
+I tested the `customer-portal` edge function directly as your logged-in user. It works correctly and returns this valid URL:
 
 ```
-submitted → approved → funded → card_issued
+https://billing.stripe.com/p/session/test_YWNjdF8xVENQYkJBRHVQRVFmcWZxLF9VVDVqemxQMlZDVkxoZlJGTllFWm9qaFd5T001c1JV0100jVqZdVQC
 ```
 
-This proves the whole chain (auth → submit fn → coverage compute → approve fn → Stripe Checkout → webhook signature → internal-secret handoff → issue-vet-card → DB writes) works in stub mode, before we flip Issuing on.
+So the code, auth, and Stripe customer lookup are all fine. The blank page comes from **Stripe's side**: in test mode, the Customer Billing Portal must be activated in the Stripe Dashboard once before any session URLs will render. Until then, Stripe responds with a valid session link that loads an empty portal page — exactly what you're seeing.
 
-## What I'll do (read + verify only — no code changes)
+## Required action (you, in Stripe Dashboard — one-time)
 
-### Step 1 — Pre-flight DB check
-Confirm you have at least one pet, one active membership (for Direct Pay coverage), and a Direct Pay accrual to draw from. If any are missing, I'll tell you what to create first.
+1. Open https://dashboard.stripe.com/test/settings/billing/portal
+2. Make sure you are in **Test mode** (toggle in top-right).
+3. Configure at minimum:
+   - Business information (name + a privacy/terms URL — can be your homepage)
+   - Functionality: enable **Customers can update payment methods** and **Customers can cancel subscriptions** (whatever options you want exposed)
+4. Click **Save**.
+5. Return to /dashboard/wallet and click **Manage subscription** again — the portal will now render.
 
-### Step 2 — Submit a ticket (you drive the UI, I watch the DB)
-You go to **Dashboard → Vet Tickets → New Ticket** and submit one with:
-- A pet you own
-- Clinic name (anything, e.g. "Test Clinic")
-- Estimate amount (e.g. $200)
-- Skip file uploads or attach a small dummy PDF
+For live mode later, repeat the same at https://dashboard.stripe.com/settings/billing/portal.
 
-After you click submit, I'll query `vet_tickets` and confirm:
-- A new row exists with `status = 'submitted'`
-- `owner_id`, `pet_id`, `estimate_amount` are correct
+## Code improvements (small, defensive)
 
-### Step 3 — Approve as admin (you drive, I watch)
-You go to **Admin → Vet Tickets**, open the ticket, click **Compute coverage**, then **Approve**.
+While confirming the diagnosis, I noticed two small UX gaps in the flow worth fixing so future failures are not silent:
 
-I'll re-query `vet_tickets` and confirm:
-- `status = 'approved'`
-- `approved_amount` is set
-- `coverage_breakdown` JSON has `dp_use`, `member_remainder`, etc.
-- A `ticket_dp_consumptions` row was inserted (DP allocated)
+1. **`src/components/wallet/WalletView.tsx` — `handleManageSubscription`**
+   Currently does `window.location.href = url` which navigates away even if Stripe later returns a bad URL. Switch to `window.open(url, "_blank", "noopener,noreferrer")` so the user keeps the wallet tab and can see toasts on failure. Reset `portalLoading` in a `finally`.
 
-### Step 4 — Pay the member remainder (you drive Stripe Checkout)
-From the owner side, click **Pay remainder** → Stripe Checkout opens → use:
-- Card: `4242 4242 4242 4242`
-- Expiry: any future date (e.g. `12/34`)
-- CVC: any 3 digits
-- ZIP: any 5 digits
+2. **`supabase/functions/customer-portal/index.ts`**
+   Wrap the `stripe.billingPortal.sessions.create(...)` call in a try/catch that detects Stripe's `"No configuration provided"` error and returns a clearer 400 message like:
+   `"Stripe Customer Portal is not configured. Open https://dashboard.stripe.com/test/settings/billing/portal and save a configuration."`
+   The frontend already toasts on `error`, so this surfaces the real cause instead of an empty page.
 
-Stripe will redirect you back. The `stripe-webhook` will fire `checkout.session.completed`, mark the ticket `funded`, then internally invoke `issue-vet-card`.
+## Steps once approved
 
-I'll then query `vet_tickets` and confirm in sequence (polling for ~30s):
-- `status` flips `approved → funded → card_issued`
-- `member_remainder_paid = true`
-- `card_id` is populated (will be a stub ID like `ic_stub_…` since `ISSUING_ENABLED=false`)
-- `authorized_until` is ~6 hours from now
-- A `vet_payouts` row was created with `method='manual_ach'`, `status='pending'`
+1. Edit `src/components/wallet/WalletView.tsx` — open portal in a new tab + always reset loading state.
+2. Edit `supabase/functions/customer-portal/index.ts` — friendlier error when portal is not configured.
+3. Ask you to complete the Stripe Dashboard portal setup above and re-test.
 
-### Step 5 — Final summary
-I'll give you a clean table showing the status at each step and the key fields, so you can see the whole flow worked. If anything stalls, I'll pull the relevant edge function logs (`submit-vet-ticket`, `approve-vet-ticket`, `compute-ticket-coverage`, `collect-member-remainder`, `stripe-webhook`, `issue-vet-card`) and show you exactly where it broke.
-
-## What I need from you to start
-1. **Confirm you're logged in** in the preview as a pet owner who has at least one pet and an active membership.
-2. **Tell me your user_id or email** so I can target queries to your tickets specifically (otherwise I'll grab the most recently created ticket and assume it's yours).
-3. **Click Approve** on this plan, then I'll begin with the pre-flight DB check and tell you when to take each UI action.
-
-## Notes
-- Everything runs in Stripe Test mode against your sandbox keys — no real money moves.
-- The card stays in stub mode (`ISSUING_ENABLED=false`), so we won't hit Stripe Issuing APIs yet. The flow stops cleanly at `card_issued`. Settlement (`card_issued → settled`) requires real Stripe Issuing, which we'll test after Stripe approves you.
-- I'm only reading the DB and watching logs — no migrations, no code edits in this loop.
+No DB migrations, no new secrets, no schema changes.
