@@ -34,6 +34,8 @@ import AdminOverviewPage from "./pages/admin/AdminOverviewPage";
 import AdminUsersPage from "./pages/admin/AdminUsersPage";
 import AdminMembershipsPage from "./pages/admin/AdminMembershipsPage";
 import AdminPlaceholder from "./pages/admin/AdminPlaceholder";
+import AdminVetsPage from "./pages/admin/AdminVetsPage";
+import AdminVetDetailPage from "./pages/admin/AdminVetDetailPage";
 
 const queryClient = new QueryClient();
 
@@ -59,7 +61,8 @@ function AppRoutes() {
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminOverviewPage />} />
           <Route path="users" element={<AdminUsersPage />} />
-          <Route path="vets" element={<AdminPlaceholder title="Vets" />} />
+          <Route path="vets" element={<AdminVetsPage />} />
+          <Route path="vets/:vetProfileId" element={<AdminVetDetailPage />} />
           <Route path="vet-tickets" element={<AdminVetTicketsPage />} />
           <Route path="memberships" element={<AdminMembershipsPage />} />
           <Route path="payments" element={<AdminPlaceholder title="Payments" />} />

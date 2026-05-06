@@ -268,3 +268,189 @@ export async function requestMembershipForReview(args: {
   if (error) throw error;
   return data;
 }
+
+// ============ Admin Vet Management ============
+
+export interface AdminVetRow {
+  id: string;
+  user_id: string;
+  clinic_name: string;
+  specializations: string[] | null;
+  location: string | null;
+  phone: string | null;
+  website: string | null;
+  bio: string | null;
+  is_approved: boolean;
+  created_at: string;
+  updated_at: string;
+  owner_full_name: string | null;
+  owner_avatar_url: string | null;
+}
+
+export interface AdminVetService {
+  id: string;
+  vet_id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  duration_minutes: number | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface AdminVetAppointment {
+  id: string;
+  vet_id: string;
+  owner_id: string;
+  pet_id: string;
+  service_id: string | null;
+  scheduled_at: string;
+  status: string;
+  notes: string | null;
+  created_at: string;
+  pet_name: string | null;
+  pet_species: string | null;
+  owner_full_name: string | null;
+  service_name: string | null;
+  service_price: number | null;
+}
+
+export type VetApprovalFilter = "pending" | "approved" | "all";
+
+export async function fetchAdminVets(filter: VetApprovalFilter = "all", search?: string): Promise<AdminVetRow[]> {
+  let q = supabase
+    .from("vet_profiles")
+    .select("*, profiles:user_id(full_name, avatar_url)")
+    .order("created_at", { ascending: false });
+
+  if (filter === "pending") q = q.eq("is_approved", false);
+  if (filter === "approved") q = q.eq("is_approved", true);
+
+  const { data, error } = await q;
+  if (error) throw error;
+
+  let rows = (data ?? []).map((v: any) => ({
+    id: v.id,
+    user_id: v.user_id,
+    clinic_name: v.clinic_name,
+    specializations: v.specializations,
+    location: v.location,
+    phone: v.phone,
+    website: v.website,
+    bio: v.bio,
+    is_approved: v.is_approved,
+    created_at: v.created_at,
+    updated_at: v.updated_at,
+    owner_full_name: v.profiles?.full_name ?? null,
+    owner_avatar_url: v.profiles?.avatar_url ?? null,
+  })) as AdminVetRow[];
+
+  if (search?.trim()) {
+    const s = search.trim().toLowerCase();
+    rows = rows.filter(
+      (r) =>
+        r.clinic_name?.toLowerCase().includes(s) ||
+        (r.owner_full_name ?? "").toLowerCase().includes(s) ||
+        (r.location ?? "").toLowerCase().includes(s)
+    );
+  }
+  return rows;
+}
+
+export async function fetchAdminVetDetail(vetProfileId: string): Promise<AdminVetRow | null> {
+  const { data, error } = await supabase
+    .from("vet_profiles")
+    .select("*, profiles:user_id(full_name, avatar_url)")
+    .eq("id", vetProfileId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  const v: any = data;
+  return {
+    id: v.id,
+    user_id: v.user_id,
+    clinic_name: v.clinic_name,
+    specializations: v.specializations,
+    location: v.location,
+    phone: v.phone,
+    website: v.website,
+    bio: v.bio,
+    is_approved: v.is_approved,
+    created_at: v.created_at,
+    updated_at: v.updated_at,
+    owner_full_name: v.profiles?.full_name ?? null,
+    owner_avatar_url: v.profiles?.avatar_url ?? null,
+  };
+}
+
+export async function setVetApproval(vetProfileId: string, approved: boolean) {
+  const { error } = await supabase
+    .from("vet_profiles")
+    .update({ is_approved: approved })
+    .eq("id", vetProfileId);
+  if (error) throw error;
+}
+
+export async function fetchAdminVetServices(vetProfileId: string): Promise<AdminVetService[]> {
+  const { data, error } = await supabase
+    .from("services")
+    .select("*")
+    .eq("vet_id", vetProfileId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as AdminVetService[];
+}
+
+export async function setVetServiceActive(serviceId: string, active: boolean) {
+  const { error } = await supabase
+    .from("services")
+    .update({ is_active: active })
+    .eq("id", serviceId);
+  if (error) throw error;
+}
+
+export async function deleteVetService(serviceId: string) {
+  const { error } = await supabase.from("services").delete().eq("id", serviceId);
+  if (error) throw error;
+}
+
+export async function fetchAdminVetAppointments(
+  vetProfileId: string,
+  statusFilter?: string
+): Promise<AdminVetAppointment[]> {
+  let q = supabase
+    .from("appointments")
+    .select("*, pets(name, species), profiles:owner_id(full_name), services(name, price)")
+    .eq("vet_id", vetProfileId)
+    .order("scheduled_at", { ascending: false });
+  if (statusFilter && statusFilter !== "all") q = q.eq("status", statusFilter);
+
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data ?? []).map((a: any) => ({
+    id: a.id,
+    vet_id: a.vet_id,
+    owner_id: a.owner_id,
+    pet_id: a.pet_id,
+    service_id: a.service_id,
+    scheduled_at: a.scheduled_at,
+    status: a.status,
+    notes: a.notes,
+    created_at: a.created_at,
+    pet_name: a.pets?.name ?? null,
+    pet_species: a.pets?.species ?? null,
+    owner_full_name: a.profiles?.full_name ?? null,
+    service_name: a.services?.name ?? null,
+    service_price: a.services?.price ?? null,
+  })) as AdminVetAppointment[];
+}
+
+export async function updateAdminAppointment(id: string, updates: { status?: string; notes?: string | null }) {
+  const { error } = await supabase.from("appointments").update(updates).eq("id", id);
+  if (error) throw error;
+}
+
+export async function deleteAdminAppointment(id: string) {
+  const { error } = await supabase.from("appointments").delete().eq("id", id);
+  if (error) throw error;
+}
