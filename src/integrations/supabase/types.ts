@@ -1666,6 +1666,10 @@ export type Database = {
         Args: { _ticket_id: string }
         Returns: undefined
       }
+      set_status_context: {
+        Args: { _changer: string; _source: string }
+        Returns: undefined
+      }
       user_has_any_role: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
