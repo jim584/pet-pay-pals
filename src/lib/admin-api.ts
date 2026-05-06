@@ -392,12 +392,24 @@ export async function fetchAdminVets(filter: VetApprovalFilter = "all", search?:
 export async function fetchAdminVetDetail(vetProfileId: string): Promise<AdminVetRow | null> {
   const { data, error } = await supabase
     .from("vet_profiles")
-    .select("*, profiles:user_id(full_name, avatar_url)")
+    .select("*")
     .eq("id", vetProfileId)
     .maybeSingle();
   if (error) throw error;
   if (!data) return null;
   const v: any = data;
+
+  let prof: { full_name: string | null; avatar_url: string | null } | null = null;
+  if (v.user_id) {
+    const { data: p, error: pErr } = await supabase
+      .from("profiles")
+      .select("full_name, avatar_url")
+      .eq("user_id", v.user_id)
+      .maybeSingle();
+    if (pErr) throw pErr;
+    prof = p as any;
+  }
+
   return {
     id: v.id,
     user_id: v.user_id,
@@ -410,8 +422,8 @@ export async function fetchAdminVetDetail(vetProfileId: string): Promise<AdminVe
     is_approved: v.is_approved,
     created_at: v.created_at,
     updated_at: v.updated_at,
-    owner_full_name: v.profiles?.full_name ?? null,
-    owner_avatar_url: v.profiles?.avatar_url ?? null,
+    owner_full_name: prof?.full_name ?? null,
+    owner_avatar_url: prof?.avatar_url ?? null,
   };
 }
 
