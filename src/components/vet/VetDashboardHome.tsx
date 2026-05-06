@@ -5,12 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/sonner";
 import { fetchVetProfile, fetchVetAppointments, fetchVetServices, updateAppointmentStatus, Appointment, VetService } from "@/lib/vet-api";
-import { Calendar, Stethoscope, DollarSign, CheckCircle, XCircle, Clock } from "lucide-react";
+import { listTicketsForVet, getTicketFileSignedUrl, VetTicket } from "@/lib/vet-tickets-api";
+import { supabase } from "@/integrations/supabase/client";
+import { Calendar, Stethoscope, DollarSign, CheckCircle, XCircle, Clock, FileText, Ticket } from "lucide-react";
+
+type TicketRow = VetTicket & { pet_name?: string; owner_name?: string };
 
 export function VetDashboardHome() {
   const { user } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [services, setServices] = useState<VetService[]>([]);
+  const [tickets, setTickets] = useState<TicketRow[]>([]);
   const [vetId, setVetId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -19,16 +24,44 @@ export function VetDashboardHome() {
     fetchVetProfile(user.id).then(async (p) => {
       if (p) {
         setVetId(p.id);
-        const [appts, svcs] = await Promise.all([
+        const [appts, svcs, tix] = await Promise.all([
           fetchVetAppointments(p.id),
           fetchVetServices(p.id),
+          listTicketsForVet(p.id),
         ]);
         setAppointments(appts);
         setServices(svcs);
+
+        const petIds = Array.from(new Set(tix.map((t) => t.pet_id).filter(Boolean)));
+        const ownerIds = Array.from(new Set(tix.map((t) => t.owner_id).filter(Boolean)));
+        const [petsRes, profsRes] = await Promise.all([
+          petIds.length
+            ? supabase.from("pets").select("id, name").in("id", petIds)
+            : Promise.resolve({ data: [], error: null } as any),
+          ownerIds.length
+            ? supabase.from("profiles").select("user_id, full_name").in("user_id", ownerIds)
+            : Promise.resolve({ data: [], error: null } as any),
+        ]);
+        const petMap = new Map((petsRes.data ?? []).map((p: any) => [p.id, p.name]));
+        const profMap = new Map((profsRes.data ?? []).map((p: any) => [p.user_id, p.full_name]));
+        setTickets(tix.map((t) => ({
+          ...t,
+          pet_name: petMap.get(t.pet_id) as string | undefined,
+          owner_name: profMap.get(t.owner_id) as string | undefined,
+        })));
       }
       setLoading(false);
     });
   }, [user]);
+
+  const openFile = async (path: string) => {
+    try {
+      const url = await getTicketFileSignedUrl(path);
+      window.open(url, "_blank");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to open file");
+    }
+  };
 
   const handleStatus = async (id: string, status: string) => {
     try {
@@ -129,6 +162,52 @@ export function VetDashboardHome() {
                     {a.status === "confirmed" && (
                       <Button size="sm" variant="outline" onClick={() => handleStatus(a.id, "completed")}>
                         Complete
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-display flex items-center gap-2">
+            <Ticket className="h-5 w-5 text-primary" />
+            Funding Tickets
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {tickets.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">No tickets assigned to your clinic yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {tickets.map((t) => (
+                <div key={t.id} className="flex flex-col gap-2 py-3 border-b last:border-0 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex-1">
+                    <p className="font-semibold text-sm">
+                      {t.pet_name || "Pet"} — {t.owner_name || "Owner"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {t.clinic_name} · Estimate ${Number(t.estimate_amount).toFixed(2)}
+                      {t.approved_amount != null && ` · Approved $${Number(t.approved_amount).toFixed(2)}`}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Submitted {new Date(t.created_at).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="secondary">{t.status}</Badge>
+                    {t.estimate_url && (
+                      <Button size="sm" variant="outline" onClick={() => openFile(t.estimate_url!)}>
+                        <FileText className="h-4 w-4 mr-1" /> Estimate
+                      </Button>
+                    )}
+                    {t.attestation_url && (
+                      <Button size="sm" variant="outline" onClick={() => openFile(t.attestation_url!)}>
+                        <FileText className="h-4 w-4 mr-1" /> Attestation
                       </Button>
                     )}
                   </div>
