@@ -306,6 +306,21 @@ Deno.serve(async (req) => {
 
 // ===== Helpers =====
 
+async function upsertPaymentByInvoice(admin: any, invoiceId: string, row: Record<string, unknown>) {
+  const { data: existing } = await admin
+    .from("payment_history")
+    .select("id")
+    .eq("stripe_invoice_id", invoiceId)
+    .maybeSingle();
+  if (existing) {
+    const { error } = await admin.from("payment_history").update(row).eq("id", existing.id);
+    if (error) console.error("update payment_history failed:", error);
+  } else {
+    const { error } = await admin.from("payment_history").insert(row);
+    if (error) console.error("insert payment_history failed:", error);
+  }
+}
+
 async function invokeIssueCard(ticketId: string) {
   try {
     const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/issue-vet-card`;
