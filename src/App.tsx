@@ -29,6 +29,10 @@ import PlansPage from "./pages/PlansPage";
 import VetTicketsPage from "./pages/VetTicketsPage";
 import AdminVetTicketsPage from "./pages/AdminVetTicketsPage";
 import VetCardPage from "./pages/VetCardPage";
+import AdminLayout from "./pages/admin/AdminLayout";
+import AdminOverviewPage from "./pages/admin/AdminOverviewPage";
+import AdminUsersPage from "./pages/admin/AdminUsersPage";
+import AdminPlaceholder from "./pages/admin/AdminPlaceholder";
 
 const queryClient = new QueryClient();
 
@@ -51,7 +55,15 @@ function AppRoutes() {
           <Route path="profile" element={<ProfileSettingsPage />} />
           <Route path="vet-tickets" element={<VetTicketsPage />} />
         </Route>
-        <Route path="/admin/vet-tickets" element={<AdminVetTicketsPage />} />
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<AdminOverviewPage />} />
+          <Route path="users" element={<AdminUsersPage />} />
+          <Route path="vets" element={<AdminPlaceholder title="Vets" />} />
+          <Route path="vet-tickets" element={<AdminVetTicketsPage />} />
+          <Route path="memberships" element={<AdminPlaceholder title="Memberships & Plans" />} />
+          <Route path="payments" element={<AdminPlaceholder title="Payments" />} />
+          <Route path="reserve" element={<AdminPlaceholder title="Wallet & Reserve" />} />
+        </Route>
         <Route path="/vet-tickets/:id/card" element={<VetCardPage />} />
         {/* Compass menu placeholder routes */}
         
