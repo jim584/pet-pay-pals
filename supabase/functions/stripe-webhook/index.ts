@@ -52,16 +52,18 @@ Deno.serve(async (req) => {
             });
           }
 
-          await admin.from("payment_history").insert({
-            user_id: userId,
-            kind: "donation",
-            status: "paid",
-            amount,
-            currency: s.currency || "usd",
-            description: `Sponsorship donation`,
-            stripe_payment_intent_id: pi,
-            occurred_at: new Date().toISOString(),
-          });
+          if (userId) {
+            await admin.from("payment_history").insert({
+              user_id: userId,
+              kind: "donation",
+              status: "paid",
+              amount,
+              currency: s.currency || "usd",
+              description: `Sponsorship donation`,
+              stripe_payment_intent_id: pi,
+              occurred_at: new Date().toISOString(),
+            });
+          }
           break;
         }
 
