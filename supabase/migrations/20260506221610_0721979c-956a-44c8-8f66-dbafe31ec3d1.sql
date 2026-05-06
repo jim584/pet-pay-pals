@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "Users can insert own donations" ON public.sponsorship_donations;

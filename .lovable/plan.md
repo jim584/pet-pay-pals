@@ -1,35 +1,43 @@
-I checked the current admin overview, payment sync function, webhook handler, and database state. The warning is legitimate right now: there are 3 active memberships, but `payment_history` has 0 rows. The likely remaining technical issue is that the current sync/webhook code uses `upsert(..., { onConflict: "stripe_invoice_id" })` against a partial unique index; Postgres/PostgREST does not treat that as a matching conflict target for this style of upsert, so invoice writes can still fail or be skipped.
+## Goal
+Stop letting "Sponsor" button write fake donations directly to the database. Route every donation through Stripe Checkout, and only record it after Stripe confirms the payment.
 
-Plan:
+## Changes
 
-1. Make invoice recording idempotent without relying on the partial-index upsert
-   - Update `backfill-payment-history` to check for an existing `stripe_invoice_id` first.
-   - If the invoice exists, update it.
-   - If it does not exist, insert it.
-   - This avoids the `ON CONFLICT` problem and should allow the Sync Stripe payments button to populate `payment_history`.
+### 1. New edge function `create-donation-checkout`
+- Accepts `{ pet_id, amount, message?, donor_name?, donor_email? }`.
+- Validates the pet exists and amount > 0.
+- Resolves the current user (anonymous donations allowed — `user_id` is optional).
+- Creates a Stripe Checkout Session in `mode: "payment"` with:
+  - `line_items`: one custom price for the donation amount (USD).
+  - `metadata`: `{ kind: "sponsorship_donation", pet_id, user_id, message, donor_name, donor_email }`.
+  - `success_url`: `/help-overcome?donation=success`
+  - `cancel_url`: `/help-overcome?donation=cancelled`
+- Returns `{ url }`.
 
-2. Apply the same fix to the live Stripe webhook handler
-   - Replace `payment_history.upsert(... onConflict: "stripe_invoice_id")` in `stripe-webhook` with a small helper that performs explicit select/update/insert by `stripe_invoice_id`.
-   - Use it for `invoice.paid` and `invoice.payment_failed`.
-   - Keep refund rows as normal inserts because they do not necessarily have a Stripe invoice ID.
+### 2. Extend `stripe-webhook` to handle `checkout.session.completed`
+When `metadata.kind === "sponsorship_donation"` and `payment_status === "paid"`:
+- Insert a row into `sponsorship_donations` (service role — trigger updates pet's raised total + status automatically).
+- Insert a row into `payment_history` with `kind = "donation"` so it shows in admin revenue.
+- Idempotent: skip if a `payment_history` row already exists for that `stripe_payment_intent_id`.
 
-3. Prevent duplicate Direct Pay accruals from webhook retries
-   - In `stripe-webhook`, before inserting `direct_pay_accruals` for a paid invoice, check whether accrual rows already exist for that `stripe_invoice_id`.
-   - This matches the backfill behavior and keeps repeated webhook delivery from creating duplicate Direct Pay balances.
+### 3. Update `HelpOvercomePage` SponsorDialog
+- Remove the direct `submitDonation` call.
+- On submit: call `create-donation-checkout` and `window.location.href = url`.
+- On `/help-overcome?donation=success`: show "Thank you" toast and refetch sponsorship pets.
+- On `?donation=cancelled`: show a neutral toast.
 
-4. Improve the admin overview warning so it is less confusing
-   - Keep the alert only when active memberships exist and no payments have been recorded.
-   - Update the text to say the next action is to click Sync Stripe payments first.
-   - If sync succeeds, the warning disappears after reload.
-   - If sync imports 0 invoices, the alert can then point to the Stripe webhook configuration as the next likely issue.
+### 4. Lock down `sponsorship_donations` (migration)
+- Drop policy "Users can insert own donations" — clients can no longer write donations directly.
+- Keep SELECT policies. Service role (webhook) bypasses RLS.
 
-5. Re-deploy and verify the backend functions
-   - Deploy `backfill-payment-history` and `stripe-webhook` after code changes.
-   - Test the sync function with the current admin session.
-   - Check that `payment_history` now has invoice rows and that the Overview page can show Recorded revenue / Recent payments instead of the warning.
+### 5. Optional cleanup (only if you confirm)
+- Reset existing test donation rows so the goal bars start at $0 raised:
+  - `DELETE FROM sponsorship_donations;`
+  - `UPDATE sponsorship_pets SET sponsorship_raised = 0, sponsorship_status = 'not_sponsored';`
 
-Outcome expected after approval:
-- You should not need to manually create payment history records.
-- Clicking Sync Stripe payments should import the existing test subscription invoices.
-- The warning should disappear once at least one invoice is recorded.
-- The webhook should continue recording future Stripe invoices automatically, provided the webhook endpoint is configured in Stripe.
+I will skip step 5 unless you explicitly say "wipe test donations".
+
+## Notes
+- Uses the existing `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` already in the project — no new secrets needed.
+- Uses the same idempotent select-then-insert pattern we applied to membership invoices.
+- Anonymous donors are supported (no login required). When logged in, `user_id` is captured.
