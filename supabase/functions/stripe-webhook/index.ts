@@ -100,28 +100,38 @@ Deno.serve(async (req) => {
           occurred_at: new Date(((inv.status_transitions?.paid_at ?? inv.created) || Math.floor(Date.now() / 1000)) * 1000).toISOString(),
         });
 
-        // Per-month DP accrual (annual still accrues monthly rows for rolling expiry)
-        const monthlyDP = m.is_fear_free_member
-          ? Number(plan.direct_pay_portion) * 0.95
-          : Number(plan.direct_pay_portion);
+        // Per-month DP accrual (annual still accrues monthly rows for rolling expiry).
+        // Skip if accruals already exist for this invoice (idempotent on webhook retries).
+        const { data: existingAccrual } = await admin
+          .from("direct_pay_accruals")
+          .select("id")
+          .eq("stripe_invoice_id", inv.id)
+          .limit(1)
+          .maybeSingle();
 
-        const monthsCovered = m.billing_interval === "year" ? 12 : 1;
-        const now = new Date();
+        if (!existingAccrual) {
+          const monthlyDP = m.is_fear_free_member
+            ? Number(plan.direct_pay_portion) * 0.95
+            : Number(plan.direct_pay_portion);
 
-        for (let i = 0; i < monthsCovered; i++) {
-          const accrualMonth = new Date(now.getFullYear(), now.getMonth() + i, 1);
-          const expiresAt = plan.dp_window_months
-            ? new Date(accrualMonth.getFullYear(), accrualMonth.getMonth() + plan.dp_window_months, 1)
-            : null;
-          await admin.from("direct_pay_accruals").insert({
-            membership_id: m.id,
-            user_id: m.user_id,
-            accrual_month: accrualMonth.toISOString().slice(0, 10),
-            amount: monthlyDP,
-            remaining_amount: monthlyDP,
-            expires_at: expiresAt ? expiresAt.toISOString() : null,
-            stripe_invoice_id: inv.id,
-          });
+          const monthsCovered = m.billing_interval === "year" ? 12 : 1;
+          const now = new Date();
+
+          for (let i = 0; i < monthsCovered; i++) {
+            const accrualMonth = new Date(now.getFullYear(), now.getMonth() + i, 1);
+            const expiresAt = plan.dp_window_months
+              ? new Date(accrualMonth.getFullYear(), accrualMonth.getMonth() + plan.dp_window_months, 1)
+              : null;
+            await admin.from("direct_pay_accruals").insert({
+              membership_id: m.id,
+              user_id: m.user_id,
+              accrual_month: accrualMonth.toISOString().slice(0, 10),
+              amount: monthlyDP,
+              remaining_amount: monthlyDP,
+              expires_at: expiresAt ? expiresAt.toISOString() : null,
+              stripe_invoice_id: inv.id,
+            });
+          }
         }
 
         // Update period end
