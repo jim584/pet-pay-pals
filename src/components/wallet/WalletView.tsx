@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Wallet as WalletIcon, ArrowDownRight, ArrowUpRight, CreditCard, Shield, Clock } from "lucide-react";
 import { fetchWallet, fetchTransactions, Wallet, WalletTransaction } from "@/lib/community-api";
-import { fetchMyMembership, fetchMyDpSummary, openCustomerPortal } from "@/lib/plans-api";
+import { fetchMyMembership, fetchMyDpSummary, openCustomerPortal, fetchPaymentHistory, PaymentHistoryRow } from "@/lib/plans-api";
 import { toast } from "@/hooks/use-toast";
 
 export function WalletView() {
@@ -15,6 +15,7 @@ export function WalletView() {
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
   const [membership, setMembership] = useState<any>(null);
   const [dpSummary, setDpSummary] = useState<{ available: number; expiringSoon: number }>({ available: 0, expiringSoon: 0 });
+  const [payments, setPayments] = useState<PaymentHistoryRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
 
@@ -40,6 +41,7 @@ export function WalletView() {
       }),
       fetchMyMembership(user.id).then(setMembership).catch(() => {}),
       fetchMyDpSummary(user.id).then(setDpSummary).catch(() => {}),
+      fetchPaymentHistory(user.id).then(setPayments).catch(() => {}),
     ]).finally(() => setLoading(false));
   }, [user]);
 
@@ -162,6 +164,50 @@ export function WalletView() {
                       {Number(tx.wallet_portion) > 0 && <Badge variant="secondary" className="text-[10px]">W: ${Number(tx.wallet_portion).toFixed(2)}</Badge>}
                       {Number(tx.direct_pay_portion) > 0 && <Badge variant="outline" className="text-[10px]">DP: ${Number(tx.direct_pay_portion).toFixed(2)}</Badge>}
                     </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-display">Membership Payments</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {payments.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">No membership payments yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {payments.map((p) => (
+                <div key={p.id} className="flex items-center justify-between py-2 border-b last:border-0">
+                  <div className="flex items-center gap-3">
+                    <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${
+                      p.status === "paid" ? "bg-accent/10 text-accent"
+                      : p.status === "refunded" ? "bg-muted text-muted-foreground"
+                      : "bg-destructive/10 text-destructive"
+                    }`}>
+                      <CreditCard className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">{p.description || p.kind.replace(/_/g, " ")}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(p.occurred_at).toLocaleDateString()} · <span className="capitalize">{p.status}</span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className={`font-semibold ${p.status === "refunded" ? "text-muted-foreground" : ""}`}>
+                      {p.status === "refunded" ? "-" : ""}${Number(p.amount).toFixed(2)}
+                    </p>
+                    {p.hosted_invoice_url && (
+                      <a href={p.hosted_invoice_url} target="_blank" rel="noopener noreferrer"
+                        className="text-[10px] text-primary hover:underline">
+                        View invoice
+                      </a>
+                    )}
                   </div>
                 </div>
               ))}
