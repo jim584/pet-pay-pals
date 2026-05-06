@@ -330,26 +330,19 @@ function SponsorDialog({ pet, userId, onClose }: { pet: SponsorshipPet; userId?:
   const finalAmount = isCustom ? Number(customAmt) : (amount as number);
 
   const handleSubmit = async () => {
-    if (!userId) {
-      toast({ title: "Please sign in to sponsor a pet", variant: "destructive" });
-      return;
-    }
     if (!finalAmount || finalAmount <= 0) return;
     setSubmitting(true);
     try {
-      await submitDonation({
+      const url = await startDonationCheckout({
         pet_id: pet.id,
-        user_id: userId,
         amount: finalAmount,
         donor_name: donorName || undefined,
         donor_email: donorEmail || undefined,
         message: message || undefined,
       });
-      toast({ title: "Thank you!", description: `You sponsored ${pet.name} with $${finalAmount}.` });
-      onClose();
+      window.location.href = url;
     } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
-    } finally {
+      toast({ title: "Couldn't start checkout", description: e.message, variant: "destructive" });
       setSubmitting(false);
     }
   };
