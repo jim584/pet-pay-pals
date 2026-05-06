@@ -341,7 +341,7 @@ export type VetApprovalFilter = "pending" | "approved" | "all";
 export async function fetchAdminVets(filter: VetApprovalFilter = "all", search?: string): Promise<AdminVetRow[]> {
   let q = supabase
     .from("vet_profiles")
-    .select("*, profiles:user_id(full_name, avatar_url)")
+    .select("*")
     .order("created_at", { ascending: false });
 
   if (filter === "pending") q = q.eq("is_approved", false);
@@ -349,6 +349,17 @@ export async function fetchAdminVets(filter: VetApprovalFilter = "all", search?:
 
   const { data, error } = await q;
   if (error) throw error;
+
+  const userIds = Array.from(new Set((data ?? []).map((v: any) => v.user_id).filter(Boolean)));
+  let profileMap = new Map<string, { full_name: string | null; avatar_url: string | null }>();
+  if (userIds.length > 0) {
+    const { data: profs, error: pErr } = await supabase
+      .from("profiles")
+      .select("user_id, full_name, avatar_url")
+      .in("user_id", userIds);
+    if (pErr) throw pErr;
+    profileMap = new Map((profs ?? []).map((p: any) => [p.user_id, { full_name: p.full_name, avatar_url: p.avatar_url }]));
+  }
 
   let rows = (data ?? []).map((v: any) => ({
     id: v.id,
@@ -362,8 +373,8 @@ export async function fetchAdminVets(filter: VetApprovalFilter = "all", search?:
     is_approved: v.is_approved,
     created_at: v.created_at,
     updated_at: v.updated_at,
-    owner_full_name: v.profiles?.full_name ?? null,
-    owner_avatar_url: v.profiles?.avatar_url ?? null,
+    owner_full_name: profileMap.get(v.user_id)?.full_name ?? null,
+    owner_avatar_url: profileMap.get(v.user_id)?.avatar_url ?? null,
   })) as AdminVetRow[];
 
   if (search?.trim()) {
