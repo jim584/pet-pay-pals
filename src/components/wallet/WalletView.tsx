@@ -41,6 +41,7 @@ export function WalletView() {
       }),
       fetchMyMembership(user.id).then(setMembership).catch(() => {}),
       fetchMyDpSummary(user.id).then(setDpSummary).catch(() => {}),
+      fetchPaymentHistory(user.id).then(setPayments).catch(() => {}),
     ]).finally(() => setLoading(false));
   }, [user]);
 
