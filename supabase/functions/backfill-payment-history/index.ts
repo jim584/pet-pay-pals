@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
     const { data: roleRow } = await admin
       .from("user_roles")
       .select("role")
-      .eq("user_id", claims.claims.sub)
+      .eq("user_id", userId)
       .eq("role", "admin")
       .maybeSingle();
     if (!roleRow) return json({ error: "Forbidden" }, 403);
