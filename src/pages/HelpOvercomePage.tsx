@@ -56,6 +56,20 @@ export default function HelpOvercomePage() {
     queryFn: fetchSponsorshipPets,
   });
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const d = params.get("donation");
+    if (d === "success") {
+      toast({ title: "Thank you!", description: "Your donation was received." });
+      qc.invalidateQueries({ queryKey: ["sponsorship-pets"] });
+      params.delete("donation");
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (d === "cancelled") {
+      toast({ title: "Donation cancelled", description: "No charge was made." });
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [qc]);
+
   const filtered = filter === "all" ? pets : pets.filter((p) => p.species === filter);
 
   return (
