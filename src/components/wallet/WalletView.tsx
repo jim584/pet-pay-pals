@@ -15,6 +15,7 @@ export function WalletView() {
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
   const [membership, setMembership] = useState<any>(null);
   const [dpSummary, setDpSummary] = useState<{ available: number; expiringSoon: number }>({ available: 0, expiringSoon: 0 });
+  const [payments, setPayments] = useState<PaymentHistoryRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
 
