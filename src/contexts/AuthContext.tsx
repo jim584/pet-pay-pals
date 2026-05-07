@@ -9,6 +9,7 @@ interface AuthContextType {
   user: User | null;
   role: AppRole | null;
   loading: boolean;
+  roleLoading: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -23,15 +24,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
+  const [roleLoading, setRoleLoading] = useState(false);
   const explicitSignOutRef = useRef(false);
 
   const fetchRole = async (userId: string) => {
-    const { data } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId)
-      .maybeSingle();
-    setRole((data?.role as AppRole) ?? null);
+    setRoleLoading(true);
+    try {
+      const { data } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .maybeSingle();
+      setRole((data?.role as AppRole) ?? null);
+    } finally {
+      setRoleLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -74,9 +81,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(newSession);
         setUser(newSession?.user ?? null);
         if (newSession?.user) {
+          setRoleLoading(true);
           setTimeout(() => { if (mounted) fetchRole(newSession.user.id); }, 0);
         } else {
           setRole(null);
+          setRoleLoading(false);
         }
       }
     );
@@ -86,6 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user) {
+        setRoleLoading(true);
         fetchRole(s.user.id).finally(() => {
           if (mounted) setLoading(false);
         });
@@ -153,7 +163,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ session, user, role, loading, signUp, signIn, signOut, selectRole, refreshRole }}
+      value={{ session, user, role, loading, roleLoading, signUp, signIn, signOut, selectRole, refreshRole }}
     >
       {children}
     </AuthContext.Provider>
