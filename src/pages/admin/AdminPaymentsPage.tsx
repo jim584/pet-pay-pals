@@ -298,6 +298,7 @@ export default function AdminPaymentsPage() {
                       </TableCell>
                     </TableRow>
                   ))}
+                  {!loading && loadingMore && Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={`m-${i}`} />)}
                 </TableBody>
               </Table>
               <div ref={sentinelRef} className="h-1" />
@@ -332,5 +333,19 @@ function KpiCard({ label, value, icon: Icon, accent }: { label: string; value: s
         <div className="text-2xl font-bold font-display">{value}</div>
       </CardContent>
     </Card>
+  );
+}
+
+function SkeletonRow() {
+  return (
+    <TableRow>
+      <TableCell><Skeleton className="h-3 w-28" /></TableCell>
+      <TableCell><Skeleton className="h-3 w-32" /></TableCell>
+      <TableCell><Skeleton className="h-5 w-20 rounded-full" /></TableCell>
+      <TableCell><Skeleton className="h-3 w-48" /></TableCell>
+      <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
+      <TableCell className="text-right"><Skeleton className="h-3 w-16 ml-auto" /></TableCell>
+      <TableCell className="text-right"><Skeleton className="h-4 w-4 ml-auto" /></TableCell>
+    </TableRow>
   );
 }
