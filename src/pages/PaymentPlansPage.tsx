@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useSearchParams } from "react-router-dom";
 
 import { useAuth } from "@/contexts/AuthContext";
@@ -43,6 +43,15 @@ export default function PaymentPlansPage() {
   const [filter, setFilter] = useState<"open" | "all" | "closed">("open");
   const [installmentsMap, setInstallmentsMap] = useState<Record<string, MyInstallment[]>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
+  const autopayRef = useRef<HTMLDivElement | null>(null);
+
+  const triggerAutopaySetup = () => {
+    autopayRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setTimeout(() => {
+      const btn = autopayRef.current?.querySelector<HTMLButtonElement>("button:not([disabled])");
+      btn?.click();
+    }, 350);
+  };
 
   const load = async () => {
     if (!user) { setLoading(false); return; }
@@ -142,7 +151,9 @@ export default function PaymentPlansPage() {
         </p>
       </div>
 
-      <AutopaySetupCard onSetupComplete={load} />
+      <div ref={autopayRef} id="autopay-setup">
+        <AutopaySetupCard onSetupComplete={load} />
+      </div>
 
       <Tabs value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
         <TabsList>
@@ -174,10 +185,14 @@ export default function PaymentPlansPage() {
               <h3 className="text-lg font-semibold">No payment plans yet</h3>
               <p className="text-sm text-muted-foreground max-w-md mx-auto mt-1">
                 When a vet visit is partially covered by your plan, the remainder is split into
-                interest-free installments and shown here. Set up autopay above so future
+                interest-free installments and shown here. Set up autopay so future
                 installments charge automatically.
               </p>
             </div>
+            <Button onClick={triggerAutopaySetup} className="mt-2">
+              <CreditCard className="h-4 w-4 mr-2" />
+              Set up autopay
+            </Button>
           </CardContent>
         </Card>
       ) : filtered.length === 0 ? (
