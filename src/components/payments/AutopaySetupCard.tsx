@@ -137,7 +137,7 @@ export function AutopaySetupCard({ onSetupComplete }: Props) {
         <div className="flex items-center gap-2">
           {checkoutUrl && (
             <Button asChild size="sm" variant="secondary">
-              <a href={checkoutUrl} target="_blank" rel="noopener noreferrer">
+              <a href={checkoutUrl} rel="noopener noreferrer">
                 Open Stripe checkout <ExternalLink className="h-3 w-3 ml-1" />
               </a>
             </Button>

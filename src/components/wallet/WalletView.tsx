@@ -26,7 +26,7 @@ export function WalletView() {
     setPortalLoading(true);
     try {
       const url = await openCustomerPortal();
-      window.open(url, "_blank", "noopener,noreferrer");
+      openCheckoutUrl(url);
     } catch (e: any) {
       toast({ title: "Couldn't open portal", description: e.message, variant: "destructive" });
     } finally {
