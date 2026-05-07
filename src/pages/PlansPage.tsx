@@ -17,6 +17,7 @@ export default function PlansPage() {
   const [species, setSpecies] = useState<"dog" | "cat">("dog");
   const [billingInterval, setBillingInterval] = useState<"month" | "year">("month");
   const [isFearFree, setIsFearFree] = useState(false);
+  const [fearFreeReason, setFearFreeReason] = useState<string>("Add a Vet of Record to your pet to qualify for Fear Free pricing.");
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
   const [loadingPlans, setLoadingPlans] = useState(true);
 
@@ -24,6 +25,35 @@ export default function PlansPage() {
     setLoadingPlans(true);
     fetchPlans(species).then(setPlans).finally(() => setLoadingPlans(false));
   }, [species]);
+
+  // Auto-derive Fear Free status from any pet's Vet of Record
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const { data: pets } = await supabase
+        .from("pets")
+        .select("vet_of_record_id")
+        .eq("owner_id", user.id);
+      const vetIds = (pets ?? []).map((p: any) => p.vet_of_record_id).filter(Boolean);
+      if (vetIds.length === 0) {
+        setIsFearFree(false);
+        setFearFreeReason("Add a Vet of Record to your pet to qualify for Fear Free pricing.");
+        return;
+      }
+      const { data: vets } = await supabase
+        .from("vet_profiles")
+        .select("fear_free_certified, clinic_name")
+        .in("id", vetIds)
+        .eq("fear_free_certified", true);
+      if (vets && vets.length > 0) {
+        setIsFearFree(true);
+        setFearFreeReason(`Verified via your Vet of Record (${vets[0].clinic_name}).`);
+      } else {
+        setIsFearFree(false);
+        setFearFreeReason("Your Vet of Record isn't Fear Free certified yet.");
+      }
+    })();
+  }, [user]);
 
   if (!loading && !user) return <Navigate to="/auth" replace />;
 
