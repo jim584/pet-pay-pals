@@ -156,6 +156,25 @@ export default function PaymentPlansPage() {
                       )}
                     </div>
                   </div>
+                  {canPay && (
+                    <div className="flex items-center gap-2 pt-2">
+                      <Switch
+                        id={`autopay-${o.id}`}
+                        checked={o.auto_pay_enabled !== false}
+                        onCheckedChange={async (v) => {
+                          try {
+                            await setObligationAutopay(o.id, v);
+                            setObligations((prev) => prev.map((x) => x.id === o.id ? { ...x, auto_pay_enabled: v } : x));
+                          } catch (e) {
+                            toast({ title: "Failed to update", description: (e as Error).message, variant: "destructive" });
+                          }
+                        }}
+                      />
+                      <Label htmlFor={`autopay-${o.id}`} className="text-xs text-muted-foreground cursor-pointer">
+                        Auto-charge installments on their due date
+                      </Label>
+                    </div>
+                  )}
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
