@@ -281,6 +281,13 @@ Deno.serve(async (req) => {
           status: "cancelled",
           cancelled_at: new Date().toISOString(),
         }).eq("stripe_subscription_id", sub.id);
+
+        // Reverse referral bounties if cancellation occurred during the hold period
+        try {
+          const { data: m } = await admin.from("memberships")
+            .select("id, user_id").eq("stripe_subscription_id", sub.id).maybeSingle();
+          if (m) await reverseReferralIfWithinHold(admin, m.user_id);
+        } catch (e) { console.error("referral reversal failed:", e); }
         break;
       }
 
