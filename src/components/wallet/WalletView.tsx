@@ -4,9 +4,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Wallet as WalletIcon, ArrowDownRight, ArrowUpRight, CreditCard, Shield, Clock } from "lucide-react";
+import { Wallet as WalletIcon, ArrowDownRight, ArrowUpRight, CreditCard, Shield, Clock, ShieldCheck } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import { fetchWallet, fetchTransactions, Wallet, WalletTransaction } from "@/lib/community-api";
-import { fetchMyMembership, fetchMyDpSummary, openCustomerPortal, fetchPaymentHistory, PaymentHistoryRow } from "@/lib/plans-api";
+import { fetchMyMembership, fetchMyDpSummary, openCustomerPortal, fetchPaymentHistory, fetchMyReserveSummary, PaymentHistoryRow, ReserveSummary } from "@/lib/plans-api";
 import { toast } from "@/hooks/use-toast";
 
 export function WalletView() {
@@ -16,6 +17,7 @@ export function WalletView() {
   const [membership, setMembership] = useState<any>(null);
   const [dpSummary, setDpSummary] = useState<{ available: number; expiringSoon: number }>({ available: 0, expiringSoon: 0 });
   const [payments, setPayments] = useState<PaymentHistoryRow[]>([]);
+  const [reserve, setReserve] = useState<ReserveSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
 
@@ -42,6 +44,7 @@ export function WalletView() {
       fetchMyMembership(user.id).then(setMembership).catch(() => {}),
       fetchMyDpSummary(user.id).then(setDpSummary).catch(() => {}),
       fetchPaymentHistory(user.id).then(setPayments).catch(() => {}),
+      fetchMyReserveSummary(user.id).then(setReserve).catch(() => {}),
     ]).finally(() => setLoading(false));
   }, [user]);
 
