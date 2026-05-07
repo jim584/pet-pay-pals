@@ -161,12 +161,13 @@ Deno.serve(async (req) => {
     breakdown.member_remainder = finalMemberRemainder;
     breakdown.reserve_validated_server_side = true;
 
-    const newStatus = memberRemainder > 0 ? "approved" : "funded";
+    const finalApproved = +(dpUse + bnplUse + Number(breakdown.reserve_use ?? 0) + Number(breakdown.member_remainder ?? 0)).toFixed(2);
+    const newStatus = Number(breakdown.member_remainder ?? 0) > 0 ? "approved" : "funded";
 
     await admin.from("vet_tickets").update({
       status: newStatus,
       coverage_breakdown: breakdown,
-      approved_amount: approvedAmount,
+      approved_amount: finalApproved,
       admin_notes: admin_notes ?? null,
       reviewed_by: userId,
       reviewed_at: new Date().toISOString(),
