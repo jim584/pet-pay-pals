@@ -9,7 +9,6 @@ import { Progress } from "@/components/ui/progress";
 import { fetchWallet, fetchTransactions, Wallet, WalletTransaction } from "@/lib/community-api";
 import { fetchMyMembership, fetchMyDpSummary, openCustomerPortal, fetchPaymentHistory, fetchMyReserveSummary, PaymentHistoryRow, ReserveSummary } from "@/lib/plans-api";
 import { toast } from "@/hooks/use-toast";
-import { openCheckoutUrl } from "@/lib/open-checkout";
 
 export function WalletView() {
   const { user } = useAuth();
@@ -26,7 +25,7 @@ export function WalletView() {
     setPortalLoading(true);
     try {
       const url = await openCustomerPortal();
-      openCheckoutUrl(url);
+      window.open(url, "_blank", "noopener,noreferrer");
     } catch (e: any) {
       toast({ title: "Couldn't open portal", description: e.message, variant: "destructive" });
     } finally {
