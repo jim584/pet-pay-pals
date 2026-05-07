@@ -16,6 +16,10 @@ export type CoverageBreakdown = {
   bnpl_use: number;
   bnpl_existing_outstanding?: number;
   reserve_use: number;
+  reserve_eligible?: boolean;
+  reserve_available?: number;
+  reserve_opted_in?: boolean;
+  reserve_blocked_reason?: string | null;
   member_remainder: number;
   computed_at?: string;
 };
