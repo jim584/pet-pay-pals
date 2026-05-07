@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Copy, RefreshCw, Plus, DollarSign, QrCode, Zap, ChevronDown, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { QRCodeCard } from "@/components/QRCodeCard";
+import ReferralReconcileTab from "@/components/admin/ReferralReconcileTab";
 import {
   listReferrers, listReferrals, listBounties, listPayouts,
   createReferrer, updateReferrer, runReferralHoldJob, createPayoutForReferrer,
@@ -226,6 +227,7 @@ export default function AdminReferralsPage() {
           <TabsTrigger value="bounties">Bounties ({bounties.length})</TabsTrigger>
           <TabsTrigger value="payouts">Payouts ({payouts.length})</TabsTrigger>
           <TabsTrigger value="milestones">Milestones ({milestones.length})</TabsTrigger>
+          <TabsTrigger value="reconcile">Reconcile</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
@@ -489,6 +491,10 @@ export default function AdminReferralsPage() {
               </TableBody>
             </Table>
           </CardContent></Card>
+        </TabsContent>
+
+        <TabsContent value="reconcile">
+          <ReferralReconcileTab />
         </TabsContent>
 
         <TabsContent value="settings">
