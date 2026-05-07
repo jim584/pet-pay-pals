@@ -1,4 +1,4 @@
-import { LayoutDashboard, LogOut, Users, Wallet, Stethoscope, Briefcase, Calendar, UserCog, Home, PawPrint, Shield, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, LogOut, Users, Wallet, Stethoscope, Briefcase, Calendar, UserCog, Home, PawPrint, Shield, ShieldCheck, FileText } from "lucide-react";
 import logoDark from "@/assets/logo-dark.png";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
@@ -34,6 +34,7 @@ const vetNav = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "My Profile", url: "/dashboard/vet-profile", icon: Stethoscope },
   { title: "Services", url: "/dashboard/vet-services", icon: Briefcase },
+  { title: "Incoming Tickets", url: "/dashboard/vet-tickets", icon: FileText },
   { title: "Community", url: "/dashboard/community", icon: Users },
   { title: "Wallet", url: "/dashboard/wallet", icon: Wallet },
   { title: "Profile", url: "/dashboard/profile", icon: UserCog },
