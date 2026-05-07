@@ -1,28 +1,23 @@
-## Goal
+## Problem
 
-On `/plans`, show pet owners which membership plan they are currently subscribed to, with a clear "Current plan" indicator and a way to manage the subscription.
+`/admin/reserve` shows "Failed to load reserve data — Could not find a relationship between member_reserve_consumptions and vet_tickets in the schema cache". The DB has no foreign keys defined (per the schema), so PostgREST cannot embed `vet_tickets` from `member_reserve_consumptions`.
 
-## Current State
+The offending query is in `src/lib/admin-api.ts → fetchAdminReserveConsumptions`:
 
-`fetchMyMembership(userId)` already exists in `src/lib/plans-api.ts` and returns the user's active/pending membership joined with its plan. It's used by `WalletView` but not by `PlansPage`. There's no visual cue on the Plans page.
+```ts
+.from("member_reserve_consumptions")
+.select("*, ticket:vet_tickets(owner_id)")
+```
 
-## Changes
+The sister helper `fetchMyReserveHistory` (`src/lib/reserve-history-api.ts`) already does it correctly with two separate queries.
 
-1. **`src/pages/PlansPage.tsx`**
-   - Import `fetchMyMembership`, `openCustomerPortal`, and `Membership`/`MembershipPlan` types.
-   - On mount (and when `user` changes), load the user's current membership into state.
-   - When membership exists, render a "Current subscription" banner above the plan grid showing: tier label, species, billing interval, status badge, monthly/annual price, next renewal (`current_period_end`), and a "Manage subscription" button that opens the Stripe customer portal via `openCustomerPortal()` + `openCheckoutUrl()`.
-   - Pre-select the species/billing interval to match the current membership when first loaded.
-   - Pass `currentPlanId` and `currentBillingInterval` into each `<PlanCard />`.
+## Fix
 
-2. **`src/components/plans/PlanCard.tsx`**
-   - Accept new optional props: `isCurrent: boolean`, `isCurrentInterval: boolean`.
-   - When `isCurrent && isCurrentInterval`, replace the Subscribe button with a disabled "Current plan" button and show a small "Active" badge in the header.
-   - When `isCurrent` but interval differs, change button label to "Switch billing".
-   - Add a subtle ring/border highlight to the active plan card.
+Update `fetchAdminReserveConsumptions` in `src/lib/admin-api.ts` to drop the embed and resolve `ticket → owner → profile` with two follow-up queries:
 
-3. **No DB or edge-function changes** — `fetchMyMembership` and `customer-portal` already exist.
+1. Select `*` from `member_reserve_consumptions` (no embed).
+2. Collect `ticket_id`s and fetch matching `vet_tickets(id, owner_id)`.
+3. Collect `owner_id`s and fetch matching `profiles(user_id, full_name)`.
+4. Map each row's `user_full_name` from the resolved owner profile.
 
-### Extra (small UX win)
-
-- If the user already has an active membership and clicks Subscribe on a different plan, the existing checkout flow handles it; no extra logic needed beyond the visual cue and portal link.
+No DB or RLS changes required.

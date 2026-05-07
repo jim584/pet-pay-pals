@@ -960,24 +960,33 @@ export async function fetchAdminReserveAccruals(search = ""): Promise<AdminReser
 export async function fetchAdminReserveConsumptions(): Promise<AdminReserveConsumptionRow[]> {
   const { data, error } = await supabase
     .from("member_reserve_consumptions")
-    .select("*, ticket:vet_tickets(owner_id)")
+    .select("*")
     .order("created_at", { ascending: false })
     .limit(200);
   if (error) throw error;
-  const userIds = Array.from(new Set((data ?? []).map((c: any) => c.ticket?.owner_id).filter(Boolean)));
+  const ticketIds = Array.from(new Set((data ?? []).map((c: any) => c.ticket_id).filter(Boolean)));
+  const ticketOwnerMap: Record<string, string | null> = {};
+  if (ticketIds.length > 0) {
+    const { data: tickets } = await supabase.from("vet_tickets").select("id, owner_id").in("id", ticketIds);
+    (tickets ?? []).forEach((t: any) => { ticketOwnerMap[t.id] = t.owner_id; });
+  }
+  const userIds = Array.from(new Set(Object.values(ticketOwnerMap).filter(Boolean) as string[]));
   const profileMap: Record<string, string | null> = {};
   if (userIds.length > 0) {
     const { data: profs } = await supabase.from("profiles").select("user_id, full_name").in("user_id", userIds);
     (profs ?? []).forEach((p: any) => { profileMap[p.user_id] = p.full_name; });
   }
-  return (data ?? []).map((c: any) => ({
-    id: c.id,
-    ticket_id: c.ticket_id,
-    accrual_id: c.accrual_id,
-    amount_consumed: Number(c.amount_consumed ?? 0),
-    released: c.released,
-    created_at: c.created_at,
-    user_full_name: profileMap[c.ticket?.owner_id] ?? null,
-  }));
+  return (data ?? []).map((c: any) => {
+    const ownerId = c.ticket_id ? ticketOwnerMap[c.ticket_id] : null;
+    return {
+      id: c.id,
+      ticket_id: c.ticket_id,
+      accrual_id: c.accrual_id,
+      amount_consumed: Number(c.amount_consumed ?? 0),
+      released: c.released,
+      created_at: c.created_at,
+      user_full_name: ownerId ? (profileMap[ownerId] ?? null) : null,
+    };
+  });
 }
 
