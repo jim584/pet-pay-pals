@@ -327,6 +327,7 @@ export default function AdminPaymentsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-8"></TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>User</TableHead>
                     <TableHead>Kind</TableHead>
