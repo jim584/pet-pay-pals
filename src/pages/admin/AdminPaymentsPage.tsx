@@ -15,8 +15,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { triggerStripeBackfill } from "@/lib/admin-api";
 import {
   CreditCard, DollarSign, RefreshCw, ExternalLink, Loader2, FileText, TrendingUp,
+  ChevronDown, ChevronRight,
 } from "lucide-react";
 
+type Installment = {
+  id: string; obligation_id: string; amount: number; paid_at: string;
+  method: string; external_ref: string | null; notes: string | null;
+};
+type Obligation = {
+  id: string; ticket_id: string | null; provider: string;
+  original_amount: number; outstanding_amount: number; status: string;
+  external_ref: string | null; created_at: string;
+};
 type PaymentRow = {
   id: string;
   user_id: string;
@@ -31,7 +41,12 @@ type PaymentRow = {
   stripe_invoice_id: string | null;
   stripe_payment_intent_id: string | null;
   stripe_charge_id: string | null;
+  vet_ticket_id: string | null;
+  bnpl_obligation_id: string | null;
   user_full_name?: string | null;
+  obligation?: Obligation | null;
+  installments?: Installment[];
+  ticket_clinic_name?: string | null;
 };
 
 const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
