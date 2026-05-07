@@ -18,12 +18,15 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   Loader2, Search, DollarSign, CreditCard, AlertCircle, CheckCircle2, Pencil, History, Trash2,
+  CalendarDays, RefreshCw, PlayCircle,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import {
   fetchAdminBnpl, fetchAdminBnplStats, updateAdminBnpl,
   recordBnplPayment, fetchBnplPayments, deleteBnplPayment,
+  fetchAdminBnplInstallments, regenerateBnplInstallments, runProcessBnplOverdue,
   type AdminBnplRow, type BnplFilter, type BnplStatus, type BnplStats, type BnplPaymentRow,
+  type AdminBnplInstallment,
 } from "@/lib/admin-api";
 
 const FILTERS: { value: BnplFilter; label: string }[] = [
