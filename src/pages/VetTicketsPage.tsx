@@ -410,6 +410,50 @@ function TicketCard({ ticket, onChanged }: { ticket: VetTicket; onChanged: () =>
           </div>
         )}
 
+        {/* Reserve opt-in toggle (pending/under-review only) */}
+        {["submitted", "under_review"].includes(ticket.status) && b && (
+          <div className="rounded-md border p-3 space-y-2">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-2">
+                <ShieldCheck className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+                <div>
+                  <p className="text-sm font-medium">Use my Reserve as a fallback</p>
+                  <p className="text-xs text-muted-foreground">
+                    Reserve is a limited safety net. It's only used <strong>after</strong> Direct Pay and BNPL
+                    can't cover the full amount.
+                  </p>
+                </div>
+              </div>
+              <Switch
+                checked={useReserve}
+                disabled={previewing || !b.reserve_eligible || Number(b.reserve_available ?? 0) <= 0}
+                onCheckedChange={togglePreviewReserve}
+              />
+            </div>
+            <div className="flex flex-wrap gap-2 text-xs">
+              <Badge variant="outline">Available: {fmt(b.reserve_available ?? 0)}</Badge>
+              {b.reserve_eligible
+                ? <Badge variant="secondary">Eligible</Badge>
+                : <Badge variant="outline" className="text-muted-foreground">Not yet eligible</Badge>}
+              {useReserve && Number(b.reserve_use) > 0 && (
+                <Badge>Will use {fmt(b.reserve_use)}</Badge>
+              )}
+            </div>
+            {b.reserve_blocked_reason && (
+              <p className="text-xs text-muted-foreground flex items-start gap-1">
+                <Info className="h-3 w-3 mt-0.5" /> {b.reserve_blocked_reason}
+              </p>
+            )}
+            {!b.reserve_eligible && !b.reserve_blocked_reason && (
+              <p className="text-xs text-muted-foreground flex items-start gap-1">
+                <Info className="h-3 w-3 mt-0.5" />
+                Reserve unlocks after 12 consecutive months of paid membership.
+              </p>
+            )}
+          </div>
+        )}
+
+
         {ticket.status === "rejected" && ticket.rejection_reason && (
           <p className="text-sm text-destructive">Reason: {ticket.rejection_reason}</p>
         )}
