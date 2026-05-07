@@ -264,43 +264,111 @@ export type Database = {
           },
         ]
       }
+      bnpl_installments: {
+        Row: {
+          amount: number
+          created_at: string
+          due_date: string
+          id: string
+          last_reminded_at: string | null
+          obligation_id: string
+          paid_amount: number
+          paid_at: string | null
+          reminder_stage: string | null
+          seq: number
+          status: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          due_date: string
+          id?: string
+          last_reminded_at?: string | null
+          obligation_id: string
+          paid_amount?: number
+          paid_at?: string | null
+          reminder_stage?: string | null
+          seq: number
+          status?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          due_date?: string
+          id?: string
+          last_reminded_at?: string | null
+          obligation_id?: string
+          paid_amount?: number
+          paid_at?: string | null
+          reminder_stage?: string | null
+          seq?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bnpl_installments_obligation_id_fkey"
+            columns: ["obligation_id"]
+            isOneToOne: false
+            referencedRelation: "bnpl_obligations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bnpl_obligations: {
         Row: {
           created_at: string
+          default_at: string | null
           external_ref: string | null
           id: string
+          installment_count: number
+          installment_interval_days: number
+          last_payment_attempt_at: string | null
+          next_due_date: string | null
           original_amount: number
           outstanding_amount: number
           owner_id: string
           pet_id: string
           provider: string
           status: Database["public"]["Enums"]["bnpl_obligation_status"]
+          stripe_payment_intent_id: string | null
           ticket_id: string
           updated_at: string
         }
         Insert: {
           created_at?: string
+          default_at?: string | null
           external_ref?: string | null
           id?: string
+          installment_count?: number
+          installment_interval_days?: number
+          last_payment_attempt_at?: string | null
+          next_due_date?: string | null
           original_amount: number
           outstanding_amount: number
           owner_id: string
           pet_id: string
           provider?: string
           status?: Database["public"]["Enums"]["bnpl_obligation_status"]
+          stripe_payment_intent_id?: string | null
           ticket_id: string
           updated_at?: string
         }
         Update: {
           created_at?: string
+          default_at?: string | null
           external_ref?: string | null
           id?: string
+          installment_count?: number
+          installment_interval_days?: number
+          last_payment_attempt_at?: string | null
+          next_due_date?: string | null
           original_amount?: number
           outstanding_amount?: number
           owner_id?: string
           pet_id?: string
           provider?: string
           status?: Database["public"]["Enums"]["bnpl_obligation_status"]
+          stripe_payment_intent_id?: string | null
           ticket_id?: string
           updated_at?: string
         }
@@ -658,12 +726,16 @@ export type Database = {
         Row: {
           admin_portion: number
           annual_price: number
+          bnpl_default_installments: number
+          bnpl_default_interval_days: number
+          bnpl_multiplier: number
           created_at: string
           direct_pay_portion: number
           dp_window_months: number | null
           fear_free_member_charge: number
           id: string
           is_active: boolean
+          max_concurrent_obligations: number
           max_dp_amount: number | null
           membership_fee: number
           plan_cap: number | null
@@ -681,12 +753,16 @@ export type Database = {
         Insert: {
           admin_portion: number
           annual_price: number
+          bnpl_default_installments?: number
+          bnpl_default_interval_days?: number
+          bnpl_multiplier?: number
           created_at?: string
           direct_pay_portion: number
           dp_window_months?: number | null
           fear_free_member_charge: number
           id?: string
           is_active?: boolean
+          max_concurrent_obligations?: number
           max_dp_amount?: number | null
           membership_fee: number
           plan_cap?: number | null
@@ -704,12 +780,16 @@ export type Database = {
         Update: {
           admin_portion?: number
           annual_price?: number
+          bnpl_default_installments?: number
+          bnpl_default_interval_days?: number
+          bnpl_multiplier?: number
           created_at?: string
           direct_pay_portion?: number
           dp_window_months?: number | null
           fear_free_member_charge?: number
           id?: string
           is_active?: boolean
+          max_concurrent_obligations?: number
           max_dp_amount?: number | null
           membership_fee?: number
           plan_cap?: number | null
@@ -2060,6 +2140,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      allocate_bnpl_payment_to_installments: {
+        Args: { _obligation_id: string }
+        Returns: undefined
+      }
       can_access_vet_ticket: {
         Args: { _ticket_id: string; _user_id: string }
         Returns: boolean
@@ -2074,6 +2158,10 @@ export type Database = {
         Returns: number
       }
       gen_referral_code: { Args: never; Returns: string }
+      generate_bnpl_installments: {
+        Args: { _obligation_id: string }
+        Returns: undefined
+      }
       get_plan_year_window: {
         Args: { _membership_id: string }
         Returns: {
@@ -2095,6 +2183,10 @@ export type Database = {
       is_vet_profile_owner: {
         Args: { _user_id: string; _vet_profile_id: string }
         Returns: boolean
+      }
+      mark_obligation_default: {
+        Args: { _obligation_id: string }
+        Returns: undefined
       }
       mark_ticket_settled: {
         Args: {
