@@ -20,7 +20,7 @@ export default function Auth() {
   const [fullName, setFullName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [referrerName, setReferrerName] = useState<string | null>(null);
-  const { signIn, signUp, user, role, loading } = useAuth();
+  const { signIn, signUp, user, role, loading, roleLoading } = useAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
 
@@ -36,7 +36,7 @@ export default function Auth() {
     });
   }, [params]);
 
-  const { signIn, signUp, user, role, loading, roleLoading } = useAuth();
+  
   useEffect(() => {
     if (loading || !user || roleLoading) return;
     const code = localStorage.getItem(REF_KEY);
