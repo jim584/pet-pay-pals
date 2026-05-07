@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { fetchWallet, fetchTransactions, Wallet, WalletTransaction } from "@/lib/community-api";
 import { fetchMyMembership, fetchMyDpSummary, openCustomerPortal, fetchPaymentHistory, fetchMyReserveSummary, PaymentHistoryRow, ReserveSummary } from "@/lib/plans-api";
 import { toast } from "@/hooks/use-toast";
+import { openCheckoutUrl } from "@/lib/open-checkout";
 
 export function WalletView() {
   const { user } = useAuth();
