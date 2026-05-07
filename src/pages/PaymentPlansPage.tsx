@@ -189,6 +189,19 @@ export default function PaymentPlansPage() {
                 installments charge automatically.
               </p>
             </div>
+            <ol className="text-sm text-left max-w-md mx-auto space-y-2 pt-2">
+              {[
+                'Click "Set up autopay" to securely save a card via Stripe.',
+                "After a vet visit, any uncovered balance is split into interest-free installments.",
+                "Each installment is charged automatically and appears here under Open.",
+                "Paid installments move to Closed; you can pay early or toggle autopay anytime.",
+              ].map((step, i) => (
+                <li key={i} className="flex items-start gap-2">
+                  <CheckCircle2 className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+                  <span className="text-muted-foreground">{step}</span>
+                </li>
+              ))}
+            </ol>
             <Button onClick={triggerAutopaySetup} className="mt-2">
               <CreditCard className="h-4 w-4 mr-2" />
               Set up autopay
