@@ -150,8 +150,12 @@ export default function AdminReferralsPage() {
     if (!v) return;
     const n = parseFloat(v);
     if (!n || n <= 0) return;
-    try { await recordMilestoneContribution(mid, n, "manual"); toast.success("Recorded"); await load(); }
-    catch (e: any) { toast.error(e.message); }
+    try {
+      await recordMilestoneContribution(mid, n, "manual");
+      toast.success("Recorded");
+      await load();
+      if (expandedMs[mid]) await refreshContribs(mid);
+    } catch (e: any) { toast.error(e.message); }
   };
 
   const saveSettings = async () => {
