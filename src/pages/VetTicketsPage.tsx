@@ -15,9 +15,10 @@ import {
 } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import {
-  listMyTickets, submitVetTicket, uploadTicketFile, startMemberRemainderCheckout,
+  listMyTickets, listTicketsForVet, submitVetTicket, uploadTicketFile, startMemberRemainderCheckout,
   getTicketFileSignedUrl, type VetTicket,
 } from "@/lib/vet-tickets-api";
+import { fetchVetProfile } from "@/lib/vet-api";
 import { Loader2, Plus, FileText, ExternalLink } from "lucide-react";
 
 const STATUS_VARIANT: Record<string, string> = {
@@ -31,6 +32,12 @@ function fmt(n: number | null | undefined) {
 }
 
 export default function VetTicketsPage() {
+  const { user, role } = useAuth();
+  if (role === "vet") return <VetIncomingTickets />;
+  return <OwnerVetTicketsView />;
+}
+
+function OwnerVetTicketsView() {
   const { user } = useAuth();
   const [tickets, setTickets] = useState<VetTicket[]>([]);
   const [pets, setPets] = useState<{ id: string; name: string }[]>([]);
@@ -76,6 +83,106 @@ export default function VetTicketsPage() {
         <div className="grid gap-4">
           {tickets.map((t) => (
             <TicketCard key={t.id} ticket={t} onChanged={load} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+type IncomingRow = VetTicket & { pet_name?: string; owner_name?: string };
+
+function VetIncomingTickets() {
+  const { user } = useAuth();
+  const [tickets, setTickets] = useState<IncomingRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      if (!user) return;
+      setLoading(true);
+      try {
+        const profile = await fetchVetProfile(user.id);
+        if (!profile) { setTickets([]); return; }
+        const tix = await listTicketsForVet(profile.id);
+        const petIds = Array.from(new Set(tix.map((t) => t.pet_id).filter(Boolean)));
+        const ownerIds = Array.from(new Set(tix.map((t) => t.owner_id).filter(Boolean)));
+        const [petsRes, profsRes] = await Promise.all([
+          petIds.length
+            ? supabase.from("pets").select("id, name").in("id", petIds)
+            : Promise.resolve({ data: [] } as any),
+          ownerIds.length
+            ? supabase.from("profiles").select("user_id, full_name").in("user_id", ownerIds)
+            : Promise.resolve({ data: [] } as any),
+        ]);
+        const petMap = new Map((petsRes.data ?? []).map((p: any) => [p.id, p.name]));
+        const profMap = new Map((profsRes.data ?? []).map((p: any) => [p.user_id, p.full_name]));
+        setTickets(tix.map((t) => ({
+          ...t,
+          pet_name: petMap.get(t.pet_id) as string | undefined,
+          owner_name: profMap.get(t.owner_id) as string | undefined,
+        })));
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [user?.id]);
+
+  const openFile = async (path: string) => {
+    try {
+      const url = await getTicketFileSignedUrl(path);
+      window.open(url, "_blank");
+    } catch (e: any) {
+      toast({ title: "Couldn't open file", description: e.message, variant: "destructive" });
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">Incoming Tickets</h1>
+        <p className="text-sm text-muted-foreground">
+          Tickets submitted by pet owners and assigned to your clinic. Read-only — only pet owners can create tickets.
+        </p>
+      </div>
+
+      {loading ? (
+        <div className="text-muted-foreground animate-pulse">Loading…</div>
+      ) : tickets.length === 0 ? (
+        <Card><CardContent className="py-12 text-center text-muted-foreground">
+          No incoming tickets yet. When a pet owner submits a ticket and selects your clinic, it will appear here.
+        </CardContent></Card>
+      ) : (
+        <div className="grid gap-4">
+          {tickets.map((t) => (
+            <Card key={t.id}>
+              <CardHeader>
+                <div className="flex items-start justify-between gap-2">
+                  <CardTitle className="text-base">
+                    {t.pet_name ?? "Pet"} — {fmt(t.estimate_amount)}
+                  </CardTitle>
+                  <Badge variant={STATUS_VARIANT[t.status] as any}>{t.status.replace("_", " ")}</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Owner: {t.owner_name ?? "—"} · Submitted {new Date(t.created_at).toLocaleString()}
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                {t.notes && <p className="text-muted-foreground">{t.notes}</p>}
+                <div className="flex flex-wrap gap-3">
+                  {t.estimate_url && (
+                    <Button variant="outline" size="sm" onClick={() => openFile(t.estimate_url!)}>
+                      <FileText className="h-4 w-4 mr-1" /> Estimate
+                    </Button>
+                  )}
+                  {t.attestation_url && (
+                    <Button variant="outline" size="sm" onClick={() => openFile(t.attestation_url!)}>
+                      <FileText className="h-4 w-4 mr-1" /> Attestation
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
       )}

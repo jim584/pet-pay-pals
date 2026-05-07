@@ -37,6 +37,14 @@ Deno.serve(async (req) => {
 
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
+    // Defense in depth: only pet owners may submit tickets.
+    const { data: roles } = await admin.from("user_roles").select("role").eq("user_id", userId);
+    const roleSet = new Set((roles ?? []).map((r: any) => r.role));
+    if (!roleSet.has("pet_owner") && (roleSet.has("vet") || roleSet.has("admin"))) {
+      return new Response(JSON.stringify({ error: "Only pet owners can submit vet tickets" }),
+        { status: 403, headers: corsHeaders });
+    }
+
     // Verify pet ownership
     const { data: pet } = await admin.from("pets").select("id, owner_id").eq("id", pet_id).maybeSingle();
     if (!pet || pet.owner_id !== userId) {
