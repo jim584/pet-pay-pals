@@ -15,8 +15,11 @@ import {
 } from "lucide-react";
 import {
   fetchReserveKpis, fetchAdminAccruals, fetchAdminDpExpiryLedger, runDpExpiryJob,
+  fetchAdminReserveAccruals, fetchAdminReserveConsumptions,
   type ReserveKpis, type AdminAccrualRow, type AdminDpLedgerRow,
+  type AdminReserveAccrualRow, type AdminReserveConsumptionRow,
 } from "@/lib/admin-api";
+import { Input } from "@/components/ui/input";
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(Number(n ?? 0));
