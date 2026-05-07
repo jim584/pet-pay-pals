@@ -11,11 +11,14 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Check, Loader2, Mail, MapPin, Phone, Globe, Trash2, FileCheck } from "lucide-react";
+import { ArrowLeft, Check, Loader2, Mail, MapPin, Phone, Globe, Trash2, FileCheck, ShieldCheck, FileText, ExternalLink } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import {
   fetchAdminVetDetail,
   setVetApproval,
+  setVetLicenseVerified,
+  setVetFearFreeVerified,
+  getVetCredentialSignedUrl,
   fetchAdminVetServices,
   setVetServiceActive,
   deleteVetService,
