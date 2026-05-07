@@ -342,6 +342,68 @@ export default function AdminReferralsPage() {
           </CardContent></Card>
         </TabsContent>
 
+        <TabsContent value="milestones" className="space-y-3">
+          <div className="flex justify-end">
+            <Dialog open={openMilestone} onOpenChange={setOpenMilestone}>
+              <DialogTrigger asChild>
+                <Button size="sm" disabled={referrers.filter(r => r.type === "shelter").length === 0}>
+                  <Plus className="h-4 w-4 mr-2" /> New milestone
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-h-[85vh] overflow-y-auto">
+                <DialogHeader><DialogTitle>Create shelter milestone</DialogTitle></DialogHeader>
+                <div className="space-y-3">
+                  <div><Label>Shelter</Label>
+                    <Select value={newMs.referrer_id} onValueChange={v => setNewMs({ ...newMs, referrer_id: v })}>
+                      <SelectTrigger><SelectValue placeholder="Select shelter" /></SelectTrigger>
+                      <SelectContent>
+                        {referrers.filter(r => r.type === "shelter").map(r => (
+                          <SelectItem key={r.id} value={r.id}>{r.display_name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div><Label>Pet name</Label>
+                    <Input value={newMs.pet_name} onChange={e => setNewMs({ ...newMs, pet_name: e.target.value })} /></div>
+                  <div><Label>Goal amount ($)</Label>
+                    <Input type="number" value={newMs.goal_amount || ""} onChange={e => setNewMs({ ...newMs, goal_amount: parseFloat(e.target.value) || 0 })} /></div>
+                  <div><Label>Payout amount ($)</Label>
+                    <Input type="number" value={newMs.payout_amount || ""} onChange={e => setNewMs({ ...newMs, payout_amount: parseFloat(e.target.value) || 0 })} /></div>
+                </div>
+                <DialogFooter><Button onClick={handleCreateMilestone} disabled={busy}>Create</Button></DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+          <Card><CardContent className="p-0">
+            <Table>
+              <TableHeader><TableRow>
+                <TableHead>Pet</TableHead><TableHead>Shelter</TableHead>
+                <TableHead className="text-right">Goal</TableHead><TableHead className="text-right">Raised</TableHead>
+                <TableHead className="text-right">Payout</TableHead><TableHead>Status</TableHead><TableHead></TableHead>
+              </TableRow></TableHeader>
+              <TableBody>
+                {milestones.map(m => {
+                  const ref = referrers.find(r => r.id === m.referrer_id);
+                  return (
+                    <TableRow key={m.id}>
+                      <TableCell>{m.pet_name}</TableCell>
+                      <TableCell>{ref?.display_name ?? "—"}</TableCell>
+                      <TableCell className="text-right font-mono">{fmt(m.goal_amount)}</TableCell>
+                      <TableCell className="text-right font-mono">{fmt(m.raised_amount)}</TableCell>
+                      <TableCell className="text-right font-mono">{fmt(m.payout_amount)}</TableCell>
+                      <TableCell><Badge variant={m.status === "completed" ? "default" : "outline"}>{m.status}</Badge></TableCell>
+                      <TableCell className="text-right">
+                        {m.status === "open" && <Button size="sm" variant="ghost" onClick={() => handleAddContribution(m.id)}>+ Contribution</Button>}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                {milestones.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No milestones yet.</TableCell></TableRow>}
+              </TableBody>
+            </Table>
+          </CardContent></Card>
+        </TabsContent>
+
         <TabsContent value="settings">
           <Card>
             <CardHeader><CardTitle className="text-base">Program settings</CardTitle></CardHeader>
@@ -367,6 +429,17 @@ export default function AdminReferralsPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={!!qrFor} onOpenChange={(o) => !o && setQrFor(null)}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Referral QR — {qrFor?.display_name}</DialogTitle></DialogHeader>
+          {qrFor && (
+            <div className="flex justify-center">
+              <QRCodeCard value={`${window.location.origin}/auth?ref=${qrFor.code}`} label={`${window.location.origin}/auth?ref=${qrFor.code}`} />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
