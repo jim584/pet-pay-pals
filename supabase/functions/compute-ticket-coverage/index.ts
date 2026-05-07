@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
     }
     const userId = userData.user.id;
 
-    const { ticket_id } = await req.json();
+    const { ticket_id, use_reserve = false } = await req.json();
     if (!ticket_id) {
       return new Response(JSON.stringify({ error: "ticket_id required" }), { status: 400, headers: corsHeaders });
     }
