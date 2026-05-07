@@ -14,8 +14,11 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { triggerStripeBackfill } from "@/lib/admin-api";
 import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   CreditCard, DollarSign, RefreshCw, ExternalLink, Loader2, FileText, TrendingUp,
-  ChevronDown, ChevronRight,
+  ChevronDown, ChevronRight, Info,
 } from "lucide-react";
 
 type Installment = {
