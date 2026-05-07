@@ -70,8 +70,15 @@ Deno.serve(async (req) => {
         // Vet ticket member-remainder payment
         if (md.kind === "vet_ticket_remainder" && md.vet_ticket_id) {
           const ticketId = md.vet_ticket_id;
+          const pi = typeof s.payment_intent === "string" ? s.payment_intent : s.payment_intent?.id ?? null;
+          // Idempotency
+          if (pi) {
+            const { data: dup } = await admin.from("payment_history")
+              .select("id").eq("stripe_payment_intent_id", pi).maybeSingle();
+            if (dup) break;
+          }
           const { data: t } = await admin.from("vet_tickets")
-            .select("approved_amount, status").eq("id", ticketId).maybeSingle();
+            .select("approved_amount, status, owner_id, clinic_name").eq("id", ticketId).maybeSingle();
           if (t && t.status === "approved") {
             await admin.from("vet_tickets").update({
               status: "funded", member_remainder_paid: true,
@@ -82,11 +89,29 @@ Deno.serve(async (req) => {
                 method: "manual_ach", status: "pending",
               });
             }
+            // Lookup any BNPL obligation for this ticket
+            const { data: ob } = await admin.from("bnpl_obligations")
+              .select("id").eq("ticket_id", ticketId).maybeSingle();
+
+            await admin.from("payment_history").insert({
+              user_id: t.owner_id,
+              kind: "member_remainder",
+              status: "paid",
+              amount: (s.amount_total ?? 0) / 100,
+              currency: s.currency || "usd",
+              description: `Vet bill member remainder — ${t.clinic_name ?? ""}`.trim(),
+              stripe_payment_intent_id: pi,
+              vet_ticket_id: ticketId,
+              bnpl_obligation_id: ob?.id ?? null,
+              occurred_at: new Date().toISOString(),
+            });
+
             // Auto-issue card
             await invokeIssueCard(ticketId);
           }
           break;
         }
+
 
         const subId = typeof s.subscription === "string" ? s.subscription : s.subscription?.id;
         if (!md.user_id || !md.plan_id || !subId) break;
