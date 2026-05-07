@@ -355,7 +355,7 @@ function SponsorDialog({ pet, userId, onClose }: { pet: SponsorshipPet; userId?:
         donor_email: donorEmail || undefined,
         message: message || undefined,
       });
-      window.location.href = url;
+      openCheckoutUrl(url);
     } catch (e: any) {
       toast({ title: "Couldn't start checkout", description: e.message, variant: "destructive" });
     } finally {
