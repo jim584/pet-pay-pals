@@ -102,9 +102,37 @@ Deno.serve(async (req) => {
     const bnplOutstanding = (bnplRows ?? []).reduce((s: number, r: any) => s + Number(r.outstanding_amount), 0);
     const concurrentObligations = (bnplRows ?? []).length;
 
-    // Plan-driven BNPL capacity
+    // Repayment history (across all pets for this owner)
+    const { count: priorDefaults } = await admin
+      .from("bnpl_obligations")
+      .select("id", { count: "exact", head: true })
+      .eq("owner_id", ticket.owner_id)
+      .eq("status", "defaulted");
+    const sinceISO = new Date(Date.now() - 180 * 86400000).toISOString().slice(0, 10);
+    const { data: ownerObligations } = await admin
+      .from("bnpl_obligations").select("id").eq("owner_id", ticket.owner_id);
+    const ownerObIds = (ownerObligations ?? []).map((r: any) => r.id);
+    let recentMissed = 0;
+    if (ownerObIds.length) {
+      const { count: missedCount } = await admin
+        .from("bnpl_installments")
+        .select("id", { count: "exact", head: true })
+        .in("obligation_id", ownerObIds)
+        .eq("status", "missed")
+        .gte("due_date", sinceISO);
+      recentMissed = missedCount ?? 0;
+    }
+
+    // Plan-driven BNPL capacity, with history penalty
     const bnplMultiplier = Number((plan as any)?.bnpl_multiplier ?? 0.5);
     const maxConcurrent = Number((plan as any)?.max_concurrent_obligations ?? 3);
+    const defaultPenalty = Number((plan as any)?.bnpl_default_penalty ?? 0.25);
+    const minMultiplier = Number((plan as any)?.bnpl_min_multiplier ?? 0);
+    const penalty = Math.min(
+      defaultPenalty * ((priorDefaults ?? 0) + 0.5 * recentMissed),
+      bnplMultiplier,
+    );
+    const effectiveMultiplier = Math.max(minMultiplier, bnplMultiplier - penalty);
 
     // Allocation
     const cap = yearCapRemaining ?? estimate;
@@ -114,8 +142,13 @@ Deno.serve(async (req) => {
     let remainingAfterDp = Math.max(0, eligibleTotal - dpUse);
 
     let bnplCapacity = 0;
-    if (concurrentObligations < maxConcurrent) {
-      bnplCapacity = Math.max(0, eligibleTotal * bnplMultiplier - bnplOutstanding);
+    let bnplBlockedReason: string | null = null;
+    if (concurrentObligations >= maxConcurrent) {
+      bnplBlockedReason = "max_concurrent_reached";
+    } else if (effectiveMultiplier <= 0 && (priorDefaults ?? 0) > 0) {
+      bnplBlockedReason = "prior_default";
+    } else {
+      bnplCapacity = Math.max(0, eligibleTotal * effectiveMultiplier - bnplOutstanding);
     }
     const bnplUse = Math.min(remainingAfterDp, bnplCapacity);
     remainingAfterDp -= bnplUse;
@@ -129,6 +162,11 @@ Deno.serve(async (req) => {
       estimate, plan_tier: tier, plan_year_cap: planCap, plan_year_cap_remaining: yearCapRemaining,
       dp_window_months: dpWindow, dp_available: dpAvailable, dp_use: round2(dpUse),
       bnpl_capacity: round2(bnplCapacity), bnpl_use: round2(bnplUse), bnpl_existing_outstanding: round2(bnplOutstanding),
+      bnpl_effective_multiplier: round2(effectiveMultiplier),
+      bnpl_base_multiplier: bnplMultiplier,
+      bnpl_prior_defaults: priorDefaults ?? 0,
+      bnpl_recent_missed: recentMissed,
+      bnpl_blocked_reason: bnplBlockedReason,
       reserve_use: reserveUse, member_remainder: round2(memberRemainder),
       computed_at: new Date().toISOString(),
     };
