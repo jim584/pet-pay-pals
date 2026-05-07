@@ -75,6 +75,9 @@ Deno.serve(async (req) => {
   let missedCount = 0;
   let defaultedCount = 0;
   let remindersSent = 0;
+  let autoAttempted = 0;
+  let autoSucceeded = 0;
+  let autoFailed = 0;
 
   try {
     const today = new Date();
@@ -90,7 +93,24 @@ Deno.serve(async (req) => {
       .select("id");
     dueCount = dueRes.data?.length ?? 0;
 
-    // 2. due past grace → missed
+    // 1b. Attempt autopay for any due installment with autopay enabled and a saved card
+    const { data: dueForAutopay } = await admin
+      .from("bnpl_installments")
+      .select("id, obligation_id, auto_charge_attempts, bnpl_obligations!inner(auto_pay_enabled, owner_id, status)")
+      .eq("status", "due")
+      .lte("due_date", todayISO)
+      .lt("auto_charge_attempts", 3);
+    const eligibleAutopay = (dueForAutopay ?? []).filter((r: any) =>
+      r.bnpl_obligations?.auto_pay_enabled
+      && ["pending", "active"].includes(r.bnpl_obligations?.status));
+    for (const row of eligibleAutopay) {
+      autoAttempted++;
+      const r = await attemptAutoCharge(row.id);
+      if (r.ok) autoSucceeded++;
+      else if (!r.skipped) autoFailed++;
+    }
+
+    // 2. due past grace → missed (re-run after autopay so paid ones are excluded)
     const missedRes = await admin.from("bnpl_installments")
       .update({ status: "missed" })
       .eq("status", "due")
@@ -124,10 +144,10 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 4. Reminders
+    // 4. Reminders (skip already-paid; autopay may have cleared some)
     const fetchToRemind = async (filter: (q: any) => any, stage: string) => {
-      const { data } = await filter(admin.from("bnpl_installments").select("id, last_reminded_at, reminder_stage"));
-      return (data ?? []).filter((r: any) => r.reminder_stage !== stage);
+      const { data } = await filter(admin.from("bnpl_installments").select("id, last_reminded_at, reminder_stage, status"));
+      return (data ?? []).filter((r: any) => r.reminder_stage !== stage && r.status !== "paid");
     };
 
     const upcoming = await fetchToRemind(
@@ -152,6 +172,9 @@ Deno.serve(async (req) => {
         installments_marked_missed: missedCount,
         obligations_defaulted: defaultedCount,
         reminders_sent: remindersSent,
+        auto_charges_attempted: autoAttempted,
+        auto_charges_succeeded: autoSucceeded,
+        auto_charges_failed: autoFailed,
       }).eq("id", runId);
     }
 
@@ -162,6 +185,9 @@ Deno.serve(async (req) => {
       installments_marked_missed: missedCount,
       obligations_defaulted: defaultedCount,
       reminders_sent: remindersSent,
+      auto_charges_attempted: autoAttempted,
+      auto_charges_succeeded: autoSucceeded,
+      auto_charges_failed: autoFailed,
     }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     const msg = (e as Error).message ?? String(e);
@@ -174,6 +200,9 @@ Deno.serve(async (req) => {
         installments_marked_missed: missedCount,
         obligations_defaulted: defaultedCount,
         reminders_sent: remindersSent,
+        auto_charges_attempted: autoAttempted,
+        auto_charges_succeeded: autoSucceeded,
+        auto_charges_failed: autoFailed,
         error_message: msg,
       }).eq("id", runId);
     }
