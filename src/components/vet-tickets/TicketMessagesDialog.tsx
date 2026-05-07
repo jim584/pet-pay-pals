@@ -178,12 +178,45 @@ export function TicketMessagesDialog({
             placeholder="Write a message… (Cmd/Ctrl+Enter to send)"
             rows={3}
           />
-          <div className="flex justify-end">
-            <Button onClick={send} disabled={sending || !draft.trim()}>
+          {pending.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {pending.map((f, i) => (
+                <span key={`${f.name}-${i}`} className="inline-flex items-center gap-1 text-xs bg-muted rounded px-2 py-1">
+                  <FileText className="h-3 w-3" />
+                  <span className="truncate max-w-[160px]">{f.name}</span>
+                  <span className="text-muted-foreground">({formatSize(f.size)})</span>
+                  <button
+                    type="button"
+                    onClick={() => setPending((prev) => prev.filter((_, idx) => idx !== i))}
+                    className="ml-1 hover:text-destructive"
+                    aria-label="Remove"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="flex items-center justify-between gap-2">
+            <input
+              ref={fileRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                const files = Array.from(e.target.files ?? []);
+                setPending((prev) => [...prev, ...files]);
+              }}
+            />
+            <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()} disabled={sending}>
+              <Paperclip className="h-4 w-4 mr-1" /> Attach
+            </Button>
+            <Button onClick={send} disabled={sending || (!draft.trim() && pending.length === 0)}>
               {sending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Send className="h-4 w-4 mr-1" />}
               Send
             </Button>
           </div>
+          <p className="text-[10px] text-muted-foreground">Max 20MB per file. PDFs and images recommended.</p>
         </div>
       </DialogContent>
     </Dialog>
