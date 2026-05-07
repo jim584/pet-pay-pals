@@ -142,6 +142,43 @@ Deno.serve(async (req) => {
           break;
         }
 
+        // BNPL installment / full balance payment
+        if (md.kind === "bnpl_payment" && md.obligation_id) {
+          const obligationId = md.obligation_id as string;
+          const installmentId = (md.installment_id as string) || null;
+          const pi = typeof s.payment_intent === "string" ? s.payment_intent : s.payment_intent?.id ?? null;
+          if (pi) {
+            const { data: dup } = await admin.from("payment_history")
+              .select("id").eq("stripe_payment_intent_id", pi).maybeSingle();
+            if (dup) break;
+          }
+          const { data: ob } = await admin.from("bnpl_obligations")
+            .select("id, owner_id").eq("id", obligationId).maybeSingle();
+          if (!ob) break;
+          const amountUsd = (s.amount_total ?? 0) / 100;
+          // Insert payment (trigger updates outstanding & installments)
+          await admin.from("bnpl_payments").insert({
+            obligation_id: obligationId,
+            amount: amountUsd,
+            method: "stripe",
+            external_ref: pi,
+            notes: installmentId ? `installment ${installmentId}` : "full balance",
+            recorded_by: ob.owner_id,
+          });
+          await admin.from("payment_history").insert({
+            user_id: ob.owner_id,
+            kind: "bnpl_payment",
+            status: "paid",
+            amount: amountUsd,
+            currency: s.currency || "usd",
+            description: "Payment plan installment",
+            stripe_payment_intent_id: pi,
+            bnpl_obligation_id: obligationId,
+            occurred_at: new Date().toISOString(),
+          });
+          break;
+        }
+
 
         const subId = typeof s.subscription === "string" ? s.subscription : s.subscription?.id;
         if (!md.user_id || !md.plan_id || !subId) break;

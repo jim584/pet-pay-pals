@@ -95,11 +95,16 @@ Deno.serve(async (req) => {
       .order("accrual_month", { ascending: true });
     const dpAvailable = (accruals ?? []).reduce((s: number, r: any) => s + Number(r.remaining_amount), 0);
 
-    // Existing BNPL outstanding (reduces capacity)
+    // Existing BNPL outstanding for this pet (reduces capacity)
     const { data: bnplRows } = await admin
-      .from("bnpl_obligations").select("outstanding_amount")
+      .from("bnpl_obligations").select("outstanding_amount, status")
       .eq("pet_id", ticket.pet_id).in("status", ["pending","active"]);
     const bnplOutstanding = (bnplRows ?? []).reduce((s: number, r: any) => s + Number(r.outstanding_amount), 0);
+    const concurrentObligations = (bnplRows ?? []).length;
+
+    // Plan-driven BNPL capacity
+    const bnplMultiplier = Number((plan as any)?.bnpl_multiplier ?? 0.5);
+    const maxConcurrent = Number((plan as any)?.max_concurrent_obligations ?? 3);
 
     // Allocation
     const cap = yearCapRemaining ?? estimate;
@@ -108,8 +113,10 @@ Deno.serve(async (req) => {
     const dpUse = Math.min(dpAvailable, eligibleTotal);
     let remainingAfterDp = Math.max(0, eligibleTotal - dpUse);
 
-    // BNPL capacity placeholder: 50% of eligible minus existing outstanding (Ryan to refine)
-    const bnplCapacity = Math.max(0, eligibleTotal * 0.5 - bnplOutstanding);
+    let bnplCapacity = 0;
+    if (concurrentObligations < maxConcurrent) {
+      bnplCapacity = Math.max(0, eligibleTotal * bnplMultiplier - bnplOutstanding);
+    }
     const bnplUse = Math.min(remainingAfterDp, bnplCapacity);
     remainingAfterDp -= bnplUse;
 
