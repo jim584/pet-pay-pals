@@ -511,6 +511,46 @@ function BnplDetails({ row }: { row: PaymentRow }) {
     : new Date(lastPaidAt.getTime() + avgGapDays * 86400000);
   const isOverdue = nextDue ? nextDue.getTime() < Date.now() : false;
 
+  // Build a projected full schedule (paid + pending) for the expandable section
+  const cadenceDays = avgGapDays ?? 30;
+  const projectedAmount = avgInstallment ?? (remainingCount ? Number(ob.outstanding_amount) / remainingCount : Number(ob.outstanding_amount));
+  type ScheduleItem = {
+    key: string;
+    date: Date;
+    amount: number;
+    paid: boolean;
+    method?: string;
+    external_ref?: string | null;
+  };
+  const schedule: ScheduleItem[] = sortedPaid.map((p) => ({
+    key: p.id,
+    date: new Date(p.paid_at),
+    amount: Number(p.amount ?? 0),
+    paid: true,
+    method: p.method,
+    external_ref: p.external_ref,
+  }));
+  if (!isPaidOff && remainingCount && remainingCount > 0) {
+    let remainingOutstanding = Number(ob.outstanding_amount);
+    let cursor = sortedPaid.length
+      ? lastPaidAt.getTime()
+      : new Date(ob.created_at).getTime();
+    for (let i = 0; i < remainingCount; i++) {
+      cursor += cadenceDays * 86400000;
+      const amt = i === remainingCount - 1
+        ? Math.max(0, remainingOutstanding)
+        : Math.min(projectedAmount, remainingOutstanding);
+      remainingOutstanding -= amt;
+      schedule.push({
+        key: `pending-${i}`,
+        date: new Date(cursor),
+        amount: amt,
+        paid: false,
+      });
+    }
+  }
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <Card>
