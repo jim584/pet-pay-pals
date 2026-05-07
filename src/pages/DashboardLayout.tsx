@@ -6,17 +6,19 @@ import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { Button } from "@/components/ui/button";
 
 export default function DashboardLayout() {
-  const { user, role, loading } = useAuth();
+  const { user, role, loading, roleLoading } = useAuth();
   const location = useLocation();
   const [slow, setSlow] = useState(false);
 
+  const isLoading = loading || (!!user && roleLoading);
+
   useEffect(() => {
-    if (!loading) { setSlow(false); return; }
+    if (!isLoading) { setSlow(false); return; }
     const t = setTimeout(() => setSlow(true), 8000);
     return () => clearTimeout(t);
-  }, [loading]);
+  }, [isLoading]);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-6 text-center">
         <div className="animate-pulse text-muted-foreground">Loading your account…</div>
