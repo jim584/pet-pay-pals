@@ -105,10 +105,60 @@ export function WalletView() {
         </Card>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      {membership && reserve && (
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Balance</CardTitle>
+            <CardTitle className="text-lg font-display flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5 text-primary" /> My Reserve
+            </CardTitle>
+            {reserve.eligible
+              ? <Badge>Eligible</Badge>
+              : <Badge variant="outline">Locked</Badge>}
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">Reserve Balance</p>
+                <p className="text-2xl font-bold font-display">${reserve.balance.toFixed(2)}</p>
+              </div>
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">Lifetime Accrued</p>
+                <p className="text-2xl font-bold font-display">${reserve.lifetimeAccrued.toFixed(2)}</p>
+              </div>
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">Used</p>
+                <p className="text-2xl font-bold font-display">${reserve.lifetimeConsumed.toFixed(2)}</p>
+              </div>
+            </div>
+            {!reserve.eligible && (
+              <div className="mt-4 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">
+                    {reserve.continuousPaidMonths} / 12 paid months
+                  </span>
+                  <span className="text-muted-foreground">
+                    {reserve.monthsUntilEligible} month{reserve.monthsUntilEligible === 1 ? "" : "s"} to go
+                  </span>
+                </div>
+                <Progress value={(reserve.continuousPaidMonths / 12) * 100} />
+                <p className="text-xs text-muted-foreground">
+                  Reserve unlocks after 12 consecutive months of paid membership. Cancellations or
+                  unpaid invoices reset the counter.
+                </p>
+              </div>
+            )}
+            {reserve.eligible && (
+              <p className="text-xs text-muted-foreground mt-3">
+                Eligible since {new Date(reserve.eligibleSince!).toLocaleDateString()}. Reserve is a
+                limited safety net — it's used <strong>after</strong> Direct Pay and BNPL when you opt in
+                on a vet ticket.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="grid gap-4 sm:grid-cols-3">
             <WalletIcon className="h-5 w-5 text-primary" />
           </CardHeader>
           <CardContent>
