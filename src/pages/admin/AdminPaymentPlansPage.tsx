@@ -25,8 +25,9 @@ import {
   fetchAdminBnpl, fetchAdminBnplStats, updateAdminBnpl,
   recordBnplPayment, fetchBnplPayments, deleteBnplPayment,
   fetchAdminBnplInstallments, regenerateBnplInstallments, runProcessBnplOverdue,
+  fetchBnplProcessorRuns,
   type AdminBnplRow, type BnplFilter, type BnplStatus, type BnplStats, type BnplPaymentRow,
-  type AdminBnplInstallment,
+  type AdminBnplInstallment, type BnplProcessorRun,
 } from "@/lib/admin-api";
 
 const FILTERS: { value: BnplFilter; label: string }[] = [
@@ -80,6 +81,21 @@ export default function AdminPaymentPlansPage() {
   const [scheduleRows, setScheduleRows] = useState<AdminBnplInstallment[]>([]);
   const [scheduleLoading, setScheduleLoading] = useState(false);
   const [runningOverdue, setRunningOverdue] = useState(false);
+  const [runs, setRuns] = useState<BnplProcessorRun[]>([]);
+  const [runsLoading, setRunsLoading] = useState(false);
+
+  const loadRuns = async () => {
+    setRunsLoading(true);
+    try {
+      setRuns(await fetchBnplProcessorRuns(25));
+    } catch (e: any) {
+      toast({ title: "Failed to load run log", description: e.message, variant: "destructive" });
+    } finally {
+      setRunsLoading(false);
+    }
+  };
+
+  useEffect(() => { loadRuns(); }, []);
 
   const openSchedule = async (row: AdminBnplRow) => {
     setScheduleTarget(row);
@@ -109,9 +125,10 @@ export default function AdminPaymentPlansPage() {
     try {
       const r = await runProcessBnplOverdue();
       toast({ title: "Overdue processor finished", description: JSON.stringify(r) });
-      await load();
+      await Promise.all([load(), loadRuns()]);
     } catch (e: any) {
       toast({ title: "Failed", description: e.message, variant: "destructive" });
+      await loadRuns();
     } finally {
       setRunningOverdue(false);
     }
@@ -361,6 +378,54 @@ export default function AdminPaymentPlansPage() {
                         <Link to="/admin/vet-tickets">View tickets</Link>
                       </Button>
                     </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Processor run log */}
+      <Card>
+        <CardContent className="p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-semibold">Overdue processor run log</h2>
+              <p className="text-xs text-muted-foreground">Last 25 runs (cron + manual triggers).</p>
+            </div>
+            <Button size="sm" variant="ghost" onClick={loadRuns} disabled={runsLoading}>
+              {runsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Refresh"}
+            </Button>
+          </div>
+          {runs.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-6 text-center">No runs recorded yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {runs.map((r) => {
+                const dur = r.finished_at
+                  ? Math.max(0, new Date(r.finished_at).getTime() - new Date(r.started_at).getTime())
+                  : null;
+                return (
+                  <div key={r.id} className="rounded-md border p-3 text-sm">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge variant={r.status === "success" ? "default" : r.status === "error" ? "destructive" : "secondary"}>
+                          {r.status}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">{r.trigger_source}</Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(r.started_at).toLocaleString()}
+                          {dur !== null ? ` · ${(dur / 1000).toFixed(1)}s` : " · running"}
+                        </span>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        due {r.installments_marked_due} · missed {r.installments_marked_missed} · defaulted {r.obligations_defaulted} · reminders {r.reminders_sent}
+                      </div>
+                    </div>
+                    {r.error_message && (
+                      <p className="mt-2 text-xs text-destructive break-words">{r.error_message}</p>
+                    )}
                   </div>
                 );
               })}

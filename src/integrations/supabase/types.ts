@@ -418,6 +418,54 @@ export type Database = {
           },
         ]
       }
+      bnpl_processor_runs: {
+        Row: {
+          created_at: string
+          details: Json | null
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          installments_marked_due: number
+          installments_marked_missed: number
+          obligations_defaulted: number
+          reminders_sent: number
+          started_at: string
+          status: string
+          trigger_source: string
+          triggered_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          details?: Json | null
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          installments_marked_due?: number
+          installments_marked_missed?: number
+          obligations_defaulted?: number
+          reminders_sent?: number
+          started_at?: string
+          status?: string
+          trigger_source?: string
+          triggered_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          details?: Json | null
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          installments_marked_due?: number
+          installments_marked_missed?: number
+          obligations_defaulted?: number
+          reminders_sent?: number
+          started_at?: string
+          status?: string
+          trigger_source?: string
+          triggered_by?: string | null
+        }
+        Relationships: []
+      }
       comment_likes: {
         Row: {
           comment_id: string
