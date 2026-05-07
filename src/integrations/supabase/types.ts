@@ -267,9 +267,12 @@ export type Database = {
       bnpl_installments: {
         Row: {
           amount: number
+          auto_charge_attempts: number
           created_at: string
           due_date: string
           id: string
+          last_auto_charge_at: string | null
+          last_auto_charge_error: string | null
           last_reminded_at: string | null
           obligation_id: string
           paid_amount: number
@@ -280,9 +283,12 @@ export type Database = {
         }
         Insert: {
           amount: number
+          auto_charge_attempts?: number
           created_at?: string
           due_date: string
           id?: string
+          last_auto_charge_at?: string | null
+          last_auto_charge_error?: string | null
           last_reminded_at?: string | null
           obligation_id: string
           paid_amount?: number
@@ -293,9 +299,12 @@ export type Database = {
         }
         Update: {
           amount?: number
+          auto_charge_attempts?: number
           created_at?: string
           due_date?: string
           id?: string
+          last_auto_charge_at?: string | null
+          last_auto_charge_error?: string | null
           last_reminded_at?: string | null
           obligation_id?: string
           paid_amount?: number
@@ -316,6 +325,7 @@ export type Database = {
       }
       bnpl_obligations: {
         Row: {
+          auto_pay_enabled: boolean
           created_at: string
           default_at: string | null
           external_ref: string | null
@@ -335,6 +345,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          auto_pay_enabled?: boolean
           created_at?: string
           default_at?: string | null
           external_ref?: string | null
@@ -354,6 +365,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          auto_pay_enabled?: boolean
           created_at?: string
           default_at?: string | null
           external_ref?: string | null
@@ -420,6 +432,9 @@ export type Database = {
       }
       bnpl_processor_runs: {
         Row: {
+          auto_charges_attempted: number
+          auto_charges_failed: number
+          auto_charges_succeeded: number
           created_at: string
           details: Json | null
           error_message: string | null
@@ -435,6 +450,9 @@ export type Database = {
           triggered_by: string | null
         }
         Insert: {
+          auto_charges_attempted?: number
+          auto_charges_failed?: number
+          auto_charges_succeeded?: number
           created_at?: string
           details?: Json | null
           error_message?: string | null
@@ -450,6 +468,9 @@ export type Database = {
           triggered_by?: string | null
         }
         Update: {
+          auto_charges_attempted?: number
+          auto_charges_failed?: number
+          auto_charges_succeeded?: number
           created_at?: string
           details?: Json | null
           error_message?: string | null
@@ -776,6 +797,8 @@ export type Database = {
           annual_price: number
           bnpl_default_installments: number
           bnpl_default_interval_days: number
+          bnpl_default_penalty: number
+          bnpl_min_multiplier: number
           bnpl_multiplier: number
           created_at: string
           direct_pay_portion: number
@@ -803,6 +826,8 @@ export type Database = {
           annual_price: number
           bnpl_default_installments?: number
           bnpl_default_interval_days?: number
+          bnpl_default_penalty?: number
+          bnpl_min_multiplier?: number
           bnpl_multiplier?: number
           created_at?: string
           direct_pay_portion: number
@@ -830,6 +855,8 @@ export type Database = {
           annual_price?: number
           bnpl_default_installments?: number
           bnpl_default_interval_days?: number
+          bnpl_default_penalty?: number
+          bnpl_min_multiplier?: number
           bnpl_multiplier?: number
           created_at?: string
           direct_pay_portion?: number
@@ -1189,6 +1216,7 @@ export type Database = {
           address: string | null
           avatar_url: string | null
           created_at: string
+          default_payment_method_id: string | null
           full_name: string
           id: string
           phone: string | null
@@ -1201,6 +1229,7 @@ export type Database = {
           address?: string | null
           avatar_url?: string | null
           created_at?: string
+          default_payment_method_id?: string | null
           full_name?: string
           id?: string
           phone?: string | null
@@ -1213,6 +1242,7 @@ export type Database = {
           address?: string | null
           avatar_url?: string | null
           created_at?: string
+          default_payment_method_id?: string | null
           full_name?: string
           id?: string
           phone?: string | null
