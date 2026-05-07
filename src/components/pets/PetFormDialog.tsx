@@ -73,6 +73,7 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
         weight_kg: pet?.weight_kg?.toString() ?? "",
         gender: pet?.gender ?? "",
         notes: pet?.notes ?? "",
+        vet_of_record_id: pet?.vet_of_record_id ?? "",
       });
       setPhotoPreview(pet?.photo_url ?? null);
       setPhotoFile(null);
