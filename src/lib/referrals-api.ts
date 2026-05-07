@@ -212,3 +212,117 @@ export async function updateReferralSettings(id: string, patch: Partial<Referral
     .eq("id", id);
   if (error) throw error;
 }
+
+// ---------- Self-scoped (referrer dashboard) ----------
+
+export interface ShelterMilestone {
+  id: string;
+  referrer_id: string;
+  adoption_listing_id: string | null;
+  pet_name: string;
+  goal_amount: number;
+  raised_amount: number;
+  payout_amount: number;
+  status: string;
+  completed_at: string | null;
+  created_at: string;
+}
+
+export async function getMyReferrer(): Promise<Referrer | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data, error } = await supabase.from("referrers")
+    .select("*").eq("user_id", user.id).maybeSingle();
+  if (error) return null;
+  return (data ?? null) as Referrer | null;
+}
+
+export async function listMyReferrals(): Promise<Referral[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  const { data, error } = await supabase
+    .from("referrals").select("*")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  const rows = (data ?? []) as any[];
+  const userIds = Array.from(new Set(rows.map(r => r.referred_user_id).filter(Boolean)));
+  let nameMap = new Map<string, string>();
+  if (userIds.length) {
+    const { data: profs } = await supabase.from("profiles").select("user_id, full_name").in("user_id", userIds);
+    nameMap = new Map((profs ?? []).map((p: any) => [p.user_id, p.full_name]));
+  }
+  return rows.map(r => ({ ...r, member_name: nameMap.get(r.referred_user_id) ?? null })) as Referral[];
+}
+
+export async function listMyBounties(): Promise<ReferralBounty[]> {
+  const { data, error } = await supabase
+    .from("referral_bounties").select("*").order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as ReferralBounty[];
+}
+
+export async function listMyPayouts(): Promise<ReferrerPayout[]> {
+  const { data, error } = await supabase
+    .from("referrer_payouts").select("*").order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as ReferrerPayout[];
+}
+
+// ---------- Stripe Connect ----------
+
+export async function startConnectOnboarding(): Promise<string | null> {
+  const { data, error } = await supabase.functions.invoke("referrer-connect-onboard", {
+    body: { return_url: `${window.location.origin}/referrer?onboarded=1` },
+  });
+  if (error) throw error;
+  return (data as any)?.url ?? null;
+}
+
+export async function refreshConnectStatus(): Promise<string | null> {
+  const { data, error } = await supabase.functions.invoke("referrer-connect-status");
+  if (error) throw error;
+  return (data as any)?.status ?? null;
+}
+
+export async function payReferrerViaStripe(referrerId: string) {
+  const { data, error } = await supabase.functions.invoke("referrer-payout", {
+    body: { referrer_id: referrerId },
+  });
+  if (error) throw error;
+  return data as { ok: boolean; transfer_id: string; amount: number; count: number };
+}
+
+// ---------- Shelter milestones ----------
+
+export async function listMilestones(referrerId?: string): Promise<ShelterMilestone[]> {
+  let q = supabase.from("shelter_referral_milestones").select("*").order("created_at", { ascending: false });
+  if (referrerId) q = q.eq("referrer_id", referrerId);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data ?? []) as ShelterMilestone[];
+}
+
+export async function createMilestone(input: {
+  referrer_id: string; pet_name: string; goal_amount: number; payout_amount: number;
+  adoption_listing_id?: string | null;
+}) {
+  const { error } = await supabase.from("shelter_referral_milestones").insert(input);
+  if (error) throw error;
+}
+
+export async function recordMilestoneContribution(milestoneId: string, amount: number, source = "manual") {
+  const { error } = await supabase.rpc("record_milestone_contribution", {
+    _milestone_id: milestoneId,
+    _amount: amount,
+    _source: source,
+    _payment_history_id: null,
+  });
+  if (error) throw error;
+}
+
+export async function listMyMilestones(): Promise<ShelterMilestone[]> {
+  const { data, error } = await supabase
+    .from("shelter_referral_milestones").select("*").order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as ShelterMilestone[];
+}
