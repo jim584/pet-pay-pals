@@ -384,6 +384,14 @@ export async function fetchAdminVets(filter: VetApprovalFilter = "all", search?:
     updated_at: v.updated_at,
     owner_full_name: profileMap.get(v.user_id)?.full_name ?? null,
     owner_avatar_url: profileMap.get(v.user_id)?.avatar_url ?? null,
+    license_number: v.license_number ?? null,
+    license_state: v.license_state ?? null,
+    license_document_url: v.license_document_url ?? null,
+    is_license_verified: !!v.is_license_verified,
+    fear_free_certified: !!v.fear_free_certified,
+    fear_free_cert_number: v.fear_free_cert_number ?? null,
+    fear_free_cert_url: v.fear_free_cert_url ?? null,
+    fear_free_verified_at: v.fear_free_verified_at ?? null,
   })) as AdminVetRow[];
 
   if (search?.trim()) {
