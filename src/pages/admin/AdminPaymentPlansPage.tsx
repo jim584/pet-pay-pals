@@ -341,6 +341,9 @@ export default function AdminPaymentPlansPage() {
                       <Button size="sm" variant="outline" onClick={() => openHistory(row)} disabled={busyId === row.id}>
                         <History className="h-4 w-4 mr-1" /> History
                       </Button>
+                      <Button size="sm" variant="outline" onClick={() => openSchedule(row)} disabled={busyId === row.id}>
+                        <CalendarDays className="h-4 w-4 mr-1" /> Schedule
+                      </Button>
                       <Button size="sm" variant="outline" onClick={() => openEdit(row)} disabled={busyId === row.id}>
                         <Pencil className="h-4 w-4 mr-1" /> Edit
                       </Button>
