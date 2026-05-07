@@ -125,9 +125,10 @@ export default function AdminPaymentPlansPage() {
     try {
       const r = await runProcessBnplOverdue();
       toast({ title: "Overdue processor finished", description: JSON.stringify(r) });
-      await load();
+      await Promise.all([load(), loadRuns()]);
     } catch (e: any) {
       toast({ title: "Failed", description: e.message, variant: "destructive" });
+      await loadRuns();
     } finally {
       setRunningOverdue(false);
     }
