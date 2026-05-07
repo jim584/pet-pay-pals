@@ -21,6 +21,7 @@ interface PetDetailProps {
 export function PetDetail({ pet, onBack, onEdit }: PetDetailProps) {
   const [records, setRecords] = useState<HealthRecord[]>([]);
   const [contacts, setContacts] = useState<EmergencyContact[]>([]);
+  const [vetOfRecord, setVetOfRecord] = useState<{ clinic_name: string; location: string | null; fear_free_certified: boolean; is_license_verified: boolean } | null>(null);
   const [showAddRecord, setShowAddRecord] = useState(false);
   const [editRecord, setEditRecord] = useState<HealthRecord | null>(null);
   const [showAddContact, setShowAddContact] = useState(false);
@@ -34,7 +35,17 @@ export function PetDetail({ pet, onBack, onEdit }: PetDetailProps) {
   useEffect(() => {
     loadRecords();
     loadContacts();
-  }, [pet.id]);
+    if (pet.vet_of_record_id) {
+      supabase
+        .from("vet_profiles")
+        .select("clinic_name, location, fear_free_certified, is_license_verified")
+        .eq("id", pet.vet_of_record_id)
+        .maybeSingle()
+        .then(({ data }) => setVetOfRecord(data as any));
+    } else {
+      setVetOfRecord(null);
+    }
+  }, [pet.id, pet.vet_of_record_id]);
 
   const handleDeleteRecord = async () => {
     if (!recordToDelete) return;
