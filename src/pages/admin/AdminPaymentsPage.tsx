@@ -106,9 +106,68 @@ export default function AdminPaymentsPage() {
         .from("profiles").select("user_id, full_name").in("user_id", userIds);
       (profs ?? []).forEach((p: any) => profileMap.set(p.user_id, p.full_name));
     }
-    const mapped = ((data ?? []) as any[]).map((r) => ({
-      ...r, user_full_name: profileMap.get(r.user_id) ?? null,
-    })) as PaymentRow[];
+
+    // Linked vet tickets + obligations + installments
+    const ticketIds = Array.from(new Set((data ?? [])
+      .map((r: any) => r.vet_ticket_id).filter(Boolean)));
+    const directObIds = Array.from(new Set((data ?? [])
+      .map((r: any) => r.bnpl_obligation_id).filter(Boolean)));
+
+    const [ticketsRes, obByTicketRes, obDirectRes] = await Promise.all([
+      ticketIds.length
+        ? supabase.from("vet_tickets").select("id, clinic_name").in("id", ticketIds)
+        : Promise.resolve({ data: [] } as any),
+      ticketIds.length
+        ? supabase.from("bnpl_obligations")
+            .select("id, ticket_id, provider, original_amount, outstanding_amount, status, external_ref, created_at")
+            .in("ticket_id", ticketIds)
+        : Promise.resolve({ data: [] } as any),
+      directObIds.length
+        ? supabase.from("bnpl_obligations")
+            .select("id, ticket_id, provider, original_amount, outstanding_amount, status, external_ref, created_at")
+            .in("id", directObIds)
+        : Promise.resolve({ data: [] } as any),
+    ]);
+
+    const ticketMap = new Map<string, any>((ticketsRes.data ?? []).map((t: any) => [t.id, t]));
+    const obByTicket = new Map<string, Obligation>(
+      (obByTicketRes.data ?? []).map((o: any) => [o.ticket_id, o as Obligation])
+    );
+    const obById = new Map<string, Obligation>([
+      ...((obByTicketRes.data ?? []) as Obligation[]),
+      ...((obDirectRes.data ?? []) as Obligation[]),
+    ].map((o) => [o.id, o]));
+
+    const allObIds = Array.from(new Set([
+      ...directObIds,
+      ...((obByTicketRes.data ?? []) as any[]).map((o) => o.id),
+    ]));
+    const installMap = new Map<string, Installment[]>();
+    if (allObIds.length) {
+      const { data: pays } = await supabase
+        .from("bnpl_payments")
+        .select("id, obligation_id, amount, paid_at, method, external_ref, notes")
+        .in("obligation_id", allObIds)
+        .order("paid_at", { ascending: false });
+      (pays ?? []).forEach((p: any) => {
+        const arr = installMap.get(p.obligation_id) ?? [];
+        arr.push(p as Installment);
+        installMap.set(p.obligation_id, arr);
+      });
+    }
+
+    const mapped = ((data ?? []) as any[]).map((r) => {
+      const directOb = r.bnpl_obligation_id ? obById.get(r.bnpl_obligation_id) ?? null : null;
+      const ticketOb = r.vet_ticket_id ? obByTicket.get(r.vet_ticket_id) ?? null : null;
+      const obligation = directOb ?? ticketOb ?? null;
+      return {
+        ...r,
+        user_full_name: profileMap.get(r.user_id) ?? null,
+        ticket_clinic_name: r.vet_ticket_id ? (ticketMap.get(r.vet_ticket_id)?.clinic_name ?? null) : null,
+        obligation,
+        installments: obligation ? (installMap.get(obligation.id) ?? []) : [],
+      };
+    }) as PaymentRow[];
     return { mapped, count: count ?? null, gotFull: (data?.length ?? 0) === PAGE_SIZE };
   }, [rangeDays, statusFilter, kindFilter]);
 
