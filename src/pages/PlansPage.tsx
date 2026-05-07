@@ -41,6 +41,16 @@ export default function PlansPage() {
 
   return (
     <div className="container mx-auto max-w-6xl p-6 space-y-6">
+      <Button
+        variant="ghost"
+        size="sm"
+        className="-ml-2"
+        onClick={() => (window.history.length > 1 ? navigate(-1) : navigate("/"))}
+      >
+        <ArrowLeft className="h-4 w-4 mr-2" />
+        Back
+      </Button>
+
       <div>
         <h1 className="text-3xl font-bold font-display">Together™ Membership Plans</h1>
         <p className="text-muted-foreground mt-1">Choose a plan that fits your pet and budget.</p>
