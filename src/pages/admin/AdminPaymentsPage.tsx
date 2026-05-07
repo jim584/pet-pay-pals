@@ -293,6 +293,19 @@ export default function AdminPaymentsPage() {
                   ))}
                 </TableBody>
               </Table>
+              <div ref={sentinelRef} className="h-1" />
+              <div className="py-4 text-center text-xs text-muted-foreground">
+                {loadingMore ? (
+                  <span className="inline-flex items-center gap-2"><Loader2 className="h-3 w-3 animate-spin" /> Loading more…</span>
+                ) : hasMore ? (
+                  <Button variant="ghost" size="sm" onClick={loadMore}>Load more</Button>
+                ) : (
+                  <span>
+                    Showing all {rows.length}
+                    {totalCount !== null && totalCount !== rows.length ? ` of ${totalCount}` : ""} transactions
+                  </span>
+                )}
+              </div>
             </div>
           )}
         </CardContent>
