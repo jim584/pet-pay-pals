@@ -710,6 +710,30 @@ export async function runProcessBnplOverdue(): Promise<{ processed?: number } & 
   return (data ?? {}) as any;
 }
 
+export interface BnplProcessorRun {
+  id: string;
+  triggered_by: string | null;
+  trigger_source: string;
+  started_at: string;
+  finished_at: string | null;
+  status: string;
+  installments_marked_due: number;
+  installments_marked_missed: number;
+  obligations_defaulted: number;
+  reminders_sent: number;
+  error_message: string | null;
+}
+
+export async function fetchBnplProcessorRuns(limit = 25): Promise<BnplProcessorRun[]> {
+  const { data, error } = await supabase
+    .from("bnpl_processor_runs")
+    .select("*")
+    .order("started_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as BnplProcessorRun[];
+}
+
 // ============ Wallet & Reserve ============
 
 export interface ReserveKpis {
