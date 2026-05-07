@@ -43,6 +43,15 @@ export default function PaymentPlansPage() {
   const [filter, setFilter] = useState<"open" | "all" | "closed">("open");
   const [installmentsMap, setInstallmentsMap] = useState<Record<string, MyInstallment[]>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
+  const autopayRef = useRef<HTMLDivElement | null>(null);
+
+  const triggerAutopaySetup = () => {
+    autopayRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setTimeout(() => {
+      const btn = autopayRef.current?.querySelector<HTMLButtonElement>("button:not([disabled])");
+      btn?.click();
+    }, 350);
+  };
 
   const load = async () => {
     if (!user) { setLoading(false); return; }
