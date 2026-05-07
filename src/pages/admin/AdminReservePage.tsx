@@ -34,6 +34,9 @@ export default function AdminReservePage() {
   const [kpis, setKpis] = useState<ReserveKpis | null>(null);
   const [accruals, setAccruals] = useState<AdminAccrualRow[]>([]);
   const [ledger, setLedger] = useState<AdminDpLedgerRow[]>([]);
+  const [memberAccruals, setMemberAccruals] = useState<AdminReserveAccrualRow[]>([]);
+  const [memberConsumptions, setMemberConsumptions] = useState<AdminReserveConsumptionRow[]>([]);
+  const [memberSearch, setMemberSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "active" | "expired">("active");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -41,14 +44,18 @@ export default function AdminReservePage() {
 
   const load = async () => {
     try {
-      const [k, a, l] = await Promise.all([
+      const [k, a, l, ma, mc] = await Promise.all([
         fetchReserveKpis(),
         fetchAdminAccruals(filter),
         fetchAdminDpExpiryLedger(),
+        fetchAdminReserveAccruals(memberSearch),
+        fetchAdminReserveConsumptions(),
       ]);
       setKpis(k);
       setAccruals(a);
       setLedger(l);
+      setMemberAccruals(ma);
+      setMemberConsumptions(mc);
     } catch (e: any) {
       toast({ title: "Failed to load reserve data", description: e.message, variant: "destructive" });
     } finally {
@@ -60,7 +67,7 @@ export default function AdminReservePage() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter]);
+  }, [filter, memberSearch]);
 
   const handleRefresh = () => { setRefreshing(true); load(); };
 
