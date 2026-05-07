@@ -98,6 +98,8 @@ export default function PaymentPlansPage() {
         </p>
       </div>
 
+      <AutopaySetupCard onSetupComplete={load} />
+
       <Tabs value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
         <TabsList>
           <TabsTrigger value="open">Open</TabsTrigger>
