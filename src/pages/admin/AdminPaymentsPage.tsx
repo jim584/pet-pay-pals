@@ -166,7 +166,7 @@ export default function AdminPaymentsPage() {
     try {
       const res = await triggerStripeBackfill();
       toast({ title: "Synced from Stripe", description: `Synced ${res.synced} · Created ${res.created}` });
-      await load();
+      await loadFirst();
     } catch (e: any) {
       toast({ title: "Sync failed", description: e.message, variant: "destructive" });
     } finally { setSyncing(false); }
