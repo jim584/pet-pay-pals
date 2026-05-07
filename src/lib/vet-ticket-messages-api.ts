@@ -2,12 +2,20 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type TicketMessageRole = "owner" | "vet" | "admin";
 
+export type TicketAttachment = {
+  path: string;
+  name: string;
+  size: number;
+  content_type: string | null;
+};
+
 export type TicketMessage = {
   id: string;
   ticket_id: string;
   sender_id: string;
   sender_role: TicketMessageRole;
   body: string;
+  attachments: TicketAttachment[];
   read_by_owner: boolean;
   read_by_vet: boolean;
   read_by_admin: boolean;
@@ -22,7 +30,10 @@ export async function listTicketMessages(ticketId: string): Promise<TicketMessag
     .eq("ticket_id", ticketId)
     .order("created_at", { ascending: true });
   if (error) throw error;
-  const msgs = (data ?? []) as unknown as TicketMessage[];
+  const msgs = (data ?? []).map((m: any) => ({
+    ...m,
+    attachments: Array.isArray(m.attachments) ? m.attachments : [],
+  })) as TicketMessage[];
   const senderIds = Array.from(new Set(msgs.map((m) => m.sender_id)));
   if (senderIds.length === 0) return msgs;
   const { data: profs } = await supabase
@@ -33,9 +44,30 @@ export async function listTicketMessages(ticketId: string): Promise<TicketMessag
   return msgs.map((m) => ({ ...m, sender_name: map.get(m.sender_id) ?? null }));
 }
 
-export async function sendTicketMessage(ticketId: string, body: string): Promise<void> {
+export async function uploadMessageAttachment(ticketId: string, file: File): Promise<TicketAttachment> {
+  const safeName = file.name.replace(/[^\w.\-]+/g, "_");
+  const path = `messages/${ticketId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName}`;
+  const { error } = await supabase.storage.from("vet-tickets").upload(path, file, {
+    upsert: false,
+    contentType: file.type || undefined,
+  });
+  if (error) throw error;
+  return { path, name: file.name, size: file.size, content_type: file.type || null };
+}
+
+export async function getMessageAttachmentUrl(path: string): Promise<string> {
+  const { data, error } = await supabase.storage.from("vet-tickets").createSignedUrl(path, 60 * 30);
+  if (error) throw error;
+  return data.signedUrl;
+}
+
+export async function sendTicketMessage(
+  ticketId: string,
+  body: string,
+  attachments: TicketAttachment[] = [],
+): Promise<void> {
   const trimmed = body.trim();
-  if (!trimmed) return;
+  if (!trimmed && attachments.length === 0) return;
   const { data: userRes } = await supabase.auth.getUser();
   const uid = userRes.user?.id;
   if (!uid) throw new Error("Not signed in");
@@ -43,7 +75,8 @@ export async function sendTicketMessage(ticketId: string, body: string): Promise
     ticket_id: ticketId,
     sender_id: uid,
     sender_role: "owner", // overridden by trigger
-    body: trimmed,
+    body: trimmed || "(attachment)",
+    attachments: attachments as any,
   } as any);
   if (error) throw error;
 }
