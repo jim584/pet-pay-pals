@@ -76,7 +76,6 @@ export default function PlansPage() {
       const url = await startCheckout({
         plan_id: plan.id,
         billing_interval: billingInterval,
-        is_fear_free_member: isFearFree,
       });
       window.location.href = url;
     } catch (e: any) {
