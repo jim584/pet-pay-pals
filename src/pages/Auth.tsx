@@ -84,6 +84,9 @@ export default function Auth() {
           <CardDescription>
             {isSignUp ? "Join Help A Pet and take care of your furry friends" : "Sign in to your Help A Pet account"}
           </CardDescription>
+          {referrerName && isSignUp && (
+            <p className="text-xs text-primary font-medium">Referred by {referrerName}</p>
+          )}
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
