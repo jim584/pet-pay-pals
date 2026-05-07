@@ -1,41 +1,45 @@
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 /**
- * Opens an external Stripe Checkout (or similar hosted) URL safely.
+ * Opens an external Stripe Checkout (or similar hosted) URL in a new tab
+ * WITHOUT ever navigating the current app tab.
  *
- * Inside the Lovable preview iframe, `window.location.href = url` only navigates
- * the embedded frame, which can leave Stripe Checkout stuck on its skeleton.
- * This helper opens the URL in a new top-level browser tab and falls back to
- * a top-level navigation if the popup is blocked.
+ * - If the popup opens: show a confirmation toast and leave the app alone.
+ * - If the browser blocks the popup: show a persistent toast with a
+ *   "Continue to checkout" action button so the user can retry from a
+ *   fresh click gesture (which browsers reliably allow).
  *
- * Returns true if the new tab/window was opened, false if it fell back.
+ * Returns true if the new tab opened, false if it was blocked.
  */
 export function openCheckoutUrl(url: string): boolean {
   if (!url) return false;
+
+  let win: Window | null = null;
   try {
-    const win = window.open(url, "_blank", "noopener,noreferrer");
-    if (win) {
-      toast({
-        title: "Opening secure checkout",
-        description: "Stripe opened in a new tab. Complete payment there, then return here.",
-      });
-      return true;
-    }
+    win = window.open(url, "_blank", "noopener,noreferrer");
   } catch {
-    /* fall through */
+    win = null;
   }
 
-  // Popup blocked or threw. Try to break out of any embedding iframe.
-  try {
-    if (window.top && window.top !== window.self) {
-      (window.top as Window).location.href = url;
-      return true;
-    }
-  } catch {
-    /* cross-origin frame — cannot navigate parent */
+  if (win) {
+    toast.success("Opening secure checkout", {
+      description: "Stripe opened in a new tab. Complete payment there, then return here.",
+    });
+    return true;
   }
 
-  // Last resort: navigate current window.
-  window.location.href = url;
+  // Popup was blocked. Do NOT navigate the current tab — that would replace
+  // the app with Stripe's loading skeleton. Surface a persistent toast with
+  // a one-click retry instead.
+  toast("Popup blocked", {
+    description: "Your browser blocked the checkout window. Click Continue to open it.",
+    duration: Infinity,
+    action: {
+      label: "Continue to checkout",
+      onClick: () => {
+        window.open(url, "_blank", "noopener,noreferrer");
+      },
+    },
+  });
   return false;
 }
