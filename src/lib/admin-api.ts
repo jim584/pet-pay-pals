@@ -659,3 +659,120 @@ export async function deleteBnplPayment(paymentId: string) {
   const { error } = await supabase.from("bnpl_payments").delete().eq("id", paymentId);
   if (error) throw error;
 }
+
+// ============ Wallet & Reserve ============
+
+export interface ReserveKpis {
+  reserveBalance: number;
+  activeOutstanding: number;
+  expiringSoon: number;
+  lifetimeExpired: number;
+  lifetimeReserveIn: number;
+  lifetimeHelpNow: number;
+  lifetimeAdmin: number;
+}
+
+export async function fetchReserveKpis(): Promise<ReserveKpis> {
+  const soon = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString();
+  const [reserve, accruals, ledger] = await Promise.all([
+    supabase.from("community_reserve").select("balance").limit(1).maybeSingle(),
+    supabase.from("direct_pay_accruals").select("remaining_amount, expires_at").eq("expired", false),
+    supabase.from("dp_expiry_ledger").select("expired_amount, community_reserve_portion, help_now_portion, admin_portion"),
+  ]);
+  const activeOutstanding = (accruals.data ?? []).reduce((s: number, a: any) => s + Number(a.remaining_amount ?? 0), 0);
+  const expiringSoon = (accruals.data ?? [])
+    .filter((a: any) => a.expires_at && a.expires_at <= soon)
+    .reduce((s: number, a: any) => s + Number(a.remaining_amount ?? 0), 0);
+  const lifetimeExpired = (ledger.data ?? []).reduce((s: number, l: any) => s + Number(l.expired_amount ?? 0), 0);
+  const lifetimeReserveIn = (ledger.data ?? []).reduce((s: number, l: any) => s + Number(l.community_reserve_portion ?? 0), 0);
+  const lifetimeHelpNow = (ledger.data ?? []).reduce((s: number, l: any) => s + Number(l.help_now_portion ?? 0), 0);
+  const lifetimeAdmin = (ledger.data ?? []).reduce((s: number, l: any) => s + Number(l.admin_portion ?? 0), 0);
+  return {
+    reserveBalance: Number((reserve.data as any)?.balance ?? 0),
+    activeOutstanding,
+    expiringSoon,
+    lifetimeExpired,
+    lifetimeReserveIn,
+    lifetimeHelpNow,
+    lifetimeAdmin,
+  };
+}
+
+export interface AdminAccrualRow {
+  id: string;
+  user_id: string;
+  membership_id: string | null;
+  amount: number;
+  remaining_amount: number;
+  accrual_month: string;
+  expires_at: string | null;
+  expired: boolean;
+  expired_at: string | null;
+  created_at: string;
+  user_full_name: string | null;
+}
+
+export async function fetchAdminAccruals(filter: "all" | "active" | "expired" = "active"): Promise<AdminAccrualRow[]> {
+  let q = supabase.from("direct_pay_accruals").select("*").order("created_at", { ascending: false }).limit(100);
+  if (filter === "active") q = q.eq("expired", false);
+  if (filter === "expired") q = q.eq("expired", true);
+  const { data, error } = await q;
+  if (error) throw error;
+  const userIds = Array.from(new Set((data ?? []).map((a: any) => a.user_id).filter(Boolean)));
+  const profileMap: Record<string, string | null> = {};
+  if (userIds.length > 0) {
+    const { data: profs } = await supabase.from("profiles").select("user_id, full_name").in("user_id", userIds);
+    (profs ?? []).forEach((p: any) => { profileMap[p.user_id] = p.full_name; });
+  }
+  return (data ?? []).map((a: any) => ({
+    id: a.id,
+    user_id: a.user_id,
+    membership_id: a.membership_id,
+    amount: Number(a.amount ?? 0),
+    remaining_amount: Number(a.remaining_amount ?? 0),
+    accrual_month: a.accrual_month,
+    expires_at: a.expires_at,
+    expired: a.expired,
+    expired_at: a.expired_at,
+    created_at: a.created_at,
+    user_full_name: profileMap[a.user_id] ?? null,
+  }));
+}
+
+export interface AdminDpLedgerRow {
+  id: string;
+  accrual_id: string;
+  expired_amount: number;
+  community_reserve_portion: number;
+  help_now_portion: number;
+  admin_portion: number;
+  reason: string;
+  created_at: string;
+  help_now_case_id: string | null;
+}
+
+export async function fetchAdminDpExpiryLedger(): Promise<AdminDpLedgerRow[]> {
+  const { data, error } = await supabase
+    .from("dp_expiry_ledger")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(100);
+  if (error) throw error;
+  return (data ?? []).map((l: any) => ({
+    id: l.id,
+    accrual_id: l.accrual_id,
+    expired_amount: Number(l.expired_amount ?? 0),
+    community_reserve_portion: Number(l.community_reserve_portion ?? 0),
+    help_now_portion: Number(l.help_now_portion ?? 0),
+    admin_portion: Number(l.admin_portion ?? 0),
+    reason: l.reason,
+    created_at: l.created_at,
+    help_now_case_id: l.help_now_case_id,
+  }));
+}
+
+export async function runDpExpiryJob(): Promise<{ processed: number; reserve_added: number }> {
+  const { data, error } = await supabase.functions.invoke("process-dp-expiry", { body: {} });
+  if (error) throw error;
+  return data as { processed: number; reserve_added: number };
+}
