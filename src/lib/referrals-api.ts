@@ -294,6 +294,51 @@ export async function payReferrerViaStripe(referrerId: string) {
   return data as { ok: boolean; transfer_id: string; amount: number; count: number };
 }
 
+export interface ReconcileRow {
+  source: "stripe" | "internal" | "both";
+  status: "matched" | "missing_internal" | "missing_stripe" | "amount_mismatch" | "status_mismatch";
+  stripe_transfer_id: string | null;
+  internal_payout_id: string | null;
+  referrer_id: string | null;
+  referrer_name: string | null;
+  destination_account: string | null;
+  stripe_amount: number | null;
+  internal_amount: number | null;
+  stripe_created: string | null;
+  internal_paid_at: string | null;
+  internal_status: string | null;
+  reversed: boolean;
+}
+export interface ReconcileSummary {
+  window_days: number;
+  stripe_transfer_count: number;
+  internal_payout_count: number;
+  matched: number;
+  missing_internal: number;
+  missing_stripe: number;
+  amount_mismatch: number;
+  status_mismatch: number;
+  reversed: number;
+  stripe_total: number;
+  internal_total: number;
+}
+
+export async function reconcileReferrerPayouts(days = 90): Promise<{ summary: ReconcileSummary; rows: ReconcileRow[] }> {
+  const { data, error } = await supabase.functions.invoke("referrer-reconcile", {
+    body: {},
+    headers: {},
+    method: "GET" as any,
+    // supabase-js doesn't pass query for invoke; fall back to fetch below if needed
+  } as any);
+  if (!error && data) return data as any;
+  // Fallback using direct fetch to support query params
+  const { data: { session } } = await supabase.auth.getSession();
+  const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/referrer-reconcile?days=${days}`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${session?.access_token}` } });
+  if (!res.ok) throw new Error(await res.text());
+  return await res.json();
+}
+
 // ---------- Shelter milestones ----------
 
 export async function listMilestones(referrerId?: string): Promise<ShelterMilestone[]> {
