@@ -44,6 +44,7 @@ export default function Auth() {
     }
     if (role === "admin") navigate("/admin", { replace: true });
     else if (role) navigate("/", { replace: true });
+    else navigate("/select-role", { replace: true });
   }, [user, role, loading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
