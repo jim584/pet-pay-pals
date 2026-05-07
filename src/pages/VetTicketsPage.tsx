@@ -16,10 +16,11 @@ import {
 import { toast } from "@/hooks/use-toast";
 import {
   listMyTickets, listTicketsForVet, submitVetTicket, uploadTicketFile, startMemberRemainderCheckout,
-  getTicketFileSignedUrl, type VetTicket,
+  getTicketFileSignedUrl, computeTicketCoverage, type VetTicket, type CoverageBreakdown,
 } from "@/lib/vet-tickets-api";
 import { fetchVetProfile } from "@/lib/vet-api";
-import { Loader2, Plus, FileText, ExternalLink } from "lucide-react";
+import { Loader2, Plus, FileText, ExternalLink, ShieldCheck, Info } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { TicketMessagesDialog } from "@/components/vet-tickets/TicketMessagesDialog";
 
 const STATUS_VARIANT: Record<string, string> = {
@@ -325,6 +326,29 @@ function NewTicketDialog({ pets, clinics, onCreated }: {
 
 function TicketCard({ ticket, onChanged }: { ticket: VetTicket; onChanged: () => void }) {
   const [paying, setPaying] = useState(false);
+  const [useReserve, setUseReserve] = useState(false);
+  const [previewBreakdown, setPreviewBreakdown] = useState<CoverageBreakdown | null>(null);
+  const [previewing, setPreviewing] = useState(false);
+
+  // Auto-preview reserve eligibility once for submitted/under_review tickets
+  useEffect(() => {
+    if (["submitted", "under_review"].includes(ticket.status) && !previewBreakdown) {
+      computeTicketCoverage(ticket.id, false).then(setPreviewBreakdown).catch(() => {});
+    }
+  }, [ticket.id, ticket.status]);
+
+  const togglePreviewReserve = async (next: boolean) => {
+    setUseReserve(next);
+    setPreviewing(true);
+    try {
+      const b = await computeTicketCoverage(ticket.id, next);
+      setPreviewBreakdown(b);
+    } catch (e: any) {
+      toast({ title: "Couldn't recompute coverage", description: e.message, variant: "destructive" });
+    } finally {
+      setPreviewing(false);
+    }
+  };
 
   const payRemainder = async () => {
     setPaying(true);
@@ -346,7 +370,7 @@ function TicketCard({ ticket, onChanged }: { ticket: VetTicket; onChanged: () =>
     }
   };
 
-  const b = ticket.coverage_breakdown;
+  const b = ticket.coverage_breakdown ?? previewBreakdown;
   return (
     <Card>
       <CardHeader>

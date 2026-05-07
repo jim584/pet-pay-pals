@@ -263,7 +263,7 @@ Deno.serve(async (req) => {
         if (!subId) break;
 
         const { data: m } = await admin.from("memberships")
-          .select("id, user_id, plan_id, is_fear_free_member, billing_interval")
+          .select("id, user_id, plan_id, is_fear_free_member, billing_interval, continuous_paid_months, last_paid_month, reserve_eligible_since")
           .eq("stripe_subscription_id", subId).maybeSingle();
         if (!m) break;
 
@@ -322,6 +322,43 @@ Deno.serve(async (req) => {
           }
         }
 
+        // Per-month MEMBER RESERVE accrual (10% allocated to each member's personal reserve).
+        // Idempotent on invoice id.
+        const { data: existingReserve } = await admin
+          .from("member_reserve_accruals")
+          .select("id").eq("stripe_invoice_id", inv.id).limit(1).maybeSingle();
+        if (!existingReserve) {
+          const monthlyReserve = Number(plan.reserve_portion ?? 0);
+          const monthsCovered = m.billing_interval === "year" ? 12 : 1;
+          const nowR = new Date();
+          if (monthlyReserve > 0) {
+            for (let i = 0; i < monthsCovered; i++) {
+              const accrualMonth = new Date(nowR.getFullYear(), nowR.getMonth() + i, 1);
+              await admin.from("member_reserve_accruals").insert({
+                membership_id: m.id,
+                user_id: m.user_id,
+                accrual_month: accrualMonth.toISOString().slice(0, 10),
+                amount: monthlyReserve,
+                remaining_amount: monthlyReserve,
+                stripe_invoice_id: inv.id,
+              });
+            }
+          }
+
+          // Continuous-paid-months counter + reserve eligibility (12 consecutive months).
+          const monthsCount = m.billing_interval === "year" ? 12 : 1;
+          const newCount = (Number(m.continuous_paid_months ?? 0)) + monthsCount;
+          const eligibleSince = !m.reserve_eligible_since && newCount >= 12
+            ? new Date().toISOString()
+            : m.reserve_eligible_since;
+          const lastPaidMonth = new Date(nowR.getFullYear(), nowR.getMonth(), 1).toISOString().slice(0, 10);
+          await admin.from("memberships").update({
+            continuous_paid_months: newCount,
+            last_paid_month: lastPaidMonth,
+            reserve_eligible_since: eligibleSince,
+          }).eq("id", m.id);
+        }
+
         // Update period end
         const sub = await stripe.subscriptions.retrieve(subId);
         await admin.from("memberships").update({
@@ -360,7 +397,12 @@ Deno.serve(async (req) => {
           stripe_subscription_id: subId,
           hosted_invoice_url: inv.hosted_invoice_url ?? null,
         });
-        await admin.from("memberships").update({ status: "past_due" }).eq("id", m.id);
+        // Payment failed: lapse breaks continuous-payment streak; resets reserve eligibility clock.
+        await admin.from("memberships").update({
+          status: "past_due",
+          continuous_paid_months: 0,
+          reserve_eligible_since: null,
+        }).eq("id", m.id);
         break;
       }
 
@@ -392,10 +434,12 @@ Deno.serve(async (req) => {
           : sub.status === "past_due" ? "past_due"
           : sub.status === "canceled" ? "cancelled"
           : "paused";
+        const isLapse = status === "cancelled" || status === "past_due" || status === "paused";
         await admin.from("memberships").update({
           status,
           current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
           cancelled_at: sub.cancel_at_period_end ? new Date().toISOString() : null,
+          ...(isLapse ? { continuous_paid_months: 0, reserve_eligible_since: null } : {}),
         }).eq("stripe_subscription_id", sub.id);
         break;
       }
@@ -405,6 +449,8 @@ Deno.serve(async (req) => {
         await admin.from("memberships").update({
           status: "cancelled",
           cancelled_at: new Date().toISOString(),
+          continuous_paid_months: 0,
+          reserve_eligible_since: null,
         }).eq("stripe_subscription_id", sub.id);
 
         // Reverse referral bounties if cancellation occurred during the hold period

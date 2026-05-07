@@ -99,6 +99,20 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Consume member Reserve (FIFO) if requested
+    if (reserveUse > 0) {
+      const { data: rConsumed, error: rErr } = await admin.rpc("consume_reserve_for_ticket", {
+        _ticket_id: ticket_id, _user_id: ticket.owner_id, _amount: reserveUse,
+      });
+      if (rErr) throw rErr;
+      if (Number(rConsumed) < reserveUse - 0.01) {
+        await admin.rpc("release_ticket_allocations", { _ticket_id: ticket_id });
+        await admin.rpc("release_reserve_for_ticket", { _ticket_id: ticket_id });
+        return new Response(JSON.stringify({ error: `Reserve shortfall: only ${rConsumed} available` }),
+          { status: 400, headers: corsHeaders });
+      }
+    }
+
     const newStatus = memberRemainder > 0 ? "approved" : "funded";
 
     await admin.from("vet_tickets").update({

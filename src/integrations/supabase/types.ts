@@ -791,6 +791,74 @@ export type Database = {
         }
         Relationships: []
       }
+      member_reserve_accruals: {
+        Row: {
+          accrual_month: string
+          amount: number
+          created_at: string
+          id: string
+          membership_id: string
+          remaining_amount: number
+          stripe_invoice_id: string | null
+          user_id: string
+        }
+        Insert: {
+          accrual_month: string
+          amount: number
+          created_at?: string
+          id?: string
+          membership_id: string
+          remaining_amount: number
+          stripe_invoice_id?: string | null
+          user_id: string
+        }
+        Update: {
+          accrual_month?: string
+          amount?: number
+          created_at?: string
+          id?: string
+          membership_id?: string
+          remaining_amount?: number
+          stripe_invoice_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      member_reserve_consumptions: {
+        Row: {
+          accrual_id: string
+          amount_consumed: number
+          created_at: string
+          id: string
+          released: boolean
+          ticket_id: string
+        }
+        Insert: {
+          accrual_id: string
+          amount_consumed: number
+          created_at?: string
+          id?: string
+          released?: boolean
+          ticket_id: string
+        }
+        Update: {
+          accrual_id?: string
+          amount_consumed?: number
+          created_at?: string
+          id?: string
+          released?: boolean
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_reserve_consumptions_accrual_id_fkey"
+            columns: ["accrual_id"]
+            isOneToOne: false
+            referencedRelation: "member_reserve_accruals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       membership_plans: {
         Row: {
           admin_portion: number
@@ -930,14 +998,17 @@ export type Database = {
           admin_notes: string | null
           billing_interval: string
           cancelled_at: string | null
+          continuous_paid_months: number
           created_at: string
           current_period_end: string | null
           id: string
           is_fear_free_member: boolean
+          last_paid_month: string | null
           pet_id: string | null
           plan_id: string
           rejection_reason: string | null
           requires_admin_approval: boolean
+          reserve_eligible_since: string | null
           started_at: string | null
           status: string
           stripe_customer_id: string | null
@@ -949,14 +1020,17 @@ export type Database = {
           admin_notes?: string | null
           billing_interval?: string
           cancelled_at?: string | null
+          continuous_paid_months?: number
           created_at?: string
           current_period_end?: string | null
           id?: string
           is_fear_free_member?: boolean
+          last_paid_month?: string | null
           pet_id?: string | null
           plan_id: string
           rejection_reason?: string | null
           requires_admin_approval?: boolean
+          reserve_eligible_since?: string | null
           started_at?: string | null
           status?: string
           stripe_customer_id?: string | null
@@ -968,14 +1042,17 @@ export type Database = {
           admin_notes?: string | null
           billing_interval?: string
           cancelled_at?: string | null
+          continuous_paid_months?: number
           created_at?: string
           current_period_end?: string | null
           id?: string
           is_fear_free_member?: boolean
+          last_paid_month?: string | null
           pet_id?: string | null
           plan_id?: string
           rejection_reason?: string | null
           requires_admin_approval?: boolean
+          reserve_eligible_since?: string | null
           started_at?: string | null
           status?: string
           stripe_customer_id?: string | null
@@ -2281,6 +2358,10 @@ export type Database = {
         }
         Returns: number
       }
+      consume_reserve_for_ticket: {
+        Args: { _amount: number; _ticket_id: string; _user_id: string }
+        Returns: number
+      }
       gen_referral_code: { Args: never; Returns: string }
       generate_bnpl_installments: {
         Args: { _obligation_id: string }
@@ -2336,6 +2417,10 @@ export type Database = {
           _payment_history_id?: string
           _source?: string
         }
+        Returns: undefined
+      }
+      release_reserve_for_ticket: {
+        Args: { _ticket_id: string }
         Returns: undefined
       }
       release_ticket_allocations: {
