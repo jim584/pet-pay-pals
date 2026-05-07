@@ -9,6 +9,7 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { triggerStripeBackfill } from "@/lib/admin-api";
@@ -239,9 +240,7 @@ export default function AdminPaymentsPage() {
             </Select>
           </div>
 
-          {loading ? (
-            <div className="text-muted-foreground animate-pulse py-10 text-center">Loading payments…</div>
-          ) : filtered.length === 0 ? (
+          {!loading && filtered.length === 0 ? (
             <div className="text-muted-foreground py-10 text-center text-sm">
               No payments match your filters.
             </div>
@@ -260,7 +259,9 @@ export default function AdminPaymentsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map((r) => (
+                  {loading
+                    ? Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={`s-${i}`} />)
+                    : filtered.map((r) => (
                     <TableRow key={r.id}>
                       <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
                         {new Date(r.occurred_at).toLocaleString()}
