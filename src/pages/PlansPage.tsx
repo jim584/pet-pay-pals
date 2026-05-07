@@ -6,6 +6,8 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { fetchPlans, startCheckout, MembershipPlan } from "@/lib/plans-api";
 import { PlanCard } from "@/components/plans/PlanCard";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
 export default function PlansPage() {
