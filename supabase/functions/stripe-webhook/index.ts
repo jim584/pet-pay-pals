@@ -439,3 +439,103 @@ async function decideAuth(admin: any, a: Stripe.Issuing.Authorization)
   }
   return { approved: true, ticketId };
 }
+
+// ===== Referral bounty helpers =====
+
+async function accrueReferralBounty(admin: any, args: {
+  userId: string; membershipId: string; invoiceId: string; paidAmount: number;
+}) {
+  if (!args.paidAmount || args.paidAmount <= 0) return;
+
+  const { data: ref } = await admin
+    .from("referrals")
+    .select("id, referrer_id, status, activated_at, membership_id")
+    .eq("referred_user_id", args.userId)
+    .maybeSingle();
+  if (!ref || ref.status === "reversed" || ref.status === "inactive") return;
+
+  const { data: referrer } = await admin
+    .from("referrers")
+    .select("id, type, is_active, fear_free_certified")
+    .eq("id", ref.referrer_id)
+    .maybeSingle();
+  if (!referrer || !referrer.is_active) return;
+  if (referrer.type === "vet" && !referrer.fear_free_certified) {
+    // still mark activation but no bounty
+    if (ref.status === "pending_signup") {
+      await admin.from("referrals").update({
+        status: "active", activated_at: new Date().toISOString(), membership_id: args.membershipId,
+      }).eq("id", ref.id);
+    }
+    return;
+  }
+
+  // Activate referral on first paid invoice
+  let activatedAt = ref.activated_at;
+  if (ref.status === "pending_signup" || !activatedAt) {
+    activatedAt = new Date().toISOString();
+    await admin.from("referrals").update({
+      status: "active", activated_at: activatedAt, membership_id: args.membershipId,
+    }).eq("id", ref.id);
+  }
+
+  // Find payment_history row for this invoice
+  const { data: ph } = await admin.from("payment_history")
+    .select("id").eq("stripe_invoice_id", args.invoiceId).maybeSingle();
+
+  // Idempotency: skip if a bounty already exists for this payment
+  if (ph?.id) {
+    const { data: existing } = await admin.from("referral_bounties")
+      .select("id").eq("payment_history_id", ph.id).maybeSingle();
+    if (existing) return;
+  }
+
+  // Settings
+  const { data: settings } = await admin.from("referral_program_settings")
+    .select("intro_rate, intro_months, ongoing_rate, hold_days").limit(1).maybeSingle();
+  const introRate = Number(settings?.intro_rate ?? 0.05);
+  const introMonths = Number(settings?.intro_months ?? 6);
+  const ongoingRate = Number(settings?.ongoing_rate ?? 0.02);
+  const holdDays = Number(settings?.hold_days ?? 30);
+
+  const monthsElapsed = Math.floor(
+    (Date.now() - new Date(activatedAt).getTime()) / (1000 * 60 * 60 * 24 * 30.4375)
+  );
+  const inIntro = monthsElapsed < introMonths;
+  const rate = inIntro ? introRate : ongoingRate;
+  const bounty = Math.round(args.paidAmount * rate * 100) / 100;
+  if (bounty <= 0) return;
+
+  const holdUntil = new Date(Date.now() + holdDays * 24 * 60 * 60 * 1000).toISOString();
+
+  await admin.from("referral_bounties").insert({
+    referral_id: ref.id,
+    referrer_id: referrer.id,
+    payment_history_id: ph?.id ?? null,
+    membership_id: args.membershipId,
+    period: inIntro ? "intro" : "ongoing",
+    rate,
+    gross_membership_amount: args.paidAmount,
+    bounty_amount: bounty,
+    hold_until: holdUntil,
+    status: "pending",
+  });
+}
+
+async function reverseReferralIfWithinHold(admin: any, userId: string) {
+  const { data: ref } = await admin
+    .from("referrals")
+    .select("id, activated_at, status")
+    .eq("referred_user_id", userId)
+    .maybeSingle();
+  if (!ref || !ref.activated_at) return;
+
+  const cutoff = new Date(new Date(ref.activated_at).getTime() + 30 * 24 * 60 * 60 * 1000);
+  if (new Date() > cutoff) return; // outside 30-day reversal window
+
+  await admin.from("referral_bounties")
+    .update({ status: "reversed" })
+    .eq("referral_id", ref.id)
+    .in("status", ["pending", "available"]);
+  await admin.from("referrals").update({ status: "reversed" }).eq("id", ref.id);
+}
