@@ -473,18 +473,42 @@ function BnplDetails({ row }: { row: PaymentRow }) {
     );
   }
 
-  // Estimate cadence + remaining installments
+  // Derive cadence from actual paid installments
+  const sortedPaid = [...installments].sort(
+    (a, b) => new Date(a.paid_at).getTime() - new Date(b.paid_at).getTime()
+  );
   const isPaidOff = Number(ob.outstanding_amount) <= 0 || ob.status === "paid_off";
-  const avgInstallment = installments.length
-    ? paidTotal / installments.length
-    : Number(ob.original_amount) / 4; // assume 4 if unknown
+  const lastPaidAt = sortedPaid.length
+    ? new Date(sortedPaid[sortedPaid.length - 1].paid_at)
+    : new Date(ob.created_at);
+
+  // Average gap between consecutive payments (days)
+  let avgGapDays: number | null = null;
+  if (sortedPaid.length >= 2) {
+    const gaps: number[] = [];
+    for (let i = 1; i < sortedPaid.length; i++) {
+      gaps.push(
+        (new Date(sortedPaid[i].paid_at).getTime() -
+          new Date(sortedPaid[i - 1].paid_at).getTime()) / 86400000
+      );
+    }
+    avgGapDays = gaps.reduce((s, g) => s + g, 0) / gaps.length;
+  }
+
+  // Average installment amount actually paid
+  const avgInstallment = sortedPaid.length
+    ? paidTotal / sortedPaid.length
+    : null;
+
   const remainingCount = isPaidOff
     ? 0
-    : Math.max(1, Math.ceil(Number(ob.outstanding_amount) / Math.max(avgInstallment, 1)));
-  const lastPaidAt = installments.length
-    ? new Date(Math.max(...installments.map((i) => new Date(i.paid_at).getTime())))
-    : new Date(ob.created_at);
-  const nextDue = isPaidOff ? null : new Date(lastPaidAt.getTime() + 30 * 86400000);
+    : avgInstallment && avgInstallment > 0
+      ? Math.max(1, Math.ceil(Number(ob.outstanding_amount) / avgInstallment))
+      : null;
+
+  const nextDue = isPaidOff || avgGapDays == null
+    ? null
+    : new Date(lastPaidAt.getTime() + avgGapDays * 86400000);
   const isOverdue = nextDue ? nextDue.getTime() < Date.now() : false;
 
   return (
@@ -507,8 +531,10 @@ function BnplDetails({ row }: { row: PaymentRow }) {
           <Detail label="Remaining installments">
             {isPaidOff ? (
               <Badge variant="default">Paid off</Badge>
+            ) : remainingCount != null ? (
+              <span>{remainingCount}</span>
             ) : (
-              <span>~{remainingCount} (est.)</span>
+              <span className="text-muted-foreground">Awaiting first payment</span>
             )}
           </Detail>
           <Detail label="Next installment due">
@@ -516,8 +542,10 @@ function BnplDetails({ row }: { row: PaymentRow }) {
               <span className={isOverdue ? "text-destructive font-semibold" : ""}>
                 {nextDue.toLocaleDateString()}{isOverdue ? " · overdue" : ""}
               </span>
-            ) : (
+            ) : isPaidOff ? (
               <span className="text-muted-foreground">—</span>
+            ) : (
+              <span className="text-muted-foreground">Needs ≥2 payments to project</span>
             )}
           </Detail>
           <Detail label="External ref" value={ob.external_ref ?? "—"} />
