@@ -49,9 +49,6 @@ export function AutopaySetupCard({ onSetupComplete }: Props) {
       let tries = 0;
       const poll = async () => {
         tries++;
-        await refresh();
-        const { data } = await fetch("about:blank").then(() => ({ data: null })).catch(() => ({ data: null }));
-        // re-read fresh status
         if (user) {
           const s = await getAutopayStatus(user.id).catch(() => null);
           if (s?.default_payment_method_id) {
