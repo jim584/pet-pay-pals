@@ -557,8 +557,32 @@ function BnplDetails({ row }: { row: PaymentRow }) {
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <Card>
-        <CardHeader className="pb-2">
+        <CardHeader className="pb-2 flex flex-row items-center justify-between">
           <CardTitle className="text-sm">BNPL agreement</CardTitle>
+          <TooltipProvider delayDuration={150}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="How projections are calculated"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Info className="h-3.5 w-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="left" className="max-w-xs text-xs leading-relaxed">
+                <p className="font-medium mb-1">Projected values</p>
+                <p>
+                  <span className="font-medium">Next installment due</span> and{" "}
+                  <span className="font-medium">remaining installments</span> are
+                  projected from the actual <code>bnpl_payments</code> records —
+                  using the average gap (cadence) between consecutive paid
+                  installments and the average installment amount. At least 2
+                  paid installments are needed to project a next due date.
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <Detail label="Provider" value={ob.provider} />
