@@ -326,6 +326,29 @@ function NewTicketDialog({ pets, clinics, onCreated }: {
 
 function TicketCard({ ticket, onChanged }: { ticket: VetTicket; onChanged: () => void }) {
   const [paying, setPaying] = useState(false);
+  const [useReserve, setUseReserve] = useState(false);
+  const [previewBreakdown, setPreviewBreakdown] = useState<CoverageBreakdown | null>(null);
+  const [previewing, setPreviewing] = useState(false);
+
+  // Auto-preview reserve eligibility once for submitted/under_review tickets
+  useEffect(() => {
+    if (["submitted", "under_review"].includes(ticket.status) && !previewBreakdown) {
+      computeTicketCoverage(ticket.id, false).then(setPreviewBreakdown).catch(() => {});
+    }
+  }, [ticket.id, ticket.status]);
+
+  const togglePreviewReserve = async (next: boolean) => {
+    setUseReserve(next);
+    setPreviewing(true);
+    try {
+      const b = await computeTicketCoverage(ticket.id, next);
+      setPreviewBreakdown(b);
+    } catch (e: any) {
+      toast({ title: "Couldn't recompute coverage", description: e.message, variant: "destructive" });
+    } finally {
+      setPreviewing(false);
+    }
+  };
 
   const payRemainder = async () => {
     setPaying(true);
@@ -347,7 +370,7 @@ function TicketCard({ ticket, onChanged }: { ticket: VetTicket; onChanged: () =>
     }
   };
 
-  const b = ticket.coverage_breakdown;
+  const b = ticket.coverage_breakdown ?? previewBreakdown;
   return (
     <Card>
       <CardHeader>
