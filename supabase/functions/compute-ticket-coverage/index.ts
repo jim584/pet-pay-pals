@@ -153,8 +153,24 @@ Deno.serve(async (req) => {
     const bnplUse = Math.min(remainingAfterDp, bnplCapacity);
     remainingAfterDp -= bnplUse;
 
-    // Reserve eligibility placeholder (admin-controlled per ticket; default 0)
-    const reserveUse = 0;
+    // Member Reserve: optional, opt-in only, used as fallback after DP+BNPL.
+    let reserveAvailable = 0;
+    let reserveEligible = false;
+    let reserveUse = 0;
+    let reserveBlockedReason: string | null = null;
+    if (membership) {
+      reserveEligible = !!membership.reserve_eligible_since;
+      const { data: rAccruals } = await admin
+        .from("member_reserve_accruals")
+        .select("remaining_amount")
+        .eq("user_id", ticket.owner_id);
+      reserveAvailable = (rAccruals ?? []).reduce((s: number, r: any) => s + Number(r.remaining_amount ?? 0), 0);
+      if (!reserveEligible) reserveBlockedReason = "not_eligible_yet";
+      else if (use_reserve && remainingAfterDp > 0) {
+        reserveUse = Math.min(reserveAvailable, remainingAfterDp);
+        remainingAfterDp -= reserveUse;
+      }
+    }
 
     const memberRemainder = Math.max(0, estimate - dpUse - bnplUse - reserveUse);
 
@@ -167,7 +183,12 @@ Deno.serve(async (req) => {
       bnpl_prior_defaults: priorDefaults ?? 0,
       bnpl_recent_missed: recentMissed,
       bnpl_blocked_reason: bnplBlockedReason,
-      reserve_use: reserveUse, member_remainder: round2(memberRemainder),
+      reserve_eligible: reserveEligible,
+      reserve_available: round2(reserveAvailable),
+      reserve_use: round2(reserveUse),
+      reserve_opted_in: !!use_reserve,
+      reserve_blocked_reason: reserveBlockedReason,
+      member_remainder: round2(memberRemainder),
       computed_at: new Date().toISOString(),
     };
 
