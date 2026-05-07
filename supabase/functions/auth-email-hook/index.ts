@@ -35,10 +35,10 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 // Configuration
-const SITE_NAME = "pet-pay-pals"
+const SITE_NAME = "Help A Pet"
 const SENDER_DOMAIN = "notify.plexaihub.com"
 const ROOT_DOMAIN = "plexaihub.com"
-const FROM_DOMAIN = "plexaihub.com" // Domain shown in From address (may be root or sender subdomain)
+const FROM_DOMAIN = "notify.plexaihub.com" // Domain shown in From address (matches verified sender subdomain)
 
 // Sample data for preview mode ONLY (not used in actual email sending).
 // URLs are baked in at scaffold time from the project's real data.
