@@ -346,12 +346,42 @@ Deno.serve(async (req) => {
           }
 
           // Continuous-paid-months counter + reserve eligibility (12 consecutive months).
+          // Detect a gap since last paid month: if the previous paid month is not the
+          // immediately preceding calendar month, the streak is broken and we restart.
           const monthsCount = m.billing_interval === "year" ? 12 : 1;
-          const newCount = (Number(m.continuous_paid_months ?? 0)) + monthsCount;
-          const eligibleSince = !m.reserve_eligible_since && newCount >= 12
+          const thisMonthStart = new Date(nowR.getFullYear(), nowR.getMonth(), 1);
+          const lastPaidMonth = thisMonthStart.toISOString().slice(0, 10);
+
+          let priorCount = Number(m.continuous_paid_months ?? 0);
+          let priorEligibleSince = m.reserve_eligible_since as string | null;
+
+          if (m.last_paid_month) {
+            const prev = new Date(m.last_paid_month + "T00:00:00Z");
+            // expected previous month = thisMonthStart - 1 month (UTC-safe via year/month math)
+            const expectedPrevYear = thisMonthStart.getUTCFullYear();
+            const expectedPrevMonth = thisMonthStart.getUTCMonth() - 1;
+            const expected = new Date(Date.UTC(expectedPrevYear, expectedPrevMonth, 1));
+            // Annual subs: last_paid_month was set to first month of last cycle; allow up to 12 months back.
+            const maxBackMonths = m.billing_interval === "year" ? 12 : 1;
+            const monthsDiff =
+              (thisMonthStart.getUTCFullYear() - prev.getUTCFullYear()) * 12 +
+              (thisMonthStart.getUTCMonth() - prev.getUTCMonth());
+            if (monthsDiff > maxBackMonths) {
+              // Gap detected — streak broken, restart counter and clear eligibility
+              priorCount = 0;
+              priorEligibleSince = null;
+            }
+          } else {
+            // No previous paid month recorded — fresh start
+            priorCount = 0;
+            priorEligibleSince = null;
+          }
+
+          const newCount = priorCount + monthsCount;
+          const eligibleSince = !priorEligibleSince && newCount >= 12
             ? new Date().toISOString()
-            : m.reserve_eligible_since;
-          const lastPaidMonth = new Date(nowR.getFullYear(), nowR.getMonth(), 1).toISOString().slice(0, 10);
+            : priorEligibleSince;
+
           await admin.from("memberships").update({
             continuous_paid_months: newCount,
             last_paid_month: lastPaidMonth,
