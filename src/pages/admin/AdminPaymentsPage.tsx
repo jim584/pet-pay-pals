@@ -439,6 +439,7 @@ function KpiCard({ label, value, icon: Icon, accent }: { label: string; value: s
 function SkeletonRow() {
   return (
     <TableRow>
+      <TableCell><Skeleton className="h-3 w-4" /></TableCell>
       <TableCell><Skeleton className="h-3 w-28" /></TableCell>
       <TableCell><Skeleton className="h-3 w-32" /></TableCell>
       <TableCell><Skeleton className="h-5 w-20 rounded-full" /></TableCell>
@@ -447,5 +448,95 @@ function SkeletonRow() {
       <TableCell className="text-right"><Skeleton className="h-3 w-16 ml-auto" /></TableCell>
       <TableCell className="text-right"><Skeleton className="h-4 w-4 ml-auto" /></TableCell>
     </TableRow>
+  );
+}
+
+const BNPL_STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  paid_off: "default",
+  active: "default",
+  pending: "outline",
+  defaulted: "destructive",
+  cancelled: "secondary",
+};
+
+function BnplDetails({ row }: { row: PaymentRow }) {
+  const ob = row.obligation;
+  const installments = row.installments ?? [];
+  const paidTotal = installments.reduce((s, i) => s + Number(i.amount ?? 0), 0);
+
+  if (!ob) {
+    return (
+      <div className="text-sm text-muted-foreground">
+        No BNPL plan on file{row.ticket_clinic_name ? ` for ${row.ticket_clinic_name}` : ""}.
+        This member remainder was paid in full at checkout.
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-4 md:grid-cols-2">
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">BNPL agreement</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          <Detail label="Provider" value={ob.provider} />
+          <Detail label="Status">
+            <Badge variant={BNPL_STATUS_VARIANT[ob.status] ?? "outline"}>{ob.status}</Badge>
+          </Detail>
+          <Detail label="Original" value={fmt(ob.original_amount)} />
+          <Detail label="Outstanding" value={fmt(ob.outstanding_amount)} />
+          <Detail label="External ref" value={ob.external_ref ?? "—"} />
+          <Detail label="Created" value={new Date(ob.created_at).toLocaleDateString()} />
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="pb-2 flex flex-row items-center justify-between">
+          <CardTitle className="text-sm">Installment schedule</CardTitle>
+          <span className="text-xs text-muted-foreground">
+            {fmt(paidTotal)} of {fmt(ob.original_amount)} paid · {installments.length} installment{installments.length === 1 ? "" : "s"}
+          </span>
+        </CardHeader>
+        <CardContent>
+          {installments.length === 0 ? (
+            <div className="text-xs text-muted-foreground py-4 text-center">
+              No installments recorded yet.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs">Date</TableHead>
+                  <TableHead className="text-xs">Method</TableHead>
+                  <TableHead className="text-xs">Ref</TableHead>
+                  <TableHead className="text-xs text-right">Amount</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {installments.map((i) => (
+                  <TableRow key={i.id}>
+                    <TableCell className="text-xs whitespace-nowrap">{new Date(i.paid_at).toLocaleDateString()}</TableCell>
+                    <TableCell className="text-xs"><Badge variant="outline">{i.method}</Badge></TableCell>
+                    <TableCell className="text-xs text-muted-foreground truncate max-w-[160px]" title={i.external_ref ?? ""}>
+                      {i.external_ref ?? "—"}
+                    </TableCell>
+                    <TableCell className="text-xs text-right font-medium">{fmt(i.amount)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function Detail({ label, value, children }: { label: string; value?: string | number; children?: React.ReactNode }) {
+  return (
+    <div className="flex justify-between gap-4">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="font-medium">{children ?? value}</span>
+    </div>
   );
 }
