@@ -9,6 +9,7 @@ import { PlanCard } from "@/components/plans/PlanCard";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function PlansPage() {
   const { user, loading } = useAuth();
@@ -28,6 +29,20 @@ export default function PlansPage() {
 
   const handleSubscribe = async (plan: MembershipPlan) => {
     try {
+      // Membership must be tied to a pet. Block checkout if user has no pet.
+      const { count, error: petCountErr } = await supabase
+        .from("pets")
+        .select("id", { count: "exact", head: true })
+        .eq("owner_id", user!.id);
+      if (petCountErr) throw petCountErr;
+      if (!count || count === 0) {
+        toast.error("Add your pet first", {
+          description: "Your membership is tied to a pet. Add one to continue.",
+        });
+        navigate("/dashboard/pets");
+        return;
+      }
+
       const url = await startCheckout({
         plan_id: plan.id,
         billing_interval: billingInterval,
