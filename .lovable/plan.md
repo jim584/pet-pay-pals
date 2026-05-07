@@ -1,45 +1,35 @@
-## Goal
+# Plan A — Quick Wins
 
-Stop the platform from sending ANY emails (BNPL reminders, auth emails like password reset / magic link / signup confirmation, etc.) until the DNS delegation for `notify.plexaihub.com` finishes verifying. Once DNS is live, flip a single switch to re-enable everything — no code changes needed.
+Ship the five low-risk fixes now. B (Vet of Record + Fear Free) and C (per-member Reserve) follow in separate passes once you confirm the Reserve eligibility rule (signup date / membership start / continuous-payment).
 
-## Why
+## 1. Enable ACH on Stripe Checkout
+- File: `supabase/functions/create-checkout/index.ts`
+- Add `us_bank_account` to `payment_method_types` alongside `card`.
+- Add `payment_method_options.us_bank_account.verification_method = 'instant'` so Plaid-style instant verification is offered.
+- No DB change.
 
-The sender domain `notify.plexaihub.com` is still **Pending** DNS verification. Any email send right now will either fail or hurt sender reputation on the new subdomain. The two Edge Functions that actually call the email API are:
+## 2. Block plan checkout until a pet exists
+- File: `src/pages/PlansPage.tsx` (and any "Choose plan" CTA on the membership flow).
+- Before calling `create-checkout`, query `pets` for the current user. If zero pets → route to `/pets/new` with a toast: "Add your pet first — your membership is tied to a pet."
+- Also guard server-side in `create-checkout`: reject with 400 if the user has no pet row.
 
-- `supabase/functions/send-bnpl-reminder/index.ts` — BNPL upcoming/due/missed/default reminders
-- `supabase/functions/auth-email-hook/index.ts` — all Supabase Auth emails (signup, recovery, magic link, etc.)
+## 3. Make pet photo required
+- DB migration: `ALTER TABLE pets ALTER COLUMN photo_url SET NOT NULL;` — first backfill any existing nulls with a placeholder so the migration doesn't fail. (I'll check the count first and either backfill or set a sensible default.)
+- UI: pet create/edit form — mark photo field required, disable Save until an image is uploaded/cropped.
 
-Both use `sendLovableEmail(...)` directly.
+## 4. Reword BNPL "reimbursement" → "repayment schedule"
+- Search & replace user-facing copy in: BNPL components, plan/onboarding scripts, ticket coverage breakdown, any tooltip/help text.
+- Keep DB column names as-is; only copy changes.
 
-## Approach
+## 5. Remove email promises from onboarding
+- Audit onboarding screens, plan confirmation, BNPL screens, vet-ticket success screens for any "we'll email you…" copy.
+- Replace with in-app notification language ("You'll see this in your dashboard") until DNS verifies on `notify.plexaihub.com`.
+- No functional change to the already-disabled email senders.
 
-Introduce a single environment flag `EMAILS_ENABLED` that both functions read at the top of their handler. When it is anything other than `"true"`, the function:
+## What I will NOT touch in this pass
+- Vet of Record / Fear Free verification (Plan B).
+- Per-member Reserve balance, accruals, 12-month lock (Plan C).
+- The 70/10/20 split itself — unchanged. Reserve allocation comes online in C.
 
-1. Logs a short "emails disabled — skipping send" line (with installment_id / email_action_type for traceability).
-2. Returns a successful response so callers (cron jobs, Supabase Auth) don't error or retry.
-3. Skips DB side-effects that imply the email was actually delivered (specifically the `last_reminded_at` / `reminder_stage` update in `send-bnpl-reminder` — otherwise we'd mark a reminder "sent" that never went out).
-
-Default behavior when the env var is missing = **disabled** (fail-safe). Set `EMAILS_ENABLED=true` once DNS verifies to turn sending back on.
-
-### Files to change
-
-1. **`supabase/functions/send-bnpl-reminder/index.ts`** — add the gate near the top of `Deno.serve`, before any work, return `{ ok: true, skipped: "emails_disabled" }`.
-2. **`supabase/functions/auth-email-hook/index.ts`** — add the gate at the top of the handler. Return a 200 with an empty/no-op body so Supabase Auth treats the hook as successful and the user signup / password reset flow doesn't break in the UI. (Side effect: users won't get the email until you flip the switch — that is the intent.)
-
-### Deployment
-
-- Deploy both updated edge functions.
-- Add the secret `EMAILS_ENABLED` (initial value: leave unset, or set to `false`).
-- When DNS for `notify.plexaihub.com` shows verified in Cloud → Emails, set `EMAILS_ENABLED=true` and redeploy is NOT needed (env reads on each invocation).
-
-## Out of scope
-
-- No template changes.
-- Not disabling Lovable Emails at the platform level (that would also affect future auth customization). The env-flag approach is reversible with one secret update.
-- Not removing call sites in `src/lib/*` — those still run, the edge function just no-ops.
-
-## Verification after applying
-
-- Trigger a BNPL reminder (admin "process overdue" action) → function logs "skipped: emails_disabled", no email sent, `last_reminded_at` NOT updated.
-- Trigger a password reset from `/auth` → no email arrives, but the auth flow returns success in the UI.
-- Once DNS verifies and `EMAILS_ENABLED=true` is set, repeat both → emails arrive normally.
+## After A ships
+I'll come back and ask you the Reserve eligibility question (signup date vs membership start vs continuous-payment) so B and C can be specced precisely.
