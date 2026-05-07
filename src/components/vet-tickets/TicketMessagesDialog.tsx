@@ -32,7 +32,9 @@ export function TicketMessagesDialog({
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [draft, setDraft] = useState("");
+  const [pending, setPending] = useState<File[]>([]);
   const [unread, setUnread] = useState(0);
+  const fileRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Refresh unread badge periodically + on mount
