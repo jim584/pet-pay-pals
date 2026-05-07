@@ -372,6 +372,26 @@ Deno.serve(async (req) => {
         }).eq("stripe_card_id", c.id);
         break;
       }
+
+      case "account.updated": {
+        const acct = event.data.object as Stripe.Account;
+        const status = (acct.charges_enabled && acct.payouts_enabled) ? "active"
+          : (acct.requirements?.disabled_reason ? "restricted" : "pending");
+        await admin.from("referrers")
+          .update({ stripe_connect_status: status })
+          .eq("stripe_connect_account_id", acct.id);
+        break;
+      }
+
+      case "transfer.paid":
+      case "transfer.failed": {
+        const t = event.data.object as Stripe.Transfer;
+        const status = event.type === "transfer.paid" ? "paid" : "failed";
+        await admin.from("referrer_payouts")
+          .update({ status, paid_at: status === "paid" ? new Date().toISOString() : null })
+          .eq("stripe_transfer_id", t.id);
+        break;
+      }
     }
 
     return new Response(JSON.stringify({ received: true }), {
