@@ -107,8 +107,8 @@ export async function listAllTicketsForAdmin(): Promise<VetTicket[]> {
   return (data ?? []) as unknown as VetTicket[];
 }
 
-export async function computeTicketCoverage(ticket_id: string): Promise<CoverageBreakdown> {
-  const { data, error } = await supabase.functions.invoke("compute-ticket-coverage", { body: { ticket_id } });
+export async function computeTicketCoverage(ticket_id: string, use_reserve = false): Promise<CoverageBreakdown> {
+  const { data, error } = await supabase.functions.invoke("compute-ticket-coverage", { body: { ticket_id, use_reserve } });
   if (error) throw error;
   return data.breakdown as CoverageBreakdown;
 }
