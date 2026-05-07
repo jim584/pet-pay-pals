@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,8 +15,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { triggerStripeBackfill } from "@/lib/admin-api";
 import {
   CreditCard, DollarSign, RefreshCw, ExternalLink, Loader2, FileText, TrendingUp,
+  ChevronDown, ChevronRight,
 } from "lucide-react";
 
+type Installment = {
+  id: string; obligation_id: string; amount: number; paid_at: string;
+  method: string; external_ref: string | null; notes: string | null;
+};
+type Obligation = {
+  id: string; ticket_id: string | null; provider: string;
+  original_amount: number; outstanding_amount: number; status: string;
+  external_ref: string | null; created_at: string;
+};
 type PaymentRow = {
   id: string;
   user_id: string;
@@ -31,7 +41,12 @@ type PaymentRow = {
   stripe_invoice_id: string | null;
   stripe_payment_intent_id: string | null;
   stripe_charge_id: string | null;
+  vet_ticket_id: string | null;
+  bnpl_obligation_id: string | null;
   user_full_name?: string | null;
+  obligation?: Obligation | null;
+  installments?: Installment[];
+  ticket_clinic_name?: string | null;
 };
 
 const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -67,6 +82,10 @@ export default function AdminPaymentsPage() {
   const [syncing, setSyncing] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const reqIdRef = useRef(0);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const toggleExpand = (id: string) => setExpanded((p) => {
+    const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n;
+  });
 
   const fetchPage = useCallback(async (offset: number, reqId: number) => {
     let q = supabase
@@ -91,9 +110,68 @@ export default function AdminPaymentsPage() {
         .from("profiles").select("user_id, full_name").in("user_id", userIds);
       (profs ?? []).forEach((p: any) => profileMap.set(p.user_id, p.full_name));
     }
-    const mapped = ((data ?? []) as any[]).map((r) => ({
-      ...r, user_full_name: profileMap.get(r.user_id) ?? null,
-    })) as PaymentRow[];
+
+    // Linked vet tickets + obligations + installments
+    const ticketIds = Array.from(new Set((data ?? [])
+      .map((r: any) => r.vet_ticket_id).filter(Boolean)));
+    const directObIds = Array.from(new Set((data ?? [])
+      .map((r: any) => r.bnpl_obligation_id).filter(Boolean)));
+
+    const [ticketsRes, obByTicketRes, obDirectRes] = await Promise.all([
+      ticketIds.length
+        ? supabase.from("vet_tickets").select("id, clinic_name").in("id", ticketIds)
+        : Promise.resolve({ data: [] } as any),
+      ticketIds.length
+        ? supabase.from("bnpl_obligations")
+            .select("id, ticket_id, provider, original_amount, outstanding_amount, status, external_ref, created_at")
+            .in("ticket_id", ticketIds)
+        : Promise.resolve({ data: [] } as any),
+      directObIds.length
+        ? supabase.from("bnpl_obligations")
+            .select("id, ticket_id, provider, original_amount, outstanding_amount, status, external_ref, created_at")
+            .in("id", directObIds)
+        : Promise.resolve({ data: [] } as any),
+    ]);
+
+    const ticketMap = new Map<string, any>((ticketsRes.data ?? []).map((t: any) => [t.id, t]));
+    const obByTicket = new Map<string, Obligation>(
+      (obByTicketRes.data ?? []).map((o: any) => [o.ticket_id, o as Obligation])
+    );
+    const obById = new Map<string, Obligation>([
+      ...((obByTicketRes.data ?? []) as Obligation[]),
+      ...((obDirectRes.data ?? []) as Obligation[]),
+    ].map((o) => [o.id, o]));
+
+    const allObIds = Array.from(new Set([
+      ...directObIds,
+      ...((obByTicketRes.data ?? []) as any[]).map((o) => o.id),
+    ]));
+    const installMap = new Map<string, Installment[]>();
+    if (allObIds.length) {
+      const { data: pays } = await supabase
+        .from("bnpl_payments")
+        .select("id, obligation_id, amount, paid_at, method, external_ref, notes")
+        .in("obligation_id", allObIds)
+        .order("paid_at", { ascending: false });
+      (pays ?? []).forEach((p: any) => {
+        const arr = installMap.get(p.obligation_id) ?? [];
+        arr.push(p as Installment);
+        installMap.set(p.obligation_id, arr);
+      });
+    }
+
+    const mapped = ((data ?? []) as any[]).map((r) => {
+      const directOb = r.bnpl_obligation_id ? obById.get(r.bnpl_obligation_id) ?? null : null;
+      const ticketOb = r.vet_ticket_id ? obByTicket.get(r.vet_ticket_id) ?? null : null;
+      const obligation = directOb ?? ticketOb ?? null;
+      return {
+        ...r,
+        user_full_name: profileMap.get(r.user_id) ?? null,
+        ticket_clinic_name: r.vet_ticket_id ? (ticketMap.get(r.vet_ticket_id)?.clinic_name ?? null) : null,
+        obligation,
+        installments: obligation ? (installMap.get(obligation.id) ?? []) : [],
+      };
+    }) as PaymentRow[];
     return { mapped, count: count ?? null, gotFull: (data?.length ?? 0) === PAGE_SIZE };
   }, [rangeDays, statusFilter, kindFilter]);
 
@@ -249,6 +327,7 @@ export default function AdminPaymentsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-8"></TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>User</TableHead>
                     <TableHead>Kind</TableHead>
@@ -261,8 +340,21 @@ export default function AdminPaymentsPage() {
                 <TableBody>
                   {loading
                     ? Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={`s-${i}`} />)
-                    : filtered.map((r) => (
-                    <TableRow key={r.id}>
+                    : filtered.map((r) => {
+                    const isRemainder = r.kind === "member_remainder";
+                    const expandable = isRemainder || !!r.obligation;
+                    const isOpen = expanded.has(r.id);
+                    return (
+                    <Fragment key={r.id}>
+                    <TableRow>
+                      <TableCell className="w-8">
+                        {expandable ? (
+                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0"
+                            onClick={() => toggleExpand(r.id)} aria-label="Expand">
+                            {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                          </Button>
+                        ) : null}
+                      </TableCell>
                       <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
                         {new Date(r.occurred_at).toLocaleString()}
                       </TableCell>
@@ -297,7 +389,15 @@ export default function AdminPaymentsPage() {
                         )}
                       </TableCell>
                     </TableRow>
-                  ))}
+                    {expandable && isOpen && (
+                      <TableRow className="bg-muted/30 hover:bg-muted/30">
+                        <TableCell colSpan={8} className="p-4">
+                          <BnplDetails row={r} />
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    </Fragment>
+                  );})}
                   {!loading && loadingMore && Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={`m-${i}`} />)}
                 </TableBody>
               </Table>
@@ -339,6 +439,7 @@ function KpiCard({ label, value, icon: Icon, accent }: { label: string; value: s
 function SkeletonRow() {
   return (
     <TableRow>
+      <TableCell><Skeleton className="h-3 w-4" /></TableCell>
       <TableCell><Skeleton className="h-3 w-28" /></TableCell>
       <TableCell><Skeleton className="h-3 w-32" /></TableCell>
       <TableCell><Skeleton className="h-5 w-20 rounded-full" /></TableCell>
@@ -347,5 +448,95 @@ function SkeletonRow() {
       <TableCell className="text-right"><Skeleton className="h-3 w-16 ml-auto" /></TableCell>
       <TableCell className="text-right"><Skeleton className="h-4 w-4 ml-auto" /></TableCell>
     </TableRow>
+  );
+}
+
+const BNPL_STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  paid_off: "default",
+  active: "default",
+  pending: "outline",
+  defaulted: "destructive",
+  cancelled: "secondary",
+};
+
+function BnplDetails({ row }: { row: PaymentRow }) {
+  const ob = row.obligation;
+  const installments = row.installments ?? [];
+  const paidTotal = installments.reduce((s, i) => s + Number(i.amount ?? 0), 0);
+
+  if (!ob) {
+    return (
+      <div className="text-sm text-muted-foreground">
+        No BNPL plan on file{row.ticket_clinic_name ? ` for ${row.ticket_clinic_name}` : ""}.
+        This member remainder was paid in full at checkout.
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-4 md:grid-cols-2">
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">BNPL agreement</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          <Detail label="Provider" value={ob.provider} />
+          <Detail label="Status">
+            <Badge variant={BNPL_STATUS_VARIANT[ob.status] ?? "outline"}>{ob.status}</Badge>
+          </Detail>
+          <Detail label="Original" value={fmt(ob.original_amount)} />
+          <Detail label="Outstanding" value={fmt(ob.outstanding_amount)} />
+          <Detail label="External ref" value={ob.external_ref ?? "—"} />
+          <Detail label="Created" value={new Date(ob.created_at).toLocaleDateString()} />
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="pb-2 flex flex-row items-center justify-between">
+          <CardTitle className="text-sm">Installment schedule</CardTitle>
+          <span className="text-xs text-muted-foreground">
+            {fmt(paidTotal)} of {fmt(ob.original_amount)} paid · {installments.length} installment{installments.length === 1 ? "" : "s"}
+          </span>
+        </CardHeader>
+        <CardContent>
+          {installments.length === 0 ? (
+            <div className="text-xs text-muted-foreground py-4 text-center">
+              No installments recorded yet.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs">Date</TableHead>
+                  <TableHead className="text-xs">Method</TableHead>
+                  <TableHead className="text-xs">Ref</TableHead>
+                  <TableHead className="text-xs text-right">Amount</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {installments.map((i) => (
+                  <TableRow key={i.id}>
+                    <TableCell className="text-xs whitespace-nowrap">{new Date(i.paid_at).toLocaleDateString()}</TableCell>
+                    <TableCell className="text-xs"><Badge variant="outline">{i.method}</Badge></TableCell>
+                    <TableCell className="text-xs text-muted-foreground truncate max-w-[160px]" title={i.external_ref ?? ""}>
+                      {i.external_ref ?? "—"}
+                    </TableCell>
+                    <TableCell className="text-xs text-right font-medium">{fmt(i.amount)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function Detail({ label, value, children }: { label: string; value?: string | number; children?: React.ReactNode }) {
+  return (
+    <div className="flex justify-between gap-4">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="font-medium">{children ?? value}</span>
+    </div>
   );
 }
