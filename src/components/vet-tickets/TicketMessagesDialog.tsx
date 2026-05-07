@@ -5,13 +5,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { MessageSquare, Loader2, Send } from "lucide-react";
+import { MessageSquare, Loader2, Send, Paperclip, X, FileText, Download } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import {
   listTicketMessages, sendTicketMessage, markTicketMessagesRead,
   getTicketUnreadCount, subscribeToTicketMessages,
-  type TicketMessage, type TicketMessageRole,
+  uploadMessageAttachment, getMessageAttachmentUrl,
+  type TicketMessage, type TicketMessageRole, type TicketAttachment,
 } from "@/lib/vet-ticket-messages-api";
 
 const ROLE_LABEL: Record<TicketMessageRole, string> = {
