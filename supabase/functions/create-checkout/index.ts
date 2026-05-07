@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
     const email = userData.user.email ?? undefined;
 
     const body = await req.json();
-    const { plan_id, pet_id, billing_interval = "month", is_fear_free_member = false } = body || {};
+    const { plan_id, pet_id, billing_interval = "month" } = body || {};
     if (!plan_id) {
       return new Response(JSON.stringify({ error: "plan_id required" }), { status: 400, headers: corsHeaders });
     }
@@ -41,18 +41,32 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Plan not found" }), { status: 404, headers: corsHeaders });
     }
 
-    // Guard: a membership must be tied to a pet. Reject checkout if the user has no pets.
-    const { count: petCount, error: petErr } = await admin
-      .from("pets").select("id", { count: "exact", head: true }).eq("owner_id", userId);
+    // Guard: membership must be tied to a pet.
+    const { data: userPets, error: petErr } = await admin
+      .from("pets").select("id, vet_of_record_id").eq("owner_id", userId);
     if (petErr) {
       return new Response(JSON.stringify({ error: "Could not verify pet" }), { status: 500, headers: corsHeaders });
     }
-    if (!petCount || petCount === 0) {
+    if (!userPets || userPets.length === 0) {
       return new Response(
         JSON.stringify({ error: "no_pet", message: "Add a pet before choosing a membership plan." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Server-side Fear Free recompute: trust ONLY admin-verified Vet of Record certification.
+    const vetIds = userPets.map((p: any) => p.vet_of_record_id).filter(Boolean);
+    let is_fear_free_member = false;
+    if (vetIds.length > 0) {
+      const { data: ffVets } = await admin
+        .from("vet_profiles")
+        .select("id")
+        .in("id", vetIds)
+        .eq("fear_free_certified", true)
+        .limit(1);
+      is_fear_free_member = !!(ffVets && ffVets.length > 0);
+    }
+
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, { apiVersion: "2024-06-20" });
 
