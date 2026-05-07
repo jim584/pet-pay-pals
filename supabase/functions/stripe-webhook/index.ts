@@ -434,10 +434,12 @@ Deno.serve(async (req) => {
           : sub.status === "past_due" ? "past_due"
           : sub.status === "canceled" ? "cancelled"
           : "paused";
+        const isLapse = status === "cancelled" || status === "past_due" || status === "paused";
         await admin.from("memberships").update({
           status,
           current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
           cancelled_at: sub.cancel_at_period_end ? new Date().toISOString() : null,
+          ...(isLapse ? { continuous_paid_months: 0, reserve_eligible_since: null } : {}),
         }).eq("stripe_subscription_id", sub.id);
         break;
       }
@@ -447,6 +449,8 @@ Deno.serve(async (req) => {
         await admin.from("memberships").update({
           status: "cancelled",
           cancelled_at: new Date().toISOString(),
+          continuous_paid_months: 0,
+          reserve_eligible_since: null,
         }).eq("stripe_subscription_id", sub.id);
 
         // Reverse referral bounties if cancellation occurred during the hold period
