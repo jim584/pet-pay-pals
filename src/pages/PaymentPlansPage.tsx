@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Navigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,8 +35,10 @@ const INSTALLMENT_VARIANT: Record<string, "default" | "secondary" | "destructive
 };
 
 export default function PaymentPlansPage() {
+  const { user, loading: authLoading } = useAuth();
   const [params, setParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [obligations, setObligations] = useState<MyObligation[]>([]);
   const [filter, setFilter] = useState<"open" | "all" | "closed">("open");
   const [installmentsMap, setInstallmentsMap] = useState<Record<string, MyInstallment[]>>({});
@@ -43,21 +46,28 @@ export default function PaymentPlansPage() {
 
   const load = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setObligations([]); return; }
-      const obs = await listMyObligations(user.id);
+      const { data: { user: u } } = await supabase.auth.getUser();
+      if (!u) { setObligations([]); return; }
+      const obs = await listMyObligations(u.id);
       setObligations(obs);
       const entries = await Promise.all(
         obs.map(async (o) => [o.id, await listInstallments(o.id)] as const),
       );
       setInstallmentsMap(Object.fromEntries(entries));
     } catch (e) {
-      toast({ title: "Failed to load payment plans", description: (e as Error).message, variant: "destructive" });
+      const msg = (e as Error).message;
+      setLoadError(msg);
+      toast({ title: "Failed to load payment plans", description: msg, variant: "destructive" });
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => {
+    if (authLoading || !user) return;
+    load();
+    /* eslint-disable-next-line */
+  }, [authLoading, user?.id]);
 
   useEffect(() => {
     if (params.get("paid")) {
@@ -87,6 +97,17 @@ export default function PaymentPlansPage() {
     }
   };
 
+  if (authLoading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-10 w-64" />
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-48 w-full" />
+      </div>
+    );
+  }
+  if (!user) return <Navigate to="/auth" replace />;
+
   return (
     <div className="space-y-6">
       <div>
@@ -112,6 +133,14 @@ export default function PaymentPlansPage() {
         <div className="grid gap-4">
           {[0, 1].map((i) => <Skeleton key={i} className="h-48 w-full" />)}
         </div>
+      ) : loadError ? (
+        <Card>
+          <CardContent className="py-12 text-center space-y-3">
+            <AlertCircle className="h-10 w-10 mx-auto text-destructive" />
+            <div className="text-sm text-destructive">{loadError}</div>
+            <Button variant="outline" size="sm" onClick={load}>Retry</Button>
+          </CardContent>
+        </Card>
       ) : filtered.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
