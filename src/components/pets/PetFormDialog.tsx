@@ -9,9 +9,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/components/ui/sonner";
 import { createPet, updatePet, Pet, calculateAge } from "@/lib/pets-api";
+import { fetchApprovedVetsForPicker, type VetPickerOption } from "@/lib/vet-api";
 import { supabase } from "@/integrations/supabase/client";
 import { isValidImageFile, ACCEPTED_IMAGE_TYPES } from "@/lib/utils";
-import { Camera, PawPrint, X, CalendarIcon } from "lucide-react";
+import { Camera, PawPrint, X, CalendarIcon, BadgeCheck, AlertCircle } from "lucide-react";
 import { ImageCropDialog } from "@/components/ui/ImageCropDialog";
 import { getBreedsForSpecies } from "@/lib/breeds";
 import { BreedCombobox } from "@/components/pets/BreedCombobox";
