@@ -24,6 +24,25 @@ async function sendReminder(installmentId: string, stage: string) {
   }
 }
 
+async function attemptAutoCharge(installmentId: string): Promise<{ ok: boolean; skipped?: string }> {
+  try {
+    const res = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/charge-bnpl-installment`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+      },
+      body: JSON.stringify({ installment_id: installmentId }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (json?.skipped) return { ok: false, skipped: json.skipped };
+    return { ok: !!json?.ok };
+  } catch (e) {
+    console.error("auto-charge dispatch failed", installmentId, e);
+    return { ok: false };
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
