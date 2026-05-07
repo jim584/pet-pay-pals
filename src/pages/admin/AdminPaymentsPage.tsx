@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -52,45 +52,88 @@ const fmt = (n: number, cur = "usd") =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: (cur || "usd").toUpperCase() }).format(Number(n ?? 0));
 
 export default function AdminPaymentsPage() {
+  const PAGE_SIZE = 50;
   const [rows, setRows] = useState<PaymentRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalCount, setTotalCount] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [kindFilter, setKindFilter] = useState<string>("all");
   const [rangeDays, setRangeDays] = useState<string>("30");
   const [syncing, setSyncing] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const reqIdRef = useRef(0);
 
-  const load = async () => {
-    setLoading(true);
+  const fetchPage = useCallback(async (offset: number, reqId: number) => {
+    let q = supabase
+      .from("payment_history")
+      .select("*", { count: offset === 0 ? "exact" : undefined })
+      .order("occurred_at", { ascending: false })
+      .range(offset, offset + PAGE_SIZE - 1);
+    if (rangeDays !== "all") {
+      const since = new Date(Date.now() - Number(rangeDays) * 86400000).toISOString();
+      q = q.gte("occurred_at", since);
+    }
+    if (statusFilter !== "all") q = q.eq("status", statusFilter);
+    if (kindFilter !== "all") q = q.eq("kind", kindFilter);
+    const { data, error, count } = await q;
+    if (error) throw error;
+    if (reqId !== reqIdRef.current) return null;
+
+    const userIds = Array.from(new Set((data ?? []).map((r: any) => r.user_id).filter(Boolean)));
+    const profileMap = new Map<string, string>();
+    if (userIds.length) {
+      const { data: profs } = await supabase
+        .from("profiles").select("user_id, full_name").in("user_id", userIds);
+      (profs ?? []).forEach((p: any) => profileMap.set(p.user_id, p.full_name));
+    }
+    const mapped = ((data ?? []) as any[]).map((r) => ({
+      ...r, user_full_name: profileMap.get(r.user_id) ?? null,
+    })) as PaymentRow[];
+    return { mapped, count: count ?? null, gotFull: (data?.length ?? 0) === PAGE_SIZE };
+  }, [rangeDays, statusFilter, kindFilter]);
+
+  const loadFirst = useCallback(async () => {
+    const reqId = ++reqIdRef.current;
+    setLoading(true); setHasMore(true);
     try {
-      let q = supabase
-        .from("payment_history")
-        .select("*")
-        .order("occurred_at", { ascending: false })
-        .limit(500);
-      if (rangeDays !== "all") {
-        const since = new Date(Date.now() - Number(rangeDays) * 86400000).toISOString();
-        q = q.gte("occurred_at", since);
-      }
-      const { data, error } = await q;
-      if (error) throw error;
-
-      const userIds = Array.from(new Set((data ?? []).map((r: any) => r.user_id).filter(Boolean)));
-      const profileMap = new Map<string, string>();
-      if (userIds.length) {
-        const { data: profs } = await supabase
-          .from("profiles").select("user_id, full_name").in("user_id", userIds);
-        (profs ?? []).forEach((p: any) => profileMap.set(p.user_id, p.full_name));
-      }
-      setRows(((data ?? []) as any[]).map((r) => ({
-        ...r, user_full_name: profileMap.get(r.user_id) ?? null,
-      })));
+      const res = await fetchPage(0, reqId);
+      if (!res) return;
+      setRows(res.mapped);
+      setTotalCount(res.count);
+      setHasMore(res.gotFull);
     } catch (e: any) {
       toast({ title: "Failed to load payments", description: e.message, variant: "destructive" });
     } finally { setLoading(false); }
-  };
+  }, [fetchPage]);
 
-  useEffect(() => { load(); }, [rangeDays]);
+  const loadMore = useCallback(async () => {
+    if (loadingMore || loading || !hasMore) return;
+    setLoadingMore(true);
+    const reqId = reqIdRef.current;
+    try {
+      const res = await fetchPage(rows.length, reqId);
+      if (!res) return;
+      setRows((prev) => [...prev, ...res.mapped]);
+      setHasMore(res.gotFull);
+    } catch (e: any) {
+      toast({ title: "Failed to load more", description: e.message, variant: "destructive" });
+    } finally { setLoadingMore(false); }
+  }, [fetchPage, rows.length, loadingMore, loading, hasMore]);
+
+  useEffect(() => { loadFirst(); }, [loadFirst]);
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting) loadMore();
+    }, { rootMargin: "200px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [loadMore]);
 
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
