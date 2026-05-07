@@ -133,6 +133,14 @@ export default function PaymentPlansPage() {
         <div className="grid gap-4">
           {[0, 1].map((i) => <Skeleton key={i} className="h-48 w-full" />)}
         </div>
+      ) : loadError ? (
+        <Card>
+          <CardContent className="py-12 text-center space-y-3">
+            <AlertCircle className="h-10 w-10 mx-auto text-destructive" />
+            <div className="text-sm text-destructive">{loadError}</div>
+            <Button variant="outline" size="sm" onClick={load}>Retry</Button>
+          </CardContent>
+        </Card>
       ) : filtered.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
