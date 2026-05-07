@@ -345,7 +345,7 @@ export interface AdminVetAppointment {
   service_price: number | null;
 }
 
-export type VetApprovalFilter = "pending" | "approved" | "all";
+export type VetApprovalFilter = "pending" | "approved" | "pending_verification" | "all";
 
 export async function fetchAdminVets(filter: VetApprovalFilter = "all", search?: string): Promise<AdminVetRow[]> {
   let q = supabase
@@ -355,6 +355,12 @@ export async function fetchAdminVets(filter: VetApprovalFilter = "all", search?:
 
   if (filter === "pending") q = q.eq("is_approved", false);
   if (filter === "approved") q = q.eq("is_approved", true);
+  if (filter === "pending_verification") {
+    // Approved clinics that have uploaded credentials still awaiting admin verification.
+    q = q
+      .eq("is_approved", true)
+      .or("and(license_document_url.not.is.null,is_license_verified.eq.false),and(fear_free_cert_url.not.is.null,fear_free_certified.eq.false)");
+  }
 
   const { data, error } = await q;
   if (error) throw error;
