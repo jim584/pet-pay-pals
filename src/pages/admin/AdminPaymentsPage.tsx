@@ -59,6 +59,7 @@ export default function AdminPaymentsPage() {
   const [hasMore, setHasMore] = useState(true);
   const [totalCount, setTotalCount] = useState<number | null>(null);
   const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [kindFilter, setKindFilter] = useState<string>("all");
   const [rangeDays, setRangeDays] = useState<string>("30");
@@ -124,6 +125,11 @@ export default function AdminPaymentsPage() {
   }, [fetchPage, rows.length, loadingMore, loading, hasMore]);
 
   useEffect(() => { loadFirst(); }, [loadFirst]);
+
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput), 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
   useEffect(() => {
     const el = sentinelRef.current;
@@ -196,8 +202,8 @@ export default function AdminPaymentsPage() {
           <div className="flex flex-wrap gap-2">
             <Input
               placeholder="Search by name, description, or Stripe ID…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               className="max-w-xs"
             />
             <Select value={statusFilter} onValueChange={setStatusFilter}>
