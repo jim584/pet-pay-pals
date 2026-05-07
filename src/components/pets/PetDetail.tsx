@@ -6,10 +6,11 @@ import { Separator } from "@/components/ui/separator";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "@/components/ui/sonner";
 import { Pet, HealthRecord, EmergencyContact, fetchHealthRecords, fetchEmergencyContacts, deleteHealthRecord, deleteEmergencyContact, formatAge } from "@/lib/pets-api";
+import { supabase } from "@/integrations/supabase/client";
 import { AddHealthRecordDialog } from "./AddHealthRecordDialog";
 import { AddEmergencyContactDialog } from "./AddEmergencyContactDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { PawPrint, Plus, Trash2, Calendar, Stethoscope, Phone, ArrowLeft, Pencil, Cake, PartyPopper } from "lucide-react";
+import { PawPrint, Plus, Trash2, Calendar, Stethoscope, Phone, ArrowLeft, Pencil, Cake, PartyPopper, BadgeCheck, MapPin } from "lucide-react";
 
 interface PetDetailProps {
   pet: Pet;
