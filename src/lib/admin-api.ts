@@ -460,6 +460,30 @@ export async function setVetApproval(vetProfileId: string, approved: boolean) {
   if (error) throw error;
 }
 
+export async function setVetLicenseVerified(vetProfileId: string, verified: boolean) {
+  const { error } = await supabase
+    .from("vet_profiles")
+    .update({ is_license_verified: verified })
+    .eq("id", vetProfileId);
+  if (error) throw error;
+}
+
+export async function setVetFearFreeVerified(vetProfileId: string, verified: boolean) {
+  const { error } = await supabase
+    .from("vet_profiles")
+    .update({ fear_free_certified: verified })
+    .eq("id", vetProfileId);
+  if (error) throw error;
+}
+
+export async function getVetCredentialSignedUrl(path: string): Promise<string | null> {
+  const { data, error } = await supabase.storage
+    .from("vet-credentials")
+    .createSignedUrl(path, 60 * 10);
+  if (error) return null;
+  return data.signedUrl;
+}
+
 export async function fetchAdminVetServices(vetProfileId: string): Promise<AdminVetService[]> {
   const { data, error } = await supabase
     .from("services")
