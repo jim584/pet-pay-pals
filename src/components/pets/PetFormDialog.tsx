@@ -161,6 +161,10 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
         notes: form.notes || null,
         owner_id: user.id,
         photo_url: removePhoto ? null : (pet?.photo_url ?? null),
+        vet_of_record_id: form.vet_of_record_id || null,
+        vet_of_record_set_at: form.vet_of_record_id && form.vet_of_record_id !== (pet?.vet_of_record_id ?? "")
+          ? new Date().toISOString()
+          : (pet?.vet_of_record_set_at ?? null),
       };
       let savedPet: Pet;
       if (pet) {
