@@ -313,6 +313,44 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
               </div>
             </div>
             <div className="space-y-2">
+              <Label>Primary vet (Vet of Record)</Label>
+              <Select
+                value={form.vet_of_record_id || "none"}
+                onValueChange={(v) => setForm({ ...form, vet_of_record_id: v === "none" ? "" : v })}
+              >
+                <SelectTrigger><SelectValue placeholder="Select your pet's primary vet" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {vetOptions.map((v) => (
+                    <SelectItem key={v.id} value={v.id}>
+                      {v.clinic_name}
+                      {v.location ? ` — ${v.location}` : ""}
+                      {v.fear_free_certified ? " · Fear Free" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {!form.vet_of_record_id ? (
+                <p className="text-xs text-yellow-700 dark:text-yellow-400 flex items-start gap-1">
+                  <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                  <span>Optional, but adding a Vet of Record unlocks Fear Free pricing if your vet is certified.</span>
+                </p>
+              ) : (
+                (() => {
+                  const sel = vetOptions.find((v) => v.id === form.vet_of_record_id);
+                  if (sel?.fear_free_certified) {
+                    return (
+                      <p className="text-xs text-primary flex items-center gap-1">
+                        <BadgeCheck className="h-3.5 w-3.5" />
+                        Fear Free certified — you qualify for Fear Free member pricing.
+                      </p>
+                    );
+                  }
+                  return null;
+                })()
+              )}
+            </div>
+            <div className="space-y-2">
               <Label>Notes</Label>
               <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3} />
             </div>
