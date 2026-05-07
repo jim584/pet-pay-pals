@@ -1,25 +1,26 @@
-I’m sorry — the last iframe breakout approach appears to be blocked in the preview/browser context, so the checkout URL is created successfully but the navigation never happens. I’ll revert that fragile part and switch to the more reliable same-tab redirect pattern.
+I checked the screenshot, the latest redirect helper, the `/plans` checkout flow, and the recorded network request. The app is successfully creating a Stripe Checkout session: the backend returned a valid `https://checkout.stripe.com/...` URL with status 200. The problem is the browser navigation from inside the embedded preview: Stripe Checkout does not render in iframes, so the preview can get stuck on Stripe’s skeleton/loading page instead of escaping to the top-level tab.
 
-Plan:
+Plan to fix it:
 
-1. Replace the current iframe/top-frame redirect helper
-   - Update `src/lib/open-checkout.ts` so it no longer tries `window.top.location` or a synthetic `<a target="_top">` click.
-   - Use direct same-window navigation only: `window.location.assign(url)` with `window.location.href = url` as fallback.
-   - Keep the “Redirecting to secure checkout” toast.
+1. Replace the checkout redirect helper with iframe-safe navigation
+   - Update `src/lib/open-checkout.ts` to detect when the app is running inside an iframe.
+   - When embedded, use a native anchor click with `target="_top"` to break out of the preview iframe.
+   - Keep normal `window.location.assign(...)` navigation for the published app/custom domain.
+   - Keep the user-facing toast, but add clear failure handling if no URL is returned.
 
-2. Make checkout actions fail visibly instead of silently
-   - If the redirect helper is given an empty/invalid URL, show an error toast and return `false`.
-   - If navigation throws, show a clear error toast telling the user to try again or use the fallback link where available.
+2. Make the manual fallback link iframe-safe too
+   - Update the Autopay fallback link to use the same top-frame behavior instead of a plain same-frame link.
+   - This prevents manual checkout links from trying to load Stripe inside the preview iframe.
 
-3. Update remaining Stripe/payment entry points for consistency
-   - Replace remaining payment-related `window.open(..., "_blank")` calls with the shared same-tab helper where the URL is a Stripe Checkout/Billing Portal URL.
-   - Leave non-payment file previews and invoice/PDF links alone if they are intentionally documents.
+3. Remove remaining payment-related new-tab redirects where needed
+   - Replace payment checkout/billing portal redirects with the shared helper.
+   - Leave non-payment file previews, PDFs, invoices, social share links, and vet file links alone.
 
-4. Add a fallback link where the UI can keep state
-   - For components that already store the checkout URL, make the fallback link open in the same tab instead of a new tab.
-   - This gives users a manual “Open Stripe checkout” path if browser navigation is blocked.
+4. Preserve successful backend flow
+   - Do not change the `create-checkout` backend function because it is already returning a valid Stripe URL.
+   - Do not change pricing or membership logic.
 
 Expected result:
-- Stripe checkout/billing portal will open in the current app tab instead of a new tab.
-- In the Lovable preview, it may replace the preview iframe rather than the whole editor tab, but it will no longer try to render Stripe inside an embedded frame via a broken skeleton state.
-- On the published site/custom domain, it will navigate the actual browser tab to Stripe and return to the app through the existing success/cancel URLs.
+- In the Lovable preview, checkout should break out of the embedded preview instead of showing Stripe’s endless skeleton.
+- On the published site and custom domain, checkout should redirect normally in the same browser tab to Stripe.
+- The app will still return to the existing success/cancel URLs after payment.
