@@ -49,6 +49,29 @@ Deno.serve(async (req) => {
         const s = event.data.object as Stripe.Checkout.Session;
         const md = s.metadata || {};
 
+        // BNPL autopay setup — capture the PaymentMethod from the SetupIntent
+        if (md.kind === "bnpl_autopay_setup" && md.user_id && s.mode === "setup") {
+          try {
+            const siId = typeof s.setup_intent === "string" ? s.setup_intent : s.setup_intent?.id;
+            if (siId) {
+              const si = await stripe.setupIntents.retrieve(siId);
+              const pmId = typeof si.payment_method === "string" ? si.payment_method : si.payment_method?.id;
+              const customerId = typeof s.customer === "string" ? s.customer : s.customer?.id;
+              if (pmId && customerId) {
+                try {
+                  await stripe.customers.update(customerId, {
+                    invoice_settings: { default_payment_method: pmId },
+                  });
+                } catch (e) { console.error("set customer default pm failed:", e); }
+                await admin.from("profiles")
+                  .update({ default_payment_method_id: pmId })
+                  .eq("user_id", md.user_id);
+              }
+            }
+          } catch (e) { console.error("autopay setup capture failed:", e); }
+          break;
+        }
+
         // Sponsorship donation payment
         if (md.kind === "sponsorship_donation" && md.pet_id && s.payment_status === "paid") {
           const pi = typeof s.payment_intent === "string" ? s.payment_intent : s.payment_intent?.id ?? null;
