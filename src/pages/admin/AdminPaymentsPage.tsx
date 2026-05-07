@@ -590,6 +590,80 @@ function BnplDetails({ row }: { row: PaymentRow }) {
           </Detail>
           <Detail label="External ref" value={ob.external_ref ?? "—"} />
           <Detail label="Created" value={new Date(ob.created_at).toLocaleDateString()} />
+
+          <div className="pt-2 border-t">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="w-full justify-between px-2 h-8"
+              onClick={() => setScheduleOpen((o) => !o)}
+              aria-expanded={scheduleOpen}
+            >
+              <span className="text-xs font-medium">
+                Installment schedule · {schedule.filter((s) => s.paid).length}/{schedule.length} paid
+              </span>
+              {scheduleOpen ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronRight className="h-4 w-4" />
+              )}
+            </Button>
+            {scheduleOpen && (
+              <div className="mt-2">
+                {schedule.length === 0 ? (
+                  <div className="text-xs text-muted-foreground py-3 text-center">
+                    No installments scheduled yet.
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs">Due date</TableHead>
+                        <TableHead className="text-xs">Status</TableHead>
+                        <TableHead className="text-xs text-right">Amount</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {schedule.map((s) => {
+                        const overdue = !s.paid && s.date.getTime() < Date.now();
+                        return (
+                          <TableRow key={s.key}>
+                            <TableCell className="text-xs whitespace-nowrap">
+                              <span className={overdue ? "text-destructive font-semibold" : ""}>
+                                {s.date.toLocaleDateString()}
+                                {overdue ? " · overdue" : ""}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-xs">
+                              {s.paid ? (
+                                <Badge variant="default">Paid</Badge>
+                              ) : overdue ? (
+                                <Badge variant="destructive">Overdue</Badge>
+                              ) : (
+                                <Badge variant="outline">Pending</Badge>
+                              )}
+                              {s.paid && s.method ? (
+                                <span className="ml-2 text-muted-foreground">{s.method}</span>
+                              ) : null}
+                            </TableCell>
+                            <TableCell className="text-xs text-right font-medium">
+                              {fmt(s.amount)}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                )}
+                {!isPaidOff && remainingCount == null && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Pending installments will appear after the first payment establishes a cadence.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
       <Card>
