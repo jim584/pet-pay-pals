@@ -151,7 +151,9 @@ export default function PaymentPlansPage() {
         </p>
       </div>
 
-      <AutopaySetupCard onSetupComplete={load} />
+      <div ref={autopayRef} id="autopay-setup">
+        <AutopaySetupCard onSetupComplete={load} />
+      </div>
 
       <Tabs value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
         <TabsList>
