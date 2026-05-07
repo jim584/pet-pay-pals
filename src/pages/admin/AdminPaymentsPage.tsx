@@ -531,8 +531,10 @@ function BnplDetails({ row }: { row: PaymentRow }) {
           <Detail label="Remaining installments">
             {isPaidOff ? (
               <Badge variant="default">Paid off</Badge>
+            ) : remainingCount != null ? (
+              <span>{remainingCount}</span>
             ) : (
-              <span>~{remainingCount} (est.)</span>
+              <span className="text-muted-foreground">Awaiting first payment</span>
             )}
           </Detail>
           <Detail label="Next installment due">
@@ -540,8 +542,10 @@ function BnplDetails({ row }: { row: PaymentRow }) {
               <span className={isOverdue ? "text-destructive font-semibold" : ""}>
                 {nextDue.toLocaleDateString()}{isOverdue ? " · overdue" : ""}
               </span>
-            ) : (
+            ) : isPaidOff ? (
               <span className="text-muted-foreground">—</span>
+            ) : (
+              <span className="text-muted-foreground">Needs ≥2 payments to project</span>
             )}
           </Detail>
           <Detail label="External ref" value={ob.external_ref ?? "—"} />
