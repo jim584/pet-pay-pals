@@ -184,6 +184,7 @@ function VetIncomingTickets() {
                       <FileText className="h-4 w-4 mr-1" /> Attestation
                     </Button>
                   )}
+                  <TicketMessagesDialog ticketId={t.id} viewerRole="vet" />
                 </div>
               </CardContent>
             </Card>
