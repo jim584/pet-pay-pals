@@ -174,9 +174,9 @@ Deno.serve(async (req) => {
     }).eq("id", ticket_id);
 
     // If fully funded already, queue manual payout + auto-issue card
-    if (newStatus === "funded" && approvedAmount > 0) {
+    if (newStatus === "funded" && finalApproved > 0) {
       await admin.from("vet_payouts").insert({
-        ticket_id, amount: approvedAmount, method: "manual_ach", status: "pending",
+        ticket_id, amount: finalApproved, method: "manual_ach", status: "pending",
       });
       try {
         await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/issue-vet-card`, {
@@ -192,7 +192,7 @@ Deno.serve(async (req) => {
       } catch (e) { console.error("auto issue-vet-card failed:", e); }
     }
 
-    return new Response(JSON.stringify({ ok: true, status: newStatus, approved_amount: approvedAmount }),
+    return new Response(JSON.stringify({ ok: true, status: newStatus, approved_amount: finalApproved }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     console.error("approve-vet-ticket error:", e);
