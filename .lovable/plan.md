@@ -1,16 +1,10 @@
-## Add "Set up autopay" CTA to empty BNPL state
+## Add a "How autopay works" checklist to the empty BNPL state
 
-### Change
-In `src/pages/PaymentPlansPage.tsx`, add a primary action button to the "No payment plans yet" empty state that takes the user into the existing autopay setup flow (the `AutopaySetupCard` already rendered at the top of the page).
+In `src/pages/PaymentPlansPage.tsx`, between the description paragraph and the "Set up autopay" button (around lines 191–192) in the `obligations.length === 0` empty state, insert a short ordered list with `CheckCircle2` icons (already imported) explaining the flow:
 
-### Implementation
-1. Wrap the `AutopaySetupCard` at line 145 in a `div` with `id="autopay-setup"` and a `ref`.
-2. In the empty state (lines 168–182), add a `Button` below the description:
-   - Label: "Set up autopay"
-   - Icon: `CreditCard`
-   - On click: scroll the autopay section into view smoothly, then programmatically click the "Set up autopay" / "Replace card" button inside `AutopaySetupCard` (queried via the ref) so the user goes straight into the Stripe checkout handoff without an extra step.
-3. If a payment method is already saved (button reads "Replace card"), the empty-state button still works the same — it just reopens the setup flow.
+1. Click "Set up autopay" to securely save a card via Stripe.
+2. After a vet visit, any uncovered balance is split into interest-free installments.
+3. Each installment is charged automatically and appears here under **Open**.
+4. Paid installments move to **Closed**; you can pay early or toggle autopay anytime.
 
-### Notes
-- No changes needed to `AutopaySetupCard.tsx`; the existing `start()` handler already opens Stripe in `_top` and shows the fallback "Continue" link.
-- No new routes, API calls, or schema changes.
+Styled with `text-sm`, left-aligned in a `max-w-md mx-auto` block, muted text, with a small primary-colored check icon per row. No other changes.
