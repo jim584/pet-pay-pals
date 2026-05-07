@@ -95,7 +95,43 @@ export default function AdminVetDetailPage() {
     }
   };
 
-  const toggleServiceActive = async (svc: AdminVetService) => {
+  const toggleLicense = async () => {
+    if (!vet) return;
+    setBusy("license");
+    try {
+      await setVetLicenseVerified(vet.id, !vet.is_license_verified);
+      const fresh = await fetchAdminVetDetail(vet.id);
+      setVet(fresh);
+      toast({ title: !vet.is_license_verified ? "License verified" : "License verification revoked" });
+    } catch (e: any) {
+      toast({ title: "Failed", description: e.message, variant: "destructive" });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const toggleFearFree = async () => {
+    if (!vet) return;
+    setBusy("ff");
+    try {
+      await setVetFearFreeVerified(vet.id, !vet.fear_free_certified);
+      const fresh = await fetchAdminVetDetail(vet.id);
+      setVet(fresh);
+      toast({ title: !vet.fear_free_certified ? "Fear Free verified" : "Fear Free verification revoked" });
+    } catch (e: any) {
+      toast({ title: "Failed", description: e.message, variant: "destructive" });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const openCredential = async (path: string | null) => {
+    if (!path) return;
+    const url = await getVetCredentialSignedUrl(path);
+    if (url) window.open(url, "_blank", "noopener,noreferrer");
+    else toast({ title: "Could not open document", variant: "destructive" });
+  };
+
     setBusy(`svc-${svc.id}`);
     try {
       await setVetServiceActive(svc.id, !svc.is_active);
