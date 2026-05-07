@@ -11,11 +11,14 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Check, Loader2, Mail, MapPin, Phone, Globe, Trash2, FileCheck } from "lucide-react";
+import { ArrowLeft, Check, Loader2, Mail, MapPin, Phone, Globe, Trash2, FileCheck, ShieldCheck, FileText, ExternalLink } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import {
   fetchAdminVetDetail,
   setVetApproval,
+  setVetLicenseVerified,
+  setVetFearFreeVerified,
+  getVetCredentialSignedUrl,
   fetchAdminVetServices,
   setVetServiceActive,
   deleteVetService,
@@ -90,6 +93,43 @@ export default function AdminVetDetailPage() {
     } finally {
       setBusy(null);
     }
+  };
+
+  const toggleLicense = async () => {
+    if (!vet) return;
+    setBusy("license");
+    try {
+      await setVetLicenseVerified(vet.id, !vet.is_license_verified);
+      const fresh = await fetchAdminVetDetail(vet.id);
+      setVet(fresh);
+      toast({ title: !vet.is_license_verified ? "License verified" : "License verification revoked" });
+    } catch (e: any) {
+      toast({ title: "Failed", description: e.message, variant: "destructive" });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const toggleFearFree = async () => {
+    if (!vet) return;
+    setBusy("ff");
+    try {
+      await setVetFearFreeVerified(vet.id, !vet.fear_free_certified);
+      const fresh = await fetchAdminVetDetail(vet.id);
+      setVet(fresh);
+      toast({ title: !vet.fear_free_certified ? "Fear Free verified" : "Fear Free verification revoked" });
+    } catch (e: any) {
+      toast({ title: "Failed", description: e.message, variant: "destructive" });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const openCredential = async (path: string | null) => {
+    if (!path) return;
+    const url = await getVetCredentialSignedUrl(path);
+    if (url) window.open(url, "_blank", "noopener,noreferrer");
+    else toast({ title: "Could not open document", variant: "destructive" });
   };
 
   const toggleServiceActive = async (svc: AdminVetService) => {
@@ -205,6 +245,78 @@ export default function AdminVetDetailPage() {
               <Switch checked={vet.is_approved} onCheckedChange={toggleApproval} disabled={busy === "approval"} />
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4" /> Verification
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 border rounded-lg">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium">Veterinary license</span>
+                <Badge variant={vet.is_license_verified ? "default" : "outline"}>
+                  {vet.is_license_verified ? "Verified" : "Unverified"}
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1 truncate">
+                {vet.license_number ? `${vet.license_number}${vet.license_state ? ` · ${vet.license_state}` : ""}` : "No license number on file"}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!vet.license_document_url}
+                onClick={() => openCredential(vet.license_document_url)}
+              >
+                <ExternalLink className="h-3 w-3 mr-1" />
+                {vet.license_document_url ? "View document" : "No document"}
+              </Button>
+              <span className="text-xs text-muted-foreground">Verified</span>
+              <Switch checked={vet.is_license_verified} onCheckedChange={toggleLicense} disabled={busy === "license"} />
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 border rounded-lg">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium">Fear Free certification</span>
+                <Badge variant={vet.fear_free_certified ? "default" : "outline"}>
+                  {vet.fear_free_certified ? "Verified" : "Not verified"}
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1 truncate">
+                {vet.fear_free_cert_number ?? "No cert number on file"}
+                {vet.fear_free_verified_at && vet.fear_free_certified
+                  ? ` · verified ${new Date(vet.fear_free_verified_at).toLocaleDateString()}`
+                  : ""}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!vet.fear_free_cert_url}
+                onClick={() => openCredential(vet.fear_free_cert_url)}
+              >
+                <ExternalLink className="h-3 w-3 mr-1" />
+                {vet.fear_free_cert_url ? "View certificate" : "No certificate"}
+              </Button>
+              <span className="text-xs text-muted-foreground">Verified</span>
+              <Switch checked={vet.fear_free_certified} onCheckedChange={toggleFearFree} disabled={busy === "ff"} />
+            </div>
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            Members whose pet's Vet of Record has Fear Free verified automatically qualify for the 5% Fear Free membership discount on checkout.
+          </p>
         </CardContent>
       </Card>
 

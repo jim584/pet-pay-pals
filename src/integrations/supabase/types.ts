@@ -1167,6 +1167,8 @@ export type Database = {
           photo_url: string | null
           species: string
           updated_at: string
+          vet_of_record_id: string | null
+          vet_of_record_set_at: string | null
           weight_kg: number | null
         }
         Insert: {
@@ -1183,6 +1185,8 @@ export type Database = {
           photo_url?: string | null
           species?: string
           updated_at?: string
+          vet_of_record_id?: string | null
+          vet_of_record_set_at?: string | null
           weight_kg?: number | null
         }
         Update: {
@@ -1199,6 +1203,8 @@ export type Database = {
           photo_url?: string | null
           species?: string
           updated_at?: string
+          vet_of_record_id?: string | null
+          vet_of_record_set_at?: string | null
           weight_kg?: number | null
         }
         Relationships: [
@@ -1208,6 +1214,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "pets_vet_of_record_id_fkey"
+            columns: ["vet_of_record_id"]
+            isOneToOne: false
+            referencedRelation: "vet_profiles"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1886,8 +1899,19 @@ export type Database = {
           bio: string | null
           clinic_name: string
           created_at: string
+          fear_free_cert_number: string | null
+          fear_free_cert_url: string | null
+          fear_free_certified: boolean
+          fear_free_verified_at: string | null
+          fear_free_verified_by: string | null
           id: string
           is_approved: boolean
+          is_license_verified: boolean
+          license_document_url: string | null
+          license_number: string | null
+          license_state: string | null
+          license_verified_at: string | null
+          license_verified_by: string | null
           location: string | null
           phone: string | null
           specializations: string[] | null
@@ -1899,8 +1923,19 @@ export type Database = {
           bio?: string | null
           clinic_name?: string
           created_at?: string
+          fear_free_cert_number?: string | null
+          fear_free_cert_url?: string | null
+          fear_free_certified?: boolean
+          fear_free_verified_at?: string | null
+          fear_free_verified_by?: string | null
           id?: string
           is_approved?: boolean
+          is_license_verified?: boolean
+          license_document_url?: string | null
+          license_number?: string | null
+          license_state?: string | null
+          license_verified_at?: string | null
+          license_verified_by?: string | null
           location?: string | null
           phone?: string | null
           specializations?: string[] | null
@@ -1912,8 +1947,19 @@ export type Database = {
           bio?: string | null
           clinic_name?: string
           created_at?: string
+          fear_free_cert_number?: string | null
+          fear_free_cert_url?: string | null
+          fear_free_certified?: boolean
+          fear_free_verified_at?: string | null
+          fear_free_verified_by?: string | null
           id?: string
           is_approved?: boolean
+          is_license_verified?: boolean
+          license_document_url?: string | null
+          license_number?: string | null
+          license_state?: string | null
+          license_verified_at?: string | null
+          license_verified_by?: string | null
           location?: string | null
           phone?: string | null
           specializations?: string[] | null

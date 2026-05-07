@@ -306,6 +306,15 @@ export interface AdminVetRow {
   updated_at: string;
   owner_full_name: string | null;
   owner_avatar_url: string | null;
+  // Verification
+  license_number: string | null;
+  license_state: string | null;
+  license_document_url: string | null;
+  is_license_verified: boolean;
+  fear_free_certified: boolean;
+  fear_free_cert_number: string | null;
+  fear_free_cert_url: string | null;
+  fear_free_verified_at: string | null;
 }
 
 export interface AdminVetService {
@@ -375,6 +384,14 @@ export async function fetchAdminVets(filter: VetApprovalFilter = "all", search?:
     updated_at: v.updated_at,
     owner_full_name: profileMap.get(v.user_id)?.full_name ?? null,
     owner_avatar_url: profileMap.get(v.user_id)?.avatar_url ?? null,
+    license_number: v.license_number ?? null,
+    license_state: v.license_state ?? null,
+    license_document_url: v.license_document_url ?? null,
+    is_license_verified: !!v.is_license_verified,
+    fear_free_certified: !!v.fear_free_certified,
+    fear_free_cert_number: v.fear_free_cert_number ?? null,
+    fear_free_cert_url: v.fear_free_cert_url ?? null,
+    fear_free_verified_at: v.fear_free_verified_at ?? null,
   })) as AdminVetRow[];
 
   if (search?.trim()) {
@@ -424,6 +441,14 @@ export async function fetchAdminVetDetail(vetProfileId: string): Promise<AdminVe
     updated_at: v.updated_at,
     owner_full_name: prof?.full_name ?? null,
     owner_avatar_url: prof?.avatar_url ?? null,
+    license_number: v.license_number ?? null,
+    license_state: v.license_state ?? null,
+    license_document_url: v.license_document_url ?? null,
+    is_license_verified: !!v.is_license_verified,
+    fear_free_certified: !!v.fear_free_certified,
+    fear_free_cert_number: v.fear_free_cert_number ?? null,
+    fear_free_cert_url: v.fear_free_cert_url ?? null,
+    fear_free_verified_at: v.fear_free_verified_at ?? null,
   };
 }
 
@@ -433,6 +458,30 @@ export async function setVetApproval(vetProfileId: string, approved: boolean) {
     .update({ is_approved: approved })
     .eq("id", vetProfileId);
   if (error) throw error;
+}
+
+export async function setVetLicenseVerified(vetProfileId: string, verified: boolean) {
+  const { error } = await supabase
+    .from("vet_profiles")
+    .update({ is_license_verified: verified })
+    .eq("id", vetProfileId);
+  if (error) throw error;
+}
+
+export async function setVetFearFreeVerified(vetProfileId: string, verified: boolean) {
+  const { error } = await supabase
+    .from("vet_profiles")
+    .update({ fear_free_certified: verified })
+    .eq("id", vetProfileId);
+  if (error) throw error;
+}
+
+export async function getVetCredentialSignedUrl(path: string): Promise<string | null> {
+  const { data, error } = await supabase.storage
+    .from("vet-credentials")
+    .createSignedUrl(path, 60 * 10);
+  if (error) return null;
+  return data.signedUrl;
 }
 
 export async function fetchAdminVetServices(vetProfileId: string): Promise<AdminVetService[]> {

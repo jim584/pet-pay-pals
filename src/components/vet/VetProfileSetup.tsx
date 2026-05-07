@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/sonner";
 import { fetchVetProfile, createVetProfile, updateVetProfile, VetProfile } from "@/lib/vet-api";
-import { Stethoscope, MapPin, Phone, Globe, CheckCircle, Clock, X } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Stethoscope, MapPin, Phone, Globe, CheckCircle, Clock, X, FileText, ShieldCheck, Upload } from "lucide-react";
 
 export function VetProfileSetup() {
   const { user } = useAuth();
@@ -16,6 +17,9 @@ export function VetProfileSetup() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [specInput, setSpecInput] = useState("");
+  const licenseInputRef = useRef<HTMLInputElement>(null);
+  const ffInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState<null | "license" | "ff">(null);
   const [form, setForm] = useState({
     clinic_name: "",
     location: "",
@@ -23,6 +27,9 @@ export function VetProfileSetup() {
     phone: "",
     website: "",
     specializations: [] as string[],
+    license_number: "",
+    license_state: "",
+    fear_free_cert_number: "",
   });
 
   useEffect(() => {
@@ -37,6 +44,9 @@ export function VetProfileSetup() {
           phone: p.phone || "",
           website: p.website || "",
           specializations: p.specializations || [],
+          license_number: p.license_number || "",
+          license_state: p.license_state || "",
+          fear_free_cert_number: p.fear_free_cert_number || "",
         });
       }
       setLoading(false);
@@ -54,6 +64,35 @@ export function VetProfileSetup() {
     setForm({ ...form, specializations: form.specializations.filter((x) => x !== s) });
   };
 
+  const uploadCredential = async (
+    file: File,
+    kind: "license" | "ff",
+  ) => {
+    if (!user) return;
+    setUploading(kind);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `${user.id}/${kind}-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("vet-credentials")
+        .upload(path, file, { upsert: false });
+      if (upErr) throw upErr;
+      const field = kind === "license" ? "license_document_url" : "fear_free_cert_url";
+      // Persist the path; we'll create signed URLs on demand for display.
+      if (profile) {
+        const updated = await updateVetProfile(profile.id, { [field]: path } as any);
+        setProfile(updated);
+      } else {
+        toast.message("Save your profile first, then upload credentials.");
+      }
+      toast.success("Document uploaded. Awaiting admin verification.");
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setUploading(null);
+    }
+  };
+
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
@@ -65,13 +104,16 @@ export function VetProfileSetup() {
         phone: form.phone || null,
         website: form.website || null,
         specializations: form.specializations,
+        license_number: form.license_number || null,
+        license_state: form.license_state || null,
+        fear_free_cert_number: form.fear_free_cert_number || null,
       };
       if (profile) {
-        const updated = await updateVetProfile(profile.id, payload);
+        const updated = await updateVetProfile(profile.id, payload as any);
         setProfile(updated);
         toast.success("Profile updated!");
       } else {
-        const created = await createVetProfile({ ...payload, user_id: user.id });
+        const created = await createVetProfile({ ...payload, user_id: user.id } as any);
         setProfile(created);
         toast.success("Vet profile created! Awaiting admin approval.");
       }
@@ -86,16 +128,26 @@ export function VetProfileSetup() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-3xl font-bold font-display">Vet Profile</h1>
-          <p className="text-muted-foreground mt-1">Set up your clinic information</p>
+          <p className="text-muted-foreground mt-1">Set up your clinic information & credentials</p>
         </div>
         {profile && (
-          <Badge variant={profile.is_approved ? "default" : "secondary"} className="gap-1">
-            {profile.is_approved ? <CheckCircle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
-            {profile.is_approved ? "Approved" : "Pending Approval"}
-          </Badge>
+          <div className="flex gap-2 flex-wrap">
+            <Badge variant={profile.is_approved ? "default" : "secondary"} className="gap-1">
+              {profile.is_approved ? <CheckCircle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+              Clinic: {profile.is_approved ? "Approved" : "Pending"}
+            </Badge>
+            <Badge variant={profile.is_license_verified ? "default" : "outline"} className="gap-1">
+              <FileText className="h-3 w-3" />
+              License: {profile.is_license_verified ? "Verified" : "Unverified"}
+            </Badge>
+            <Badge variant={profile.fear_free_certified ? "default" : "outline"} className="gap-1">
+              <ShieldCheck className="h-3 w-3" />
+              Fear Free: {profile.fear_free_certified ? "Verified" : "Not verified"}
+            </Badge>
+          </div>
         )}
       </div>
 
@@ -140,6 +192,92 @@ export function VetProfileSetup() {
           <Button onClick={handleSave} disabled={saving || !form.clinic_name} className="w-full">
             {saving ? "Saving..." : profile ? "Update Profile" : "Create Profile"}
           </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><FileText className="h-4 w-4" /> Veterinary License</CardTitle>
+          <CardDescription>
+            Required for clinic verification. An admin will review your document.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>License number</Label>
+              <Input value={form.license_number} onChange={(e) => setForm({ ...form, license_number: e.target.value })} placeholder="VET-12345" />
+            </div>
+            <div className="space-y-2">
+              <Label>State / region</Label>
+              <Input value={form.license_state} onChange={(e) => setForm({ ...form, license_state: e.target.value })} placeholder="CA" />
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <input
+              ref={licenseInputRef}
+              type="file"
+              accept="image/*,application/pdf"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (f) uploadCredential(f, "license");
+              }}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => licenseInputRef.current?.click()}
+              disabled={!profile || uploading === "license"}
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              {uploading === "license" ? "Uploading…" : profile?.license_document_url ? "Replace document" : "Upload document"}
+            </Button>
+            {profile?.license_document_url && (
+              <span className="text-xs text-muted-foreground">Document on file</span>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><ShieldCheck className="h-4 w-4" /> Fear Free Certification</CardTitle>
+          <CardDescription>
+            Optional. When verified, your clients with you set as Vet of Record qualify for a 5% Fear Free membership discount.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Certification number</Label>
+            <Input value={form.fear_free_cert_number} onChange={(e) => setForm({ ...form, fear_free_cert_number: e.target.value })} placeholder="FF-XXXXXX" />
+          </div>
+          <div className="flex items-center gap-3">
+            <input
+              ref={ffInputRef}
+              type="file"
+              accept="image/*,application/pdf"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (f) uploadCredential(f, "ff");
+              }}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => ffInputRef.current?.click()}
+              disabled={!profile || uploading === "ff"}
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              {uploading === "ff" ? "Uploading…" : profile?.fear_free_cert_url ? "Replace certificate" : "Upload certificate"}
+            </Button>
+            {profile?.fear_free_cert_url && (
+              <span className="text-xs text-muted-foreground">Certificate on file</span>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

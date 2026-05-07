@@ -10,6 +10,16 @@ export interface VetProfile {
   phone: string | null;
   website: string | null;
   is_approved: boolean;
+  // Verification (read-only for vets; admin-managed)
+  license_number: string | null;
+  license_state: string | null;
+  license_document_url: string | null;
+  is_license_verified: boolean;
+  license_verified_at: string | null;
+  fear_free_certified: boolean;
+  fear_free_cert_number: string | null;
+  fear_free_cert_url: string | null;
+  fear_free_verified_at: string | null;
   created_at: string;
   updated_at: string;
 }

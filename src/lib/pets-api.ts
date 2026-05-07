@@ -12,6 +12,8 @@ export interface Pet {
   gender: string | null;
   photo_url: string | null;
   notes: string | null;
+  vet_of_record_id: string | null;
+  vet_of_record_set_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -68,7 +70,7 @@ export async function fetchPets() {
   return data as Pet[];
 }
 
-export async function createPet(pet: Omit<Pet, "id" | "created_at" | "updated_at">) {
+export async function createPet(pet: Partial<Pet> & { owner_id: string; name: string; species: string }) {
   const { data, error } = await supabase.from("pets").insert(pet).select().single();
   if (error) throw error;
   return data as Pet;
