@@ -91,6 +91,25 @@ Deno.serve(async (req) => {
           },
           quantity: 1,
         },
+    const session = await stripe.checkout.sessions.create({
+      customer: customerId,
+      mode: "subscription",
+      payment_method_types: ["card", "us_bank_account"],
+      payment_method_options: {
+        us_bank_account: {
+          verification_method: "instant",
+        },
+      },
+      line_items: [
+        {
+          price_data: {
+            currency: "usd",
+            recurring: { interval },
+            unit_amount: Math.round(membershipAmount * 100),
+            product_data: { name: `${plan.tier_label} (${plan.species}) — Membership${is_fear_free_member ? " (Fear Free)" : ""}` },
+          },
+          quantity: 1,
+        },
         {
           price_data: {
             currency: "usd",
