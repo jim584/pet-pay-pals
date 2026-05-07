@@ -905,3 +905,79 @@ export async function runDpExpiryJob(): Promise<{ processed: number; reserve_add
   if (error) throw error;
   return data as { processed: number; reserve_added: number };
 }
+
+export interface AdminReserveAccrualRow {
+  id: string;
+  user_id: string;
+  user_full_name: string | null;
+  membership_id: string | null;
+  amount: number;
+  remaining_amount: number;
+  accrual_month: string;
+  stripe_invoice_id: string | null;
+  created_at: string;
+}
+
+export interface AdminReserveConsumptionRow {
+  id: string;
+  ticket_id: string;
+  accrual_id: string;
+  amount_consumed: number;
+  released: boolean;
+  created_at: string;
+  user_full_name: string | null;
+}
+
+export async function fetchAdminReserveAccruals(search = ""): Promise<AdminReserveAccrualRow[]> {
+  const { data, error } = await supabase
+    .from("member_reserve_accruals")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(200);
+  if (error) throw error;
+  const userIds = Array.from(new Set((data ?? []).map((a: any) => a.user_id).filter(Boolean)));
+  const profileMap: Record<string, string | null> = {};
+  if (userIds.length > 0) {
+    const { data: profs } = await supabase.from("profiles").select("user_id, full_name").in("user_id", userIds);
+    (profs ?? []).forEach((p: any) => { profileMap[p.user_id] = p.full_name; });
+  }
+  const term = search.trim().toLowerCase();
+  return (data ?? [])
+    .map((a: any) => ({
+      id: a.id,
+      user_id: a.user_id,
+      user_full_name: profileMap[a.user_id] ?? null,
+      membership_id: a.membership_id,
+      amount: Number(a.amount ?? 0),
+      remaining_amount: Number(a.remaining_amount ?? 0),
+      accrual_month: a.accrual_month,
+      stripe_invoice_id: a.stripe_invoice_id,
+      created_at: a.created_at,
+    }))
+    .filter((r) => !term || (r.user_full_name ?? "").toLowerCase().includes(term));
+}
+
+export async function fetchAdminReserveConsumptions(): Promise<AdminReserveConsumptionRow[]> {
+  const { data, error } = await supabase
+    .from("member_reserve_consumptions")
+    .select("*, ticket:vet_tickets(owner_id)")
+    .order("created_at", { ascending: false })
+    .limit(200);
+  if (error) throw error;
+  const userIds = Array.from(new Set((data ?? []).map((c: any) => c.ticket?.owner_id).filter(Boolean)));
+  const profileMap: Record<string, string | null> = {};
+  if (userIds.length > 0) {
+    const { data: profs } = await supabase.from("profiles").select("user_id, full_name").in("user_id", userIds);
+    (profs ?? []).forEach((p: any) => { profileMap[p.user_id] = p.full_name; });
+  }
+  return (data ?? []).map((c: any) => ({
+    id: c.id,
+    ticket_id: c.ticket_id,
+    accrual_id: c.accrual_id,
+    amount_consumed: Number(c.amount_consumed ?? 0),
+    released: c.released,
+    created_at: c.created_at,
+    user_full_name: profileMap[c.ticket?.owner_id] ?? null,
+  }));
+}
+
