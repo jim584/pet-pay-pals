@@ -20,6 +20,7 @@ import {
 } from "@/lib/vet-tickets-api";
 import { fetchVetProfile } from "@/lib/vet-api";
 import { Loader2, Plus, FileText, ExternalLink } from "lucide-react";
+import { TicketMessagesDialog } from "@/components/vet-tickets/TicketMessagesDialog";
 
 const STATUS_VARIANT: Record<string, string> = {
   submitted: "secondary", under_review: "secondary",
@@ -183,6 +184,7 @@ function VetIncomingTickets() {
                       <FileText className="h-4 w-4 mr-1" /> Attestation
                     </Button>
                   )}
+                  <TicketMessagesDialog ticketId={t.id} viewerRole="vet" />
                 </div>
               </CardContent>
             </Card>
@@ -372,6 +374,7 @@ function TicketCard({ ticket, onChanged }: { ticket: VetTicket; onChanged: () =>
               <FileText className="h-4 w-4 mr-1" /> Attestation
             </Button>
           )}
+          <TicketMessagesDialog ticketId={ticket.id} viewerRole="owner" />
         </div>
 
         {b && (

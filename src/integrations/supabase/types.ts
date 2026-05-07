@@ -1765,6 +1765,42 @@ export type Database = {
         }
         Relationships: []
       }
+      vet_ticket_messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          read_by_admin: boolean
+          read_by_owner: boolean
+          read_by_vet: boolean
+          sender_id: string
+          sender_role: string
+          ticket_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          read_by_admin?: boolean
+          read_by_owner?: boolean
+          read_by_vet?: boolean
+          sender_id: string
+          sender_role: string
+          ticket_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          read_by_admin?: boolean
+          read_by_owner?: boolean
+          read_by_vet?: boolean
+          sender_id?: string
+          sender_role?: string
+          ticket_id?: string
+        }
+        Relationships: []
+      }
       vet_tickets: {
         Row: {
           admin_notes: string | null
@@ -2021,6 +2057,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_vet_ticket: {
+        Args: { _ticket_id: string; _user_id: string }
+        Returns: boolean
+      }
       consume_dp_for_ticket: {
         Args: {
           _amount: number
@@ -2096,6 +2136,10 @@ export type Database = {
         Returns: undefined
       }
       user_has_any_role: { Args: { _user_id: string }; Returns: boolean }
+      vet_ticket_role_for: {
+        Args: { _ticket_id: string; _user_id: string }
+        Returns: string
+      }
     }
     Enums: {
       app_role: "pet_owner" | "vet" | "admin"

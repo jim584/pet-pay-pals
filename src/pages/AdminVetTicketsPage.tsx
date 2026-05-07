@@ -13,6 +13,7 @@ import {
 } from "@/lib/vet-tickets-api";
 import { Loader2, FileText, ShieldAlert } from "lucide-react";
 import { Navigate } from "react-router-dom";
+import { TicketMessagesDialog } from "@/components/vet-tickets/TicketMessagesDialog";
 
 const STATUS_VARIANT: Record<string, string> = {
   submitted: "secondary", under_review: "secondary",
@@ -79,6 +80,9 @@ export default function AdminVetTicketsPage() {
                   Owner: {t.owner_id.slice(0,8)} · Approved {fmt(t.approved_amount)} · {new Date(t.updated_at).toLocaleString()}
                 </p>
               </CardHeader>
+              <CardContent>
+                <TicketMessagesDialog ticketId={t.id} viewerRole="admin" />
+              </CardContent>
             </Card>
           ))}
         </div>
@@ -160,6 +164,7 @@ function AdminTicketCard({ ticket, onChanged }: { ticket: VetTicket; onChanged: 
               <FileText className="h-4 w-4 mr-1" /> Attestation
             </Button>
           )}
+          <TicketMessagesDialog ticketId={ticket.id} viewerRole="admin" />
         </div>
 
         <div className="flex items-center gap-2">
