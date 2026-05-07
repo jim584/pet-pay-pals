@@ -64,6 +64,16 @@ Deno.serve(async (req) => {
               occurred_at: new Date().toISOString(),
             });
           }
+          if (md.milestone_id) {
+            try {
+              await admin.rpc("record_milestone_contribution", {
+                _milestone_id: md.milestone_id,
+                _amount: amount,
+                _source: "donation",
+                _payment_history_id: null,
+              });
+            } catch (e) { console.error("milestone contribution failed:", e); }
+          }
           break;
         }
 
@@ -372,6 +382,26 @@ Deno.serve(async (req) => {
         }).eq("stripe_card_id", c.id);
         break;
       }
+
+      case "account.updated": {
+        const acct = event.data.object as Stripe.Account;
+        const status = (acct.charges_enabled && acct.payouts_enabled) ? "active"
+          : (acct.requirements?.disabled_reason ? "restricted" : "pending");
+        await admin.from("referrers")
+          .update({ stripe_connect_status: status })
+          .eq("stripe_connect_account_id", acct.id);
+        break;
+      }
+
+      case "transfer.paid":
+      case "transfer.failed": {
+        const t = event.data.object as Stripe.Transfer;
+        const status = event.type === "transfer.paid" ? "paid" : "failed";
+        await admin.from("referrer_payouts")
+          .update({ status, paid_at: status === "paid" ? new Date().toISOString() : null })
+          .eq("stripe_transfer_id", t.id);
+        break;
+      }
     }
 
     return new Response(JSON.stringify({ received: true }), {
@@ -460,6 +490,15 @@ async function accrueReferralBounty(admin: any, args: {
     .eq("id", ref.referrer_id)
     .maybeSingle();
   if (!referrer || !referrer.is_active) return;
+  // Shelters earn through milestones, not subscription %
+  if (referrer.type === "shelter") {
+    if (ref.status === "pending_signup") {
+      await admin.from("referrals").update({
+        status: "active", activated_at: new Date().toISOString(), membership_id: args.membershipId,
+      }).eq("id", ref.id);
+    }
+    return;
+  }
   if (referrer.type === "vet" && !referrer.fear_free_certified) {
     // still mark activation but no bounty
     if (ref.status === "pending_signup") {

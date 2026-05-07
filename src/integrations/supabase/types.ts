@@ -1247,6 +1247,7 @@ export type Database = {
           paid_at: string | null
           referrer_id: string
           status: string
+          stripe_transfer_id: string | null
         }
         Insert: {
           amount: number
@@ -1258,6 +1259,7 @@ export type Database = {
           paid_at?: string | null
           referrer_id: string
           status?: string
+          stripe_transfer_id?: string | null
         }
         Update: {
           amount?: number
@@ -1269,6 +1271,7 @@ export type Database = {
           paid_at?: string | null
           referrer_id?: string
           status?: string
+          stripe_transfer_id?: string | null
         }
         Relationships: [
           {
@@ -1291,6 +1294,8 @@ export type Database = {
           notes: string | null
           payout_email: string | null
           payout_method: string
+          stripe_connect_account_id: string | null
+          stripe_connect_status: string
           type: Database["public"]["Enums"]["referrer_type"]
           updated_at: string
           user_id: string | null
@@ -1305,6 +1310,8 @@ export type Database = {
           notes?: string | null
           payout_email?: string | null
           payout_method?: string
+          stripe_connect_account_id?: string | null
+          stripe_connect_status?: string
           type: Database["public"]["Enums"]["referrer_type"]
           updated_at?: string
           user_id?: string | null
@@ -1319,6 +1326,8 @@ export type Database = {
           notes?: string | null
           payout_email?: string | null
           payout_method?: string
+          stripe_connect_account_id?: string | null
+          stripe_connect_status?: string
           type?: Database["public"]["Enums"]["referrer_type"]
           updated_at?: string
           user_id?: string | null
@@ -1365,6 +1374,91 @@ export type Database = {
             columns: ["vet_id"]
             isOneToOne: false
             referencedRelation: "vet_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shelter_milestone_contributions: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          milestone_id: string
+          payment_history_id: string | null
+          source: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          milestone_id: string
+          payment_history_id?: string | null
+          source?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          milestone_id?: string
+          payment_history_id?: string | null
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shelter_milestone_contributions_milestone_id_fkey"
+            columns: ["milestone_id"]
+            isOneToOne: false
+            referencedRelation: "shelter_referral_milestones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shelter_referral_milestones: {
+        Row: {
+          adoption_listing_id: string | null
+          completed_at: string | null
+          created_at: string
+          goal_amount: number
+          id: string
+          payout_amount: number
+          pet_name: string
+          raised_amount: number
+          referrer_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          adoption_listing_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          goal_amount: number
+          id?: string
+          payout_amount: number
+          pet_name: string
+          raised_amount?: number
+          referrer_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          adoption_listing_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          goal_amount?: number
+          id?: string
+          payout_amount?: number
+          pet_name?: string
+          raised_amount?: number
+          referrer_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shelter_referral_milestones_referrer_id_fkey"
+            columns: ["referrer_id"]
+            isOneToOne: false
+            referencedRelation: "referrers"
             referencedColumns: ["id"]
           },
         ]
@@ -1940,6 +2034,15 @@ export type Database = {
           _from_user_id: string
           _story_id?: string
           _to_user_id: string
+        }
+        Returns: undefined
+      }
+      record_milestone_contribution: {
+        Args: {
+          _amount: number
+          _milestone_id: string
+          _payment_history_id?: string
+          _source?: string
         }
         Returns: undefined
       }

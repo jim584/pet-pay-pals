@@ -1,80 +1,111 @@
-## Goal
-Add a Referral & Bounty Program: each eligible referrer (vet, shelter, influencer, partner) gets a unique referral code/link. New members signing up via that link have the referrer credited. Bounties accrue per paid invoice (5% first 6 months, 2% ongoing), are held 30 days, then become payable. Cancellations within 30 days reverse pending bounties. Vets must be Fear Free certified to participate.
 
-## Database (migration)
+# Referral Program — Phase 2
 
-**Enum**
-- `referrer_type`: `vet | shelter | influencer | partner`
+Five additions on top of the existing admin-only referral system.
 
-**`referrers`**
-- `id uuid pk`, `user_id uuid` (nullable — partner may be off-platform), `type referrer_type`, `display_name text`, `code text unique` (short slug), `is_active bool default true`, `fear_free_certified bool default false` (vets only — required to be true to earn), `payout_email text`, `payout_method text default 'manual'`, `notes text`, `created_at`, `updated_at`
-- Auto-generated `code` via trigger if blank (8-char random).
+---
 
-**`referral_program_settings`** (singleton row)
-- `intro_rate numeric default 0.05`, `intro_months int default 6`, `ongoing_rate numeric default 0.02`, `hold_days int default 30`. Admin-editable.
+## 1. Public Referrer Dashboard
 
-**`referrals`** (link a member → referrer)
-- `id`, `referrer_id fk referrers`, `referred_user_id uuid` (the member), `membership_id uuid` (set when first paid membership activates), `code_used text`, `status text` (`pending_signup | active | reversed | inactive`), `activated_at`, `created_at`, `unique(referred_user_id)` — a member is referred by at most one referrer.
+New route `/referrer` for users whose `auth.uid()` matches a row in `referrers.user_id`.
 
-**`referral_bounties`** (one row per qualifying paid invoice)
-- `id`, `referral_id`, `referrer_id`, `payment_history_id` (fk), `membership_id`, `period text` (`intro|ongoing`), `rate numeric`, `gross_membership_amount numeric`, `bounty_amount numeric`, `hold_until timestamptz`, `status text` (`pending | available | paid | reversed`), `paid_at`, `payout_id fk referrer_payouts nullable`, `created_at`.
+**Page sections:**
+- Header: display name, type badge, referral code with copy button, share link `https://<site>/auth?ref=CODE`
+- Stat cards: total referrals, active members, pending bounties ($), available bounties ($), lifetime paid ($)
+- Tabs:
+  - **Referrals** — list of own referrals (status, member name, activated date)
+  - **Bounties** — own bounty rows (period, rate, amount, status, hold-until)
+  - **Payouts** — own payout history
+  - **Share** — large QR code + downloadable PNG + copyable link + social share buttons
+- "Connect Stripe" button (see §3) if `payout_method != 'stripe_connect'`
 
-**`referrer_payouts`**
-- `id`, `referrer_id`, `amount`, `method`, `status` (`pending|paid|failed`), `external_ref`, `notes`, `created_at`, `paid_at`.
+**Access:** `RequireReferrer` guard — redirects to `/` with toast if user has no referrer row. Also surface a "Referrer Dashboard" link in the user dropdown when applicable.
 
-**RLS**
-- All admin-managed (existing `has_role(...,'admin')` pattern).
-- Referrers can `SELECT` their own row, their `referrals`, their `referral_bounties`, and their `referrer_payouts` (via `user_id = auth.uid()`).
-- Public/anon `SELECT` on `referrers` limited to `code, display_name, type, is_active` for code-validation on signup (or use a `SECURITY DEFINER` function `public.resolve_referral_code(_code text)` returning minimal info — preferred).
+**New file:** `src/pages/ReferrerDashboard.tsx`. Reuses existing `referrals-api.ts` with new self-scoped helpers (`getMyReferrer`, `listMyReferrals`, `listMyBounties`, `listMyPayouts`) — RLS already permits `user_id = auth.uid()` reads.
 
-## Tracking flow
+---
 
-1. **Capture code** — `Auth.tsx` reads `?ref=CODE` from URL on mount; if present and valid (call `resolve_referral_code`), persist to `localStorage.pending_referral_code`.
-2. **On signup completion** — after `signUp()` returns user, if a code is stored, insert a `referrals` row `(referrer_id, referred_user_id=user.id, code_used, status='pending_signup')`. Clear localStorage. Done client-side using a permissive INSERT policy: `auth.uid() = referred_user_id AND NOT EXISTS prior referral for this user`.
-3. **Activation & accrual** — extend `supabase/functions/stripe-webhook/index.ts` `invoice.payment_succeeded` handler:
-   - After inserting `payment_history` row for a `membership_invoice` paid invoice, look up `referrals` for `referred_user_id = membership.user_id`.
-   - If found and `status in ('pending_signup','active')`:
-     - On first paid invoice: set `referrals.status='active'`, `activated_at=now`, `membership_id`.
-     - Compute months elapsed since `activated_at`. If `< intro_months` → `intro` rate, else `ongoing` rate.
-     - If referrer is `vet` and `fear_free_certified=false` → skip bounty (still mark referral active).
-     - Insert `referral_bounties` row with `bounty_amount = round(amount * rate, 2)`, `hold_until = now + hold_days`, `status='pending'`.
-4. **Hold expiry** — add edge function `process-referral-bounties` (manually invokable + cron-eligible later):
-   - Move `pending` bounties whose `hold_until <= now()` to `available`.
-5. **Cancellation reversal** — extend webhook `customer.subscription.deleted` / `invoice.payment_failed`:
-   - If a referred membership is cancelled and `now() < activated_at + 30 days`, set all bounties for that referral to `reversed` and set `referrals.status='reversed'`.
+## 2. QR Code Generation
 
-## Admin UI
+Add `qrcode.react` package. Render `<QRCodeCanvas value={shareUrl} size={256} />` in:
+- Referrer dashboard "Share" tab (with PNG download)
+- Admin Referrers table (modal "Show QR" action)
 
-**`/admin/referrals`** new page (sidebar item "Referrals" with `Megaphone` icon, between Payment Plans and Wallet & Reserve).
+Download via canvas `.toDataURL("image/png")` → trigger `<a download>`.
 
-Tabs:
-- **Referrers** — table (Name, Type, Code, FF Certified, Active, Outstanding bounty, Lifetime paid, Created). Actions: create, edit, toggle active, copy referral link `${origin}/auth?ref=CODE`. Vets: toggle FF certified.
-- **Referrals** — table of referred members (Member name, Referrer, Code, Status, Activated, Membership). Filters by status.
-- **Bounties** — table (Date, Referrer, Member, Period, Rate, Membership amount, Bounty, Hold until, Status). Filter by status; "Run hold-expiry job" button → `process-referral-bounties`.
-- **Payouts** — table + "Create payout" dialog: select referrer, sums `available` bounty amount, on confirm inserts `referrer_payouts` row and links those bounties (`status='paid'`, `payout_id`, `paid_at`). Mark payout status `paid` with optional external ref.
-- **Settings card** — edit `referral_program_settings` (rates, intro months, hold days).
+---
 
-**`/admin/vets/:id`** — show "Fear Free certified for bounty" toggle that updates the referrer record (creating one if vet has no referrer yet).
+## 3. Stripe Connect for Automated Payouts
 
-## Public/referrer surface (minimal in this phase)
+**DB migration:**
+- `referrers`: add `stripe_connect_account_id text`, `stripe_connect_status text default 'none'` (`none|pending|active|restricted`)
+- `referrer_payouts`: add `stripe_transfer_id text`
 
-- **Signup capture only** — `?ref=CODE` honored on `/auth`. Show a small "Referred by {display_name}" badge on the auth card if code resolves.
-- A self-serve referrer dashboard is **out of scope** for this phase; admins manage referrer accounts and share links manually. (Easy follow-up.)
+**Edge functions** (3 new):
+- `referrer-connect-onboard` — creates Stripe Express account if missing, returns Account Link URL for onboarding. Stores `stripe_connect_account_id`, sets status `pending`.
+- `referrer-connect-status` — fetches account, updates `stripe_connect_status` to `active` when `charges_enabled && payouts_enabled`.
+- `referrer-payout` — admin-triggered (`INTERNAL_FUNCTION_SECRET` or admin JWT). Sums `available` bounties for a referrer, creates a Stripe `transfer` to their connected account, inserts a `referrer_payouts` row with `method='stripe_connect'` + `stripe_transfer_id`, marks bounties `paid`.
 
-## API layer
+**Webhook:** extend `stripe-webhook` to handle `account.updated` (sync connect status) and `transfer.paid` / `transfer.failed` (update payout row).
 
-**`src/lib/referrals-api.ts`** (new)
-- `resolveReferralCode(code)` → calls SECURITY DEFINER fn
-- `attachReferralOnSignup(userId, code)`
-- Admin: `listReferrers`, `createReferrer`, `updateReferrer`, `listReferrals(filter)`, `listBounties(filter)`, `runReferralHoldJob()`, `listPayouts`, `createPayout(referrerId)`, `updatePayoutStatus`, `getSettings`, `updateSettings`.
+**Admin UI:** Referrers tab gets "Pay via Stripe" button (only when `stripe_connect_status='active'`); existing manual payout remains as fallback.
 
-## Edge functions
+**Referrer UI:** "Connect Stripe" → `referrer-connect-onboard` → redirect to Stripe → return URL `/referrer?onboarded=1` triggers status refresh.
 
-- `process-referral-bounties` (new) — promote pending → available; admin-only auth via service role check + admin role.
-- `stripe-webhook` (modified) — referral accrual on paid invoice; reversal on early cancellation.
+---
 
-## Out of scope (this phase)
-- Self-serve referrer signup, referrer-facing dashboard.
-- Stripe Connect automatic payouts (payouts recorded as manual; external_ref captured).
-- QR code rendering (the link is enough; a QR can be added later via a small `qrcode.react` install).
-- Multi-tier / shelter milestone-funding-based payouts (handled with manual payouts for now; the admin can create payouts arbitrarily).
+## 4. Shelter Milestone-Based Payouts
+
+Shelters earn on adoption funding milestones, not subscription %.
+
+**DB migration:**
+- New table `shelter_referral_milestones`: `referrer_id`, `adoption_listing_id` (nullable), `pet_name`, `goal_amount`, `raised_amount default 0`, `status` (`open|completed|paid`), `payout_amount`, `completed_at`
+- New table `shelter_milestone_contributions`: `milestone_id`, `payment_history_id` (nullable), `amount`, `source` (`donation|sponsorship|membership`), `created_at`
+- DB function `record_milestone_contribution(_milestone_id, _amount, _source, _payment_history_id)` — increments `raised_amount`, sets `status='completed'` + `completed_at` when goal met, inserts `referral_bounties` row with `period='milestone'`, `bounty_amount = payout_amount`, `hold_until = now() + hold_days`
+- Webhook hook: when a payment is tagged with `milestone_id` (passed via Stripe metadata), call the function
+
+**Admin UI:** New "Milestones" tab inside `AdminReferralsPage` — create/edit milestones, link to shelter referrer, view contributions, mark manual contributions.
+
+**Shelter referrer dashboard:** new "Milestones" tab showing their milestones with progress bars; the regular Bounties tab also shows `period='milestone'` rows.
+
+The existing 5%/2% subscription logic in `stripe-webhook` is **skipped** for referrers of type `shelter` (they earn only via milestones).
+
+---
+
+## 5. End-to-End Testing
+
+Live verification using Stripe **test mode** (existing `STRIPE_SECRET_KEY` test key).
+
+**Test script** (`scripts/test-referral-flow.md` — checklist, not automated):
+1. Admin creates a vet referrer (`fear_free_certified=true`) → copies code
+2. Open incognito → visit `/auth?ref=CODE` → sign up new user → verify `referrals` row exists with `status=pending_signup`
+3. New user subscribes to a membership via test card `4242…` → verify webhook creates `payment_history`, marks referral `active`, inserts `pending` bounty at 5%
+4. Admin runs "Process holds" with `hold_days` temporarily set to 0 → bounty becomes `available`
+5. Admin clicks "Pay via Stripe" (after referrer onboards Connect with test account) → verify `transfer` created, payout row inserted, bounty `paid`
+6. Cancel subscription within hold window → verify bounty `reversed`
+7. Vet with `fear_free_certified=false` → verify NO bounty inserted
+8. Shelter milestone: create milestone, simulate contribution reaching goal → verify bounty + payout
+
+**Tools used during execution:** `supabase--curl_edge_functions` for webhook simulation, `supabase--read_query` for state checks, `supabase--edge_function_logs` for debugging.
+
+---
+
+## Technical Details
+
+**Files created:**
+- `src/pages/ReferrerDashboard.tsx`
+- `src/components/referrer/ReferrerGuard.tsx`
+- `src/components/QRCodeCard.tsx`
+- `supabase/functions/referrer-connect-onboard/index.ts`
+- `supabase/functions/referrer-connect-status/index.ts`
+- `supabase/functions/referrer-payout/index.ts`
+- 2 migration files (Connect columns + shelter milestones)
+
+**Files edited:**
+- `src/App.tsx` (route)
+- `src/lib/referrals-api.ts` (self-scoped helpers, milestone helpers, Connect helpers)
+- `src/pages/admin/AdminReferralsPage.tsx` (Milestones tab, Pay-via-Stripe action, QR action)
+- `supabase/functions/stripe-webhook/index.ts` (skip shelters in subscription path, handle milestone metadata, account.updated, transfer events)
+- `package.json` (`qrcode.react`)
+
+**Out of scope:** Referrer self-signup (admin still creates referrer rows); influencer landing pages; multi-currency payouts; Stripe Express dashboard embedding.

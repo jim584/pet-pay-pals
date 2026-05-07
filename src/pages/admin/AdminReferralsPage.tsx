@@ -10,13 +10,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { Copy, RefreshCw, Plus, DollarSign } from "lucide-react";
+import { Copy, RefreshCw, Plus, DollarSign, QrCode, Zap } from "lucide-react";
 import { toast } from "sonner";
+import { QRCodeCard } from "@/components/QRCodeCard";
 import {
   listReferrers, listReferrals, listBounties, listPayouts,
   createReferrer, updateReferrer, runReferralHoldJob, createPayoutForReferrer,
   getReferralSettings, updateReferralSettings,
+  payReferrerViaStripe, listMilestones, createMilestone, recordMilestoneContribution,
   type Referrer, type Referral, type ReferralBounty, type ReferrerPayout, type ReferralSettings, type ReferrerType,
+  type ShelterMilestone,
 } from "@/lib/referrals-api";
 
 const fmt = (n: number) => `$${Number(n ?? 0).toFixed(2)}`;
@@ -32,6 +35,10 @@ export default function AdminReferralsPage() {
   const [referralFilter, setReferralFilter] = useState("all");
   const [bountyFilter, setBountyFilter] = useState("all");
   const [busy, setBusy] = useState(false);
+  const [milestones, setMilestones] = useState<ShelterMilestone[]>([]);
+  const [qrFor, setQrFor] = useState<Referrer | null>(null);
+  const [openMilestone, setOpenMilestone] = useState(false);
+  const [newMs, setNewMs] = useState({ referrer_id: "", pet_name: "", goal_amount: 0, payout_amount: 0 });
 
   // Create referrer dialog
   const [openCreate, setOpenCreate] = useState(false);
@@ -40,10 +47,11 @@ export default function AdminReferralsPage() {
   });
 
   const load = async () => {
-    const [r, rs, b, p, s] = await Promise.all([
-      listReferrers(), listReferrals(referralFilter), listBounties(bountyFilter), listPayouts(), getReferralSettings(),
+    const [r, rs, b, p, s, ms] = await Promise.all([
+      listReferrers(), listReferrals(referralFilter), listBounties(bountyFilter), listPayouts(),
+      getReferralSettings(), listMilestones(),
     ]);
-    setReferrers(r); setReferrals(rs); setBounties(b); setPayouts(p); setSettings(s);
+    setReferrers(r); setReferrals(rs); setBounties(b); setPayouts(p); setSettings(s); setMilestones(ms);
   };
 
   useEffect(() => { (async () => { try { await load(); } finally { setLoading(false); } })(); }, []);
@@ -90,6 +98,38 @@ export default function AdminReferralsPage() {
       toast.success(`Paid ${fmt(r.total)} (${r.count} bounties)`);
       await load();
     } catch (e: any) { toast.error(e.message); } finally { setBusy(false); }
+  };
+
+  const handleStripePayout = async (referrerId: string) => {
+    setBusy(true);
+    try {
+      const r = await payReferrerViaStripe(referrerId);
+      toast.success(`Stripe transfer $${r.amount.toFixed(2)} (${r.count} bounties)`);
+      await load();
+    } catch (e: any) { toast.error(e.message); } finally { setBusy(false); }
+  };
+
+  const handleCreateMilestone = async () => {
+    if (!newMs.referrer_id || !newMs.pet_name || !newMs.goal_amount || !newMs.payout_amount) {
+      toast.error("All fields required"); return;
+    }
+    setBusy(true);
+    try {
+      await createMilestone(newMs);
+      toast.success("Milestone created");
+      setOpenMilestone(false);
+      setNewMs({ referrer_id: "", pet_name: "", goal_amount: 0, payout_amount: 0 });
+      await load();
+    } catch (e: any) { toast.error(e.message); } finally { setBusy(false); }
+  };
+
+  const handleAddContribution = async (mid: string) => {
+    const v = window.prompt("Contribution amount ($):");
+    if (!v) return;
+    const n = parseFloat(v);
+    if (!n || n <= 0) return;
+    try { await recordMilestoneContribution(mid, n, "manual"); toast.success("Recorded"); await load(); }
+    catch (e: any) { toast.error(e.message); }
   };
 
   const saveSettings = async () => {
@@ -159,6 +199,7 @@ export default function AdminReferralsPage() {
           <TabsTrigger value="referrals">Referrals ({referrals.length})</TabsTrigger>
           <TabsTrigger value="bounties">Bounties ({bounties.length})</TabsTrigger>
           <TabsTrigger value="payouts">Payouts ({payouts.length})</TabsTrigger>
+          <TabsTrigger value="milestones">Milestones ({milestones.length})</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
@@ -184,11 +225,17 @@ export default function AdminReferralsPage() {
                       </TableCell>
                       <TableCell><Switch checked={r.is_active} onCheckedChange={() => toggleActive(r)} /></TableCell>
                       <TableCell className="text-right font-mono">{fmt(outstandingByReferrer.get(r.id) ?? 0)}</TableCell>
-                      <TableCell className="text-right">
-                        <Button size="sm" variant="ghost" onClick={() => copyLink(r.code)}><Copy className="h-3 w-3" /></Button>
-                        <Button size="sm" variant="ghost" disabled={!(outstandingByReferrer.get(r.id) ?? 0)} onClick={() => handlePayout(r.id)}>
-                          <DollarSign className="h-3 w-3" /> Pay out
+                      <TableCell className="text-right space-x-1">
+                        <Button size="sm" variant="ghost" onClick={() => copyLink(r.code)} title="Copy link"><Copy className="h-3 w-3" /></Button>
+                        <Button size="sm" variant="ghost" onClick={() => setQrFor(r)} title="Show QR"><QrCode className="h-3 w-3" /></Button>
+                        <Button size="sm" variant="ghost" disabled={busy || !(outstandingByReferrer.get(r.id) ?? 0)} onClick={() => handlePayout(r.id)} title="Manual payout">
+                          <DollarSign className="h-3 w-3" />
                         </Button>
+                        {r.stripe_connect_status === "active" && (
+                          <Button size="sm" variant="default" disabled={busy || !(outstandingByReferrer.get(r.id) ?? 0)} onClick={() => handleStripePayout(r.id)} title="Stripe payout">
+                            <Zap className="h-3 w-3" />
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -295,6 +342,68 @@ export default function AdminReferralsPage() {
           </CardContent></Card>
         </TabsContent>
 
+        <TabsContent value="milestones" className="space-y-3">
+          <div className="flex justify-end">
+            <Dialog open={openMilestone} onOpenChange={setOpenMilestone}>
+              <DialogTrigger asChild>
+                <Button size="sm" disabled={referrers.filter(r => r.type === "shelter").length === 0}>
+                  <Plus className="h-4 w-4 mr-2" /> New milestone
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-h-[85vh] overflow-y-auto">
+                <DialogHeader><DialogTitle>Create shelter milestone</DialogTitle></DialogHeader>
+                <div className="space-y-3">
+                  <div><Label>Shelter</Label>
+                    <Select value={newMs.referrer_id} onValueChange={v => setNewMs({ ...newMs, referrer_id: v })}>
+                      <SelectTrigger><SelectValue placeholder="Select shelter" /></SelectTrigger>
+                      <SelectContent>
+                        {referrers.filter(r => r.type === "shelter").map(r => (
+                          <SelectItem key={r.id} value={r.id}>{r.display_name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div><Label>Pet name</Label>
+                    <Input value={newMs.pet_name} onChange={e => setNewMs({ ...newMs, pet_name: e.target.value })} /></div>
+                  <div><Label>Goal amount ($)</Label>
+                    <Input type="number" value={newMs.goal_amount || ""} onChange={e => setNewMs({ ...newMs, goal_amount: parseFloat(e.target.value) || 0 })} /></div>
+                  <div><Label>Payout amount ($)</Label>
+                    <Input type="number" value={newMs.payout_amount || ""} onChange={e => setNewMs({ ...newMs, payout_amount: parseFloat(e.target.value) || 0 })} /></div>
+                </div>
+                <DialogFooter><Button onClick={handleCreateMilestone} disabled={busy}>Create</Button></DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+          <Card><CardContent className="p-0">
+            <Table>
+              <TableHeader><TableRow>
+                <TableHead>Pet</TableHead><TableHead>Shelter</TableHead>
+                <TableHead className="text-right">Goal</TableHead><TableHead className="text-right">Raised</TableHead>
+                <TableHead className="text-right">Payout</TableHead><TableHead>Status</TableHead><TableHead></TableHead>
+              </TableRow></TableHeader>
+              <TableBody>
+                {milestones.map(m => {
+                  const ref = referrers.find(r => r.id === m.referrer_id);
+                  return (
+                    <TableRow key={m.id}>
+                      <TableCell>{m.pet_name}</TableCell>
+                      <TableCell>{ref?.display_name ?? "—"}</TableCell>
+                      <TableCell className="text-right font-mono">{fmt(m.goal_amount)}</TableCell>
+                      <TableCell className="text-right font-mono">{fmt(m.raised_amount)}</TableCell>
+                      <TableCell className="text-right font-mono">{fmt(m.payout_amount)}</TableCell>
+                      <TableCell><Badge variant={m.status === "completed" ? "default" : "outline"}>{m.status}</Badge></TableCell>
+                      <TableCell className="text-right">
+                        {m.status === "open" && <Button size="sm" variant="ghost" onClick={() => handleAddContribution(m.id)}>+ Contribution</Button>}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                {milestones.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No milestones yet.</TableCell></TableRow>}
+              </TableBody>
+            </Table>
+          </CardContent></Card>
+        </TabsContent>
+
         <TabsContent value="settings">
           <Card>
             <CardHeader><CardTitle className="text-base">Program settings</CardTitle></CardHeader>
@@ -320,6 +429,17 @@ export default function AdminReferralsPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={!!qrFor} onOpenChange={(o) => !o && setQrFor(null)}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Referral QR — {qrFor?.display_name}</DialogTitle></DialogHeader>
+          {qrFor && (
+            <div className="flex justify-center">
+              <QRCodeCard value={`${window.location.origin}/auth?ref=${qrFor.code}`} label={`${window.location.origin}/auth?ref=${qrFor.code}`} />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
