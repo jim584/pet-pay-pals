@@ -8,11 +8,15 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CreditCard, Loader2, AlertCircle, CheckCircle2, Calendar } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
+import { AutopaySetupCard } from "@/components/payments/AutopaySetupCard";
 import {
   listMyObligations,
   listInstallments,
   startInstallmentCheckout,
+  setObligationAutopay,
   type MyObligation,
   type MyInstallment,
 } from "@/lib/bnpl-api";
