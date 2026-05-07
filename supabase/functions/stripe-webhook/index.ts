@@ -49,6 +49,29 @@ Deno.serve(async (req) => {
         const s = event.data.object as Stripe.Checkout.Session;
         const md = s.metadata || {};
 
+        // BNPL autopay setup — capture the PaymentMethod from the SetupIntent
+        if (md.kind === "bnpl_autopay_setup" && md.user_id && s.mode === "setup") {
+          try {
+            const siId = typeof s.setup_intent === "string" ? s.setup_intent : s.setup_intent?.id;
+            if (siId) {
+              const si = await stripe.setupIntents.retrieve(siId);
+              const pmId = typeof si.payment_method === "string" ? si.payment_method : si.payment_method?.id;
+              const customerId = typeof s.customer === "string" ? s.customer : s.customer?.id;
+              if (pmId && customerId) {
+                try {
+                  await stripe.customers.update(customerId, {
+                    invoice_settings: { default_payment_method: pmId },
+                  });
+                } catch (e) { console.error("set customer default pm failed:", e); }
+                await admin.from("profiles")
+                  .update({ default_payment_method_id: pmId })
+                  .eq("user_id", md.user_id);
+              }
+            }
+          } catch (e) { console.error("autopay setup capture failed:", e); }
+          break;
+        }
+
         // Sponsorship donation payment
         if (md.kind === "sponsorship_donation" && md.pet_id && s.payment_status === "paid") {
           const pi = typeof s.payment_intent === "string" ? s.payment_intent : s.payment_intent?.id ?? null;
@@ -195,6 +218,41 @@ Deno.serve(async (req) => {
           stripe_customer_id: typeof s.customer === "string" ? s.customer : s.customer?.id,
           started_at: new Date().toISOString(),
           current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
+        });
+        break;
+      }
+
+      // Off-session BNPL autopay PaymentIntent (no Checkout session)
+      case "payment_intent.succeeded": {
+        const pi = event.data.object as Stripe.PaymentIntent;
+        const md = pi.metadata || {};
+        if (md.kind !== "bnpl_payment" || !md.obligation_id) break;
+        // Skip if a Checkout session already recorded it (it would have an existing payment_history row)
+        const { data: dup } = await admin.from("payment_history")
+          .select("id").eq("stripe_payment_intent_id", pi.id).maybeSingle();
+        if (dup) break;
+        const { data: ob } = await admin.from("bnpl_obligations")
+          .select("id, owner_id").eq("id", md.obligation_id).maybeSingle();
+        if (!ob) break;
+        const amountUsd = (pi.amount_received ?? pi.amount ?? 0) / 100;
+        await admin.from("bnpl_payments").insert({
+          obligation_id: ob.id,
+          amount: amountUsd,
+          method: "stripe_autopay",
+          external_ref: pi.id,
+          notes: md.installment_id ? `autopay installment ${md.installment_id}` : "autopay",
+          recorded_by: ob.owner_id,
+        });
+        await admin.from("payment_history").insert({
+          user_id: ob.owner_id,
+          kind: "bnpl_payment",
+          status: "paid",
+          amount: amountUsd,
+          currency: pi.currency || "usd",
+          description: "Payment plan autopay",
+          stripe_payment_intent_id: pi.id,
+          bnpl_obligation_id: ob.id,
+          occurred_at: new Date().toISOString(),
         });
         break;
       }

@@ -8,11 +8,15 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CreditCard, Loader2, AlertCircle, CheckCircle2, Calendar } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
+import { AutopaySetupCard } from "@/components/payments/AutopaySetupCard";
 import {
   listMyObligations,
   listInstallments,
   startInstallmentCheckout,
+  setObligationAutopay,
   type MyObligation,
   type MyInstallment,
 } from "@/lib/bnpl-api";
@@ -94,6 +98,8 @@ export default function PaymentPlansPage() {
         </p>
       </div>
 
+      <AutopaySetupCard onSetupComplete={load} />
+
       <Tabs value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
         <TabsList>
           <TabsTrigger value="open">Open</TabsTrigger>
@@ -150,6 +156,25 @@ export default function PaymentPlansPage() {
                       )}
                     </div>
                   </div>
+                  {canPay && (
+                    <div className="flex items-center gap-2 pt-2">
+                      <Switch
+                        id={`autopay-${o.id}`}
+                        checked={o.auto_pay_enabled !== false}
+                        onCheckedChange={async (v) => {
+                          try {
+                            await setObligationAutopay(o.id, v);
+                            setObligations((prev) => prev.map((x) => x.id === o.id ? { ...x, auto_pay_enabled: v } : x));
+                          } catch (e) {
+                            toast({ title: "Failed to update", description: (e as Error).message, variant: "destructive" });
+                          }
+                        }}
+                      />
+                      <Label htmlFor={`autopay-${o.id}`} className="text-xs text-muted-foreground cursor-pointer">
+                        Auto-charge installments on their due date
+                      </Label>
+                    </div>
+                  )}
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
