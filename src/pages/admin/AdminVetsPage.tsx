@@ -16,6 +16,7 @@ import { fetchAdminVets, setVetApproval, type AdminVetRow, type VetApprovalFilte
 
 const FILTERS: { value: VetApprovalFilter; label: string }[] = [
   { value: "pending", label: "Pending" },
+  { value: "pending_verification", label: "Pending verification" },
   { value: "approved", label: "Approved" },
   { value: "all", label: "All" },
 ];
