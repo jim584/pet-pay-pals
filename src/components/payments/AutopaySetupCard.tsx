@@ -5,6 +5,7 @@ import { CreditCard, Loader2, ShieldCheck, ExternalLink, AlertCircle } from "luc
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { confirmAutopaySetup, getAutopayStatus, startAutopaySetup } from "@/lib/bnpl-api";
+import { openCheckoutUrl } from "@/lib/open-checkout";
 
 interface Props {
   /** Triggered after redirect-back when autopay just completed setup, so parent can reload. */
@@ -99,14 +100,10 @@ export function AutopaySetupCard({ onSetupComplete }: Props) {
     try {
       const { url } = await startAutopaySetup();
       setCheckoutUrl(url);
-      try {
-        window.open(url, "_top") ?? (window.location.href = url);
-      } catch {
-        window.location.href = url;
-      }
-      setTimeout(() => setBusy(false), 1200);
+      openCheckoutUrl(url);
     } catch (e) {
       toast({ title: "Setup failed", description: (e as Error).message, variant: "destructive" });
+    } finally {
       setBusy(false);
     }
   };
@@ -140,8 +137,8 @@ export function AutopaySetupCard({ onSetupComplete }: Props) {
         <div className="flex items-center gap-2">
           {checkoutUrl && (
             <Button asChild size="sm" variant="secondary">
-              <a href={checkoutUrl} target="_top" rel="noopener noreferrer">
-                Continue <ExternalLink className="h-3 w-3 ml-1" />
+              <a href={checkoutUrl} target="_blank" rel="noopener noreferrer">
+                Open Stripe checkout <ExternalLink className="h-3 w-3 ml-1" />
               </a>
             </Button>
           )}

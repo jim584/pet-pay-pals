@@ -1,62 +1,44 @@
-## Fix the recurring BNPL autopay skeleton/loading loop
+I found the key clue: the backend function is returning a valid Stripe Checkout URL with status 200, so the failure is not that checkout is never created. The Stripe hosted page is likely being opened inside the Lovable preview iframe/same-frame navigation, where Stripe Checkout can sit on its loading skeleton instead of rendering normally. I’ll change the app so Stripe checkout is launched as a real browser tab/window with a safe fallback instead of navigating the embedded preview frame.
 
-### What is actually happening
-I checked the browser replay and network activity. The autopay function is returning a valid Stripe Checkout URL successfully. The page is not failing at the initial BNPL query — it returns an empty obligations list quickly.
+Plan:
 
-The remaining failure is the return/handoff flow:
-- The app redirects the top window to Stripe checkout.
-- When the user returns, the page relies on the Stripe webhook to have already saved `default_payment_method_id`.
-- There are no recent `stripe-webhook` records for the attempted autopay setup, so the card status never updates.
-- The UI keeps waiting/confirming or lands back in auth/dashboard loading instead of showing a clear recovery path.
+1. Add a shared checkout redirect helper
+   - Create one reusable helper for external payment URLs.
+   - It will open Stripe in a new top-level browser tab/window using `window.open(..., "_blank")`.
+   - If the popup is blocked, it will fall back to a visible direct link/button instead of leaving the user stuck on a spinner.
+   - It will also use a short timeout so buttons don’t spin forever.
 
-### Plan
+2. Fix plan subscriptions
+   - Update the Plans page subscribe flow to use the shared checkout launcher instead of `window.location.href = url`.
+   - Keep the user on the Plans page with clear feedback: “Stripe opened in a new tab” plus a “Continue to secure checkout” fallback if needed.
+   - Ensure the Subscribe button resets if redirect/opening fails.
 
-1. **Add a dedicated autopay confirmation backend function**
-   - Create a new backend function, e.g. `confirm-bnpl-autopay`.
-   - Input: `session_id` from the Stripe return URL.
-   - Validate the signed-in user.
-   - Retrieve the Stripe Checkout Session and SetupIntent directly.
-   - Verify the session metadata belongs to the current user and is `bnpl_autopay_setup`.
-   - Save the resulting payment method to the user profile.
-   - Return `{ default_payment_method_id }`.
-   - This makes return-from-Stripe work even if the webhook is delayed, missing, or not configured.
+3. Fix autopay setup
+   - Update `AutopaySetupCard` to use the same checkout launcher.
+   - Remove the current `_top` same-frame approach that can still get trapped in the preview/container.
+   - Keep the existing return confirmation flow (`autopay=success&session_id=...`) so saved cards still self-confirm after returning.
+   - Keep the existing “Continue” fallback link, but make it more explicit and reliable.
 
-2. **Update the client BNPL API**
-   - Add `confirmAutopaySetup(sessionId)` in `src/lib/bnpl-api.ts` using `supabase.functions.invoke()`.
-   - Keep `getAutopayStatus()` as a fallback/status check.
+4. Fix related Stripe payment entry points to prevent the same bug elsewhere
+   - Apply the same helper to payment plan installment checkout.
+   - Apply it to vet ticket member-remainder checkout and donation checkout where the code uses `window.location.href` for Stripe.
+   - This prevents the same Stripe skeleton issue from resurfacing from another payment button.
 
-3. **Fix `AutopaySetupCard` return handling**
-   - On `?autopay=success&session_id=...`, call `confirmAutopaySetup(session_id)` first instead of only polling the profile.
-   - Only show “Confirming card setup…” while that request is actively running.
-   - Always end in a clear state:
-     - success: “A card is on file…”
-     - still missing card: show a warning message and a “Try setup again” button
-     - cancelled: show cancelled message and normal setup button
-   - Clear `autopay` and `session_id` URL params after handling.
+5. Improve user-facing failure states
+   - Buttons will stop spinning if checkout does not open.
+   - The user will see a clear message and a direct “Open Stripe checkout” option.
+   - This avoids the current experience where the app appears to be permanently loading.
 
-4. **Stop dashboard auth loading from becoming endless**
-   - Add a timeout fallback to `DashboardLayout`’s auth loading state so the user sees a clear “Still loading your account” card with a retry/login action instead of an infinite full-page `Loading...`.
-   - Preserve normal redirects for unauthenticated users and role selection.
+Technical details:
 
-5. **Preserve intended destination through login**
-   - When `/dashboard/payment-plans` redirects to `/auth`, include a redirect parameter.
-   - After login, send the user back to `/dashboard/payment-plans` when that was the requested page, instead of always sending them home.
+- The observed network request to `create-checkout` succeeded and returned a `https://checkout.stripe.com/...` URL.
+- The current code redirects with `window.location.href` in several places, which can navigate only the embedded preview frame.
+- Stripe Checkout is a hosted external payment page and should not be embedded in the app iframe.
+- The fix is client-side and should not require database changes or new backend secrets.
 
-6. **Keep the BNPL empty state usable**
-   - Keep the empty-state checklist and Set up autopay button.
-   - If setup returns without card confirmation, show recovery messaging rather than skeletons.
+After approval, I’ll implement the helper and wire it into the subscription, autopay, and payment redirect flows.
 
-### Files to change
-- `supabase/functions/confirm-bnpl-autopay/index.ts` — new backend function.
-- `src/lib/bnpl-api.ts` — add confirm API helper.
-- `src/components/payments/AutopaySetupCard.tsx` — self-healing return handling and clear failure state.
-- `src/pages/DashboardLayout.tsx` — timeout fallback for account loading.
-- `src/pages/Auth.tsx` — respect redirect param after login.
-
-### Verification
-- Click Set up autopay from `/dashboard/payment-plans`.
-- Confirm the `setup-bnpl-autopay` request returns a Stripe URL.
-- Simulate returning to `/dashboard/payment-plans?autopay=success&session_id=...`.
-- Confirm the new function saves the payment method and the page exits loading.
-- Confirm users with no BNPL obligations see the empty state, not skeletons.
-- Confirm unauthenticated users are redirected to login and then back to payment plans.
+<lov-actions>
+<lov-open-history>View History</lov-open-history>
+<lov-link url="https://docs.lovable.dev/tips-tricks/troubleshooting">Troubleshooting docs</lov-link>
+</lov-actions>

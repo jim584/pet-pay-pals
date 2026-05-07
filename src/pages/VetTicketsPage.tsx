@@ -22,6 +22,7 @@ import { fetchVetProfile } from "@/lib/vet-api";
 import { Loader2, Plus, FileText, ExternalLink, ShieldCheck, Info } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { TicketMessagesDialog } from "@/components/vet-tickets/TicketMessagesDialog";
+import { openCheckoutUrl } from "@/lib/open-checkout";
 
 const STATUS_VARIANT: Record<string, string> = {
   submitted: "secondary", under_review: "secondary",
@@ -354,9 +355,10 @@ function TicketCard({ ticket, onChanged }: { ticket: VetTicket; onChanged: () =>
     setPaying(true);
     try {
       const url = await startMemberRemainderCheckout(ticket.id);
-      window.location.href = url;
+      openCheckoutUrl(url);
     } catch (e: any) {
       toast({ title: "Couldn't start checkout", description: e.message, variant: "destructive" });
+    } finally {
       setPaying(false);
     }
   };
