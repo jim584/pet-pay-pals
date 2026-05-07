@@ -492,6 +492,10 @@ export default function AdminReferralsPage() {
           </CardContent></Card>
         </TabsContent>
 
+        <TabsContent value="reconcile">
+          <ReferralReconcileTab />
+        </TabsContent>
+
         <TabsContent value="settings">
           <Card>
             <CardHeader><CardTitle className="text-base">Program settings</CardTitle></CardHeader>
