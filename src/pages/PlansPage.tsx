@@ -115,9 +115,15 @@ export default function PlansPage() {
             onCheckedChange={(v) => setBillingInterval(v ? "year" : "month")} />
         </div>
 
-        <div className="flex items-center gap-2">
-          <Label htmlFor="ff">Fear Free member (5% off membership)</Label>
-          <Switch id="ff" checked={isFearFree} onCheckedChange={setIsFearFree} />
+        <div className="flex items-center gap-2 text-sm">
+          {isFearFree ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 text-primary px-3 py-1 font-medium">
+              ✓ Fear Free member (5% off membership)
+            </span>
+          ) : (
+            <span className="text-muted-foreground">Fear Free pricing: not active</span>
+          )}
+          <span className="text-xs text-muted-foreground hidden md:inline">— {fearFreeReason}</span>
         </div>
       </div>
 
