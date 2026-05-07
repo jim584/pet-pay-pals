@@ -848,6 +848,7 @@ export type Database = {
       payment_history: {
         Row: {
           amount: number
+          bnpl_obligation_id: string | null
           created_at: string
           currency: string
           description: string | null
@@ -863,9 +864,11 @@ export type Database = {
           stripe_payment_intent_id: string | null
           stripe_subscription_id: string | null
           user_id: string
+          vet_ticket_id: string | null
         }
         Insert: {
           amount?: number
+          bnpl_obligation_id?: string | null
           created_at?: string
           currency?: string
           description?: string | null
@@ -881,9 +884,11 @@ export type Database = {
           stripe_payment_intent_id?: string | null
           stripe_subscription_id?: string | null
           user_id: string
+          vet_ticket_id?: string | null
         }
         Update: {
           amount?: number
+          bnpl_obligation_id?: string | null
           created_at?: string
           currency?: string
           description?: string | null
@@ -899,6 +904,7 @@ export type Database = {
           stripe_payment_intent_id?: string | null
           stripe_subscription_id?: string | null
           user_id?: string
+          vet_ticket_id?: string | null
         }
         Relationships: []
       }

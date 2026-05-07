@@ -1,25 +1,68 @@
-# Build Admin Payments Page
+## Goal
 
-Replace the "Coming soon" placeholder at `/admin/payments` with a full payments dashboard backed by the existing `payment_history` table (already populated by Stripe webhook + backfill function).
+In `/admin/payments`, when a row's kind is `member_remainder` (or a new `bnpl_*` kind), show the linked BNPL obligation (provider, original amount, outstanding, status) and a collapsible installment schedule from `bnpl_payments`.
 
-## What you'll see
+## Current gaps found
 
-- **KPI cards** (filtered by current range): Gross collected, # successful payments, Refunded total, Failed count
-- **Filters**: search (name / description / Stripe invoice ID / payment intent), status, kind (Membership / Member remainder / Donation / One-time), and time range (7d / 30d / 90d / 1y / all)
-- **Transactions table**: date, user (full name from profiles), kind badge, description, status badge, amount (currency-formatted), invoice link (hosted Stripe URL or PDF)
-- **Sync from Stripe** button — calls the existing `backfill-payment-history` edge function and refreshes
+1. `payment_history` currently has **no** rows for `member_remainder` — the `vet_ticket_remainder` branch of `stripe-webhook` updates the ticket and creates a vet_payout but never inserts a `payment_history` row. (Confirmed: the only kind in DB today is `membership_invoice`.)
+2. There is no link column from `payment_history` → `vet_tickets` or `bnpl_obligations`. Installments live only in `bnpl_payments` keyed by `obligation_id`.
+3. `bnpl_obligations` is keyed to `ticket_id` + `owner_id`, not to a payment row.
 
-## Files
+## Plan
 
-1. **Create** `src/pages/admin/AdminPaymentsPage.tsx` — full page implementation using shadcn `Card`, `Table`, `Select`, `Input`, `Badge`, `Button`. Reads `payment_history` directly (admin RLS already grants SELECT) and joins user names from `profiles` in JS.
-2. **Edit** `src/App.tsx` — replace
-   ```tsx
-   <Route path="payments" element={<AdminPlaceholder title="Payments" />} />
-   ```
-   with `<Route path="payments" element={<AdminPaymentsPage />} />` and import the new page.
+### 1. DB migration — add link columns + record member-remainder payments
 
-## Notes
+- Add nullable columns to `payment_history`:
+  - `vet_ticket_id uuid`
+  - `bnpl_obligation_id uuid`
+- Index both for join speed.
+- No RLS changes (admin SELECT already covers it; owner SELECT stays user-scoped).
 
-- No DB changes, no new edge functions — everything reuses existing schema (`payment_history`) and the `backfill-payment-history` edge function already wired in `admin-api.ts` via `triggerStripeBackfill()`.
-- Currency formatted with `Intl.NumberFormat`. Status colors via existing semantic tokens.
-- Out of scope for this task: refund/void actions (would require a new edge function with Stripe secret) and the separate `/admin/reserve` (Wallet & Reserve) placeholder — let me know if you want those next.
+### 2. Edge function update — `stripe-webhook`
+
+In the `vet_ticket_remainder` branch (around line 71), after marking the ticket funded, insert a `payment_history` row:
+
+```ts
+await admin.from("payment_history").insert({
+  user_id: ticket.owner_id,
+  kind: "member_remainder",
+  status: "paid",
+  amount: (s.amount_total ?? 0) / 100,
+  currency: s.currency || "usd",
+  description: `Vet bill member remainder — ${ticket.clinic_name}`,
+  stripe_payment_intent_id: pi,
+  vet_ticket_id: ticketId,
+  bnpl_obligation_id: <obligation lookup by ticket_id, if any>,
+  occurred_at: new Date().toISOString(),
+});
+```
+
+Also add idempotency check by `stripe_payment_intent_id` (mirroring the donation branch).
+
+### 3. Admin Payments UI — `src/pages/admin/AdminPaymentsPage.tsx`
+
+- Extend `PaymentRow` type with `vet_ticket_id`, `bnpl_obligation_id`.
+- After fetching a page, batch-load:
+  - `vet_tickets` (id, clinic_name, estimate_amount, approved_amount) for any `vet_ticket_id`
+  - `bnpl_obligations` (id, provider, original_amount, outstanding_amount, status, external_ref) for any `bnpl_obligation_id` **and** for any ticket that has an obligation (look up by `ticket_id` so existing rows without a direct link still resolve)
+  - `bnpl_payments` for those obligations (single `.in("obligation_id", ids)` query)
+- Attach `ticket`, `obligation`, `installments[]` to each row in JS.
+- In the table, when `r.kind === "member_remainder"` or `r.obligation` exists:
+  - Add a chevron button on the row that toggles an expanded sub-row (`<TableRow>` with `colSpan=7`).
+  - Expanded panel shows two cards:
+    - **BNPL agreement**: provider, original amount, outstanding, status badge, external ref, created date.
+    - **Installment schedule**: small table of `bnpl_payments` (date, method, amount, ref, notes); plus computed "Paid X of Y" summary.
+  - If no obligation exists for a `member_remainder` row, show a single line: "No BNPL plan — paid in full via Stripe Checkout."
+
+### 4. Out of scope
+
+- Admin actions to record/edit BNPL payments from this page (already exists in the dedicated BNPL admin section).
+- Backfilling historical `member_remainder` rows (none exist yet).
+
+### Files touched
+
+```text
+supabase/migrations/<new>.sql                       (new)
+supabase/functions/stripe-webhook/index.ts          (edit)
+src/pages/admin/AdminPaymentsPage.tsx               (edit)
+```
