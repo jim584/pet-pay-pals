@@ -226,6 +226,7 @@ export default function AdminReferralsPage() {
           <TabsTrigger value="bounties">Bounties ({bounties.length})</TabsTrigger>
           <TabsTrigger value="payouts">Payouts ({payouts.length})</TabsTrigger>
           <TabsTrigger value="milestones">Milestones ({milestones.length})</TabsTrigger>
+          <TabsTrigger value="reconcile">Reconcile</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
