@@ -14,6 +14,7 @@ import DashboardIndex from "./pages/DashboardIndex";
 import PetsPage from "./pages/PetsPage";
 import CommunityPage from "./pages/CommunityPage";
 import WalletPage from "./pages/WalletPage";
+import ReserveHistoryPage from "./pages/ReserveHistoryPage";
 import PaymentPlansPage from "./pages/PaymentPlansPage";
 import VetProfilePage from "./pages/VetProfilePage";
 import VetServicesPage from "./pages/VetServicesPage";
@@ -59,6 +60,7 @@ function AppRoutes() {
           <Route path="pets" element={<PetsPage />} />
           <Route path="community" element={<CommunityPage />} />
           <Route path="wallet" element={<WalletPage />} />
+          <Route path="wallet/reserve-history" element={<ReserveHistoryPage />} />
           <Route path="payment-plans" element={<PaymentPlansPage />} />
           <Route path="vet-profile" element={<VetProfilePage />} />
           <Route path="vet-services" element={<VetServicesPage />} />
