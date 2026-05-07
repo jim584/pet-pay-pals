@@ -397,7 +397,12 @@ Deno.serve(async (req) => {
           stripe_subscription_id: subId,
           hosted_invoice_url: inv.hosted_invoice_url ?? null,
         });
-        await admin.from("memberships").update({ status: "past_due" }).eq("id", m.id);
+        // Payment failed: lapse breaks continuous-payment streak; resets reserve eligibility clock.
+        await admin.from("memberships").update({
+          status: "past_due",
+          continuous_paid_months: 0,
+          reserve_eligible_since: null,
+        }).eq("id", m.id);
         break;
       }
 
