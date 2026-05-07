@@ -1,0 +1,73 @@
+import { supabase } from "@/integrations/supabase/client";
+
+export type BnplObligationStatus = "pending" | "active" | "paid_off" | "defaulted" | "cancelled";
+
+export interface MyObligation {
+  id: string;
+  ticket_id: string;
+  pet_id: string;
+  status: BnplObligationStatus;
+  original_amount: number;
+  outstanding_amount: number;
+  installment_count: number;
+  installment_interval_days: number;
+  next_due_date: string | null;
+  default_at: string | null;
+  created_at: string;
+  clinic_name?: string | null;
+  estimate_amount?: number | null;
+}
+
+export interface MyInstallment {
+  id: string;
+  obligation_id: string;
+  seq: number;
+  due_date: string;
+  amount: number;
+  paid_amount: number;
+  status: "scheduled" | "due" | "paid" | "missed";
+  paid_at: string | null;
+}
+
+export async function listMyObligations(userId: string): Promise<MyObligation[]> {
+  const { data, error } = await supabase
+    .from("bnpl_obligations")
+    .select("*")
+    .eq("owner_id", userId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  const rows = (data ?? []) as any[];
+  if (!rows.length) return [];
+  const ticketIds = Array.from(new Set(rows.map((r) => r.ticket_id).filter(Boolean)));
+  const { data: tickets } = await supabase
+    .from("vet_tickets")
+    .select("id, clinic_name, estimate_amount")
+    .in("id", ticketIds);
+  const byId = new Map((tickets ?? []).map((t: any) => [t.id, t]));
+  return rows.map((r) => ({
+    ...r,
+    clinic_name: byId.get(r.ticket_id)?.clinic_name ?? null,
+    estimate_amount: byId.get(r.ticket_id)?.estimate_amount ?? null,
+  })) as MyObligation[];
+}
+
+export async function listInstallments(obligationId: string): Promise<MyInstallment[]> {
+  const { data, error } = await supabase
+    .from("bnpl_installments")
+    .select("*")
+    .eq("obligation_id", obligationId)
+    .order("seq", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as MyInstallment[];
+}
+
+export async function startInstallmentCheckout(args: {
+  obligation_id: string;
+  installment_id?: string;
+  pay_full?: boolean;
+}): Promise<string> {
+  const { data, error } = await supabase.functions.invoke("pay-bnpl-installment", { body: args });
+  if (error) throw error;
+  if (!data?.url) throw new Error("No checkout URL returned");
+  return data.url as string;
+}
