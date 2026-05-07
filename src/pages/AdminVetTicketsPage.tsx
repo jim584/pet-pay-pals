@@ -80,6 +80,9 @@ export default function AdminVetTicketsPage() {
                   Owner: {t.owner_id.slice(0,8)} · Approved {fmt(t.approved_amount)} · {new Date(t.updated_at).toLocaleString()}
                 </p>
               </CardHeader>
+              <CardContent>
+                <TicketMessagesDialog ticketId={t.id} viewerRole="admin" />
+              </CardContent>
             </Card>
           ))}
         </div>
