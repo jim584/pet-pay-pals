@@ -185,10 +185,14 @@ export default function PaymentPlansPage() {
               <h3 className="text-lg font-semibold">No payment plans yet</h3>
               <p className="text-sm text-muted-foreground max-w-md mx-auto mt-1">
                 When a vet visit is partially covered by your plan, the remainder is split into
-                interest-free installments and shown here. Set up autopay above so future
+                interest-free installments and shown here. Set up autopay so future
                 installments charge automatically.
               </p>
             </div>
+            <Button onClick={triggerAutopaySetup} className="mt-2">
+              <CreditCard className="h-4 w-4 mr-2" />
+              Set up autopay
+            </Button>
           </CardContent>
         </Card>
       ) : filtered.length === 0 ? (
