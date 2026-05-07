@@ -129,6 +129,12 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+    // Photo is required: either an existing photo (edit) or a newly selected file.
+    const hasExistingPhoto = !removePhoto && !!pet?.photo_url;
+    if (!photoFile && !hasExistingPhoto) {
+      toast.error("Photo required", { description: "Please add a photo of your pet to continue." });
+      return;
+    }
     setSubmitting(true);
     try {
       const dobStr = form.date_of_birth ? format(form.date_of_birth, "yyyy-MM-dd") : null;
@@ -206,7 +212,7 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
                   onChange={handlePhotoSelect}
                 />
               </div>
-              <p className="text-xs text-muted-foreground">Click to upload photo</p>
+              <p className="text-xs text-muted-foreground">Click to upload photo (required)</p>
             </div>
             <div className="space-y-2">
               <Label>Name *</Label>
