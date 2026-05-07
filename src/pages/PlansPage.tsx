@@ -4,10 +4,12 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { fetchPlans, startCheckout, MembershipPlan } from "@/lib/plans-api";
+import { fetchPlans, startCheckout, fetchMyMembership, openCustomerPortal, MembershipPlan, Membership } from "@/lib/plans-api";
 import { PlanCard } from "@/components/plans/PlanCard";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { openCheckoutUrl } from "@/lib/open-checkout";
@@ -21,11 +23,24 @@ export default function PlansPage() {
   const [fearFreeReason, setFearFreeReason] = useState<string>("Add a Vet of Record to your pet to qualify for Fear Free pricing.");
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
   const [loadingPlans, setLoadingPlans] = useState(true);
+  const [membership, setMembership] = useState<(Membership & { plan: MembershipPlan }) | null>(null);
+  const [portalLoading, setPortalLoading] = useState(false);
 
   useEffect(() => {
     setLoadingPlans(true);
     fetchPlans(species).then(setPlans).finally(() => setLoadingPlans(false));
   }, [species]);
+
+  // Load current membership
+  useEffect(() => {
+    if (!user) return;
+    fetchMyMembership(user.id).then((m) => {
+      if (!m) return;
+      setMembership(m);
+      if (m.plan?.species) setSpecies(m.plan.species);
+      if (m.billing_interval) setBillingInterval(m.billing_interval);
+    }).catch(() => {});
+  }, [user]);
 
   // Auto-derive Fear Free status from any pet's Vet of Record
   useEffect(() => {
@@ -101,6 +116,54 @@ export default function PlansPage() {
         <p className="text-muted-foreground mt-1">Choose a plan that fits your pet and budget.</p>
       </div>
 
+      {membership && (
+        <Card className="border-primary/40 bg-primary/5">
+          <CardContent className="p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs uppercase tracking-wide text-muted-foreground">Your current plan</span>
+                <Badge variant="secondary" className="capitalize">{membership.status}</Badge>
+              </div>
+              <h2 className="text-xl font-semibold font-display">
+                {membership.plan?.tier_label ?? "Membership"}
+                <span className="text-muted-foreground text-sm font-normal ml-2 capitalize">
+                  · {membership.plan?.species} · {membership.billing_interval === "year" ? "Annual" : "Monthly"}
+                </span>
+              </h2>
+              {membership.plan && (
+                <p className="text-sm text-muted-foreground">
+                  ${(membership.billing_interval === "year"
+                    ? (membership.is_fear_free_member ? membership.plan.fear_free_member_charge * 12 : membership.plan.annual_price) + membership.plan.platform_fee * 12
+                    : (membership.is_fear_free_member ? membership.plan.fear_free_member_charge : membership.plan.membership_fee) + membership.plan.platform_fee
+                  ).toFixed(2)} /{membership.billing_interval}
+                  {membership.current_period_end && (
+                    <> · Renews {new Date(membership.current_period_end).toLocaleDateString()}</>
+                  )}
+                </p>
+              )}
+            </div>
+            <Button
+              variant="outline"
+              disabled={portalLoading}
+              onClick={async () => {
+                setPortalLoading(true);
+                try {
+                  const url = await openCustomerPortal();
+                  openCheckoutUrl(url);
+                } catch (e: any) {
+                  toast.error(e.message || "Could not open billing portal");
+                } finally {
+                  setPortalLoading(false);
+                }
+              }}
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />
+              {portalLoading ? "Opening…" : "Manage subscription"}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="flex flex-wrap items-center gap-6">
         <Tabs value={species} onValueChange={(v) => setSpecies(v as any)}>
           <TabsList>
@@ -133,7 +196,9 @@ export default function PlansPage() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {plans.map((p) => (
             <PlanCard key={p.id} plan={p} isFearFree={isFearFree}
-              billingInterval={billingInterval} onSubscribe={handleSubscribe} />
+              billingInterval={billingInterval} onSubscribe={handleSubscribe}
+              isCurrent={membership?.plan_id === p.id}
+              isCurrentInterval={membership?.plan_id === p.id && membership?.billing_interval === billingInterval} />
           ))}
         </div>
       )}
