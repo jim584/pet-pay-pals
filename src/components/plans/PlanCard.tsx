@@ -12,6 +12,8 @@ interface Props {
   isFearFree: boolean;
   billingInterval: "month" | "year";
   onSubscribe: (plan: MembershipPlan) => Promise<void>;
+  isCurrent?: boolean;
+  isCurrentInterval?: boolean;
 }
 
 const tierAccent: Record<string, string> = {
@@ -21,7 +23,7 @@ const tierAccent: Record<string, string> = {
   platinum: "border-primary/50 ring-1 ring-primary/20",
 };
 
-export function PlanCard({ plan, isFearFree, billingInterval, onSubscribe }: Props) {
+export function PlanCard({ plan, isFearFree, billingInterval, onSubscribe, isCurrent = false, isCurrentInterval = false }: Props) {
   const [loading, setLoading] = useState(false);
 
   const monthly = isFearFree ? plan.fear_free_member_charge : plan.membership_fee;
@@ -36,11 +38,14 @@ export function PlanCard({ plan, isFearFree, billingInterval, onSubscribe }: Pro
   };
 
   return (
-    <Card className={`flex flex-col ${tierAccent[plan.tier]}`}>
+    <Card className={`flex flex-col ${tierAccent[plan.tier]} ${isCurrent ? "ring-2 ring-primary shadow-lg" : ""}`}>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
           <Badge variant="secondary" className="capitalize">{plan.tier}</Badge>
-          {plan.tier === "platinum" && <Badge>Most flexible</Badge>}
+          <div className="flex gap-1.5">
+            {isCurrent && <Badge className="bg-primary">Active</Badge>}
+            {plan.tier === "platinum" && !isCurrent && <Badge>Most flexible</Badge>}
+          </div>
         </div>
         <CardTitle className="font-display text-2xl mt-2">{plan.tier_label}</CardTitle>
         <p className="text-xs text-muted-foreground capitalize">{plan.species} plan</p>
@@ -74,8 +79,15 @@ export function PlanCard({ plan, isFearFree, billingInterval, onSubscribe }: Pro
           </li>
         </ul>
 
-        <Button onClick={handle} disabled={loading} className="w-full">
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Subscribe"}
+        <Button
+          onClick={handle}
+          disabled={loading || (isCurrent && isCurrentInterval)}
+          variant={isCurrent && isCurrentInterval ? "secondary" : "default"}
+          className="w-full"
+        >
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> :
+            isCurrent && isCurrentInterval ? "Current plan" :
+            isCurrent ? "Switch billing" : "Subscribe"}
         </Button>
       </CardContent>
     </Card>

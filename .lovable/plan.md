@@ -1,26 +1,28 @@
 ## Goal
 
-When an admin signs in, send them straight to the Admin Dashboard Overview (`/admin`), regardless of any `?redirect=` query param.
+On `/plans`, show pet owners which membership plan they are currently subscribed to, with a clear "Current plan" indicator and a way to manage the subscription.
 
-## Current Behavior
+## Current State
 
-`src/pages/Auth.tsx` (line 48) already routes admins to `/admin`, but it honors `safeRedirect` first:
-
-```ts
-if (role === "admin") navigate(safeRedirect ?? "/admin", { replace: true });
-```
-
-So if the admin landed on `/auth?redirect=/some-pet-page` (e.g. clicked a "Sign in" link from a public page), they get bounced into the public app instead of the admin dashboard.
-
-Additionally, `src/pages/admin/AdminLayout.tsx` only checks `loading` — not the new `roleLoading` flag — so on a fresh admin login it can briefly evaluate `role !== "admin"` before the role fetch resolves and bounce them to `/`.
+`fetchMyMembership(userId)` already exists in `src/lib/plans-api.ts` and returns the user's active/pending membership joined with its plan. It's used by `WalletView` but not by `PlansPage`. There's no visual cue on the Plans page.
 
 ## Changes
 
-1. **`src/pages/Auth.tsx`** — For admins, always navigate to `/admin` and ignore `safeRedirect`:
-   ```ts
-   if (role === "admin") navigate("/admin", { replace: true });
-   ```
+1. **`src/pages/PlansPage.tsx`**
+   - Import `fetchMyMembership`, `openCustomerPortal`, and `Membership`/`MembershipPlan` types.
+   - On mount (and when `user` changes), load the user's current membership into state.
+   - When membership exists, render a "Current subscription" banner above the plan grid showing: tier label, species, billing interval, status badge, monthly/annual price, next renewal (`current_period_end`), and a "Manage subscription" button that opens the Stripe customer portal via `openCustomerPortal()` + `openCheckoutUrl()`.
+   - Pre-select the species/billing interval to match the current membership when first loaded.
+   - Pass `currentPlanId` and `currentBillingInterval` into each `<PlanCard />`.
 
-2. **`src/pages/admin/AdminLayout.tsx`** — Pull `roleLoading` from `useAuth()` and treat `loading || (user && roleLoading)` as the loading state, so the layout waits for the role fetch before redirecting non-admins. Also send unauthenticated visitors to `/auth?redirect=/admin` so they come back to the admin dashboard after signing in.
+2. **`src/components/plans/PlanCard.tsx`**
+   - Accept new optional props: `isCurrent: boolean`, `isCurrentInterval: boolean`.
+   - When `isCurrent && isCurrentInterval`, replace the Subscribe button with a disabled "Current plan" button and show a small "Active" badge in the header.
+   - When `isCurrent` but interval differs, change button label to "Switch billing".
+   - Add a subtle ring/border highlight to the active plan card.
 
-No DB or routing-config changes needed.
+3. **No DB or edge-function changes** — `fetchMyMembership` and `customer-portal` already exist.
+
+### Extra (small UX win)
+
+- If the user already has an active membership and clicks Subscribe on a different plan, the existing checkout flow handles it; no extra logic needed beyond the visual cue and portal link.
