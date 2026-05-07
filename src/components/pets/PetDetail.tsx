@@ -6,10 +6,11 @@ import { Separator } from "@/components/ui/separator";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "@/components/ui/sonner";
 import { Pet, HealthRecord, EmergencyContact, fetchHealthRecords, fetchEmergencyContacts, deleteHealthRecord, deleteEmergencyContact, formatAge } from "@/lib/pets-api";
+import { supabase } from "@/integrations/supabase/client";
 import { AddHealthRecordDialog } from "./AddHealthRecordDialog";
 import { AddEmergencyContactDialog } from "./AddEmergencyContactDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { PawPrint, Plus, Trash2, Calendar, Stethoscope, Phone, ArrowLeft, Pencil, Cake, PartyPopper } from "lucide-react";
+import { PawPrint, Plus, Trash2, Calendar, Stethoscope, Phone, ArrowLeft, Pencil, Cake, PartyPopper, BadgeCheck, MapPin } from "lucide-react";
 
 interface PetDetailProps {
   pet: Pet;
@@ -20,6 +21,7 @@ interface PetDetailProps {
 export function PetDetail({ pet, onBack, onEdit }: PetDetailProps) {
   const [records, setRecords] = useState<HealthRecord[]>([]);
   const [contacts, setContacts] = useState<EmergencyContact[]>([]);
+  const [vetOfRecord, setVetOfRecord] = useState<{ clinic_name: string; location: string | null; fear_free_certified: boolean; is_license_verified: boolean } | null>(null);
   const [showAddRecord, setShowAddRecord] = useState(false);
   const [editRecord, setEditRecord] = useState<HealthRecord | null>(null);
   const [showAddContact, setShowAddContact] = useState(false);
@@ -33,7 +35,17 @@ export function PetDetail({ pet, onBack, onEdit }: PetDetailProps) {
   useEffect(() => {
     loadRecords();
     loadContacts();
-  }, [pet.id]);
+    if (pet.vet_of_record_id) {
+      supabase
+        .from("vet_profiles")
+        .select("clinic_name, location, fear_free_certified, is_license_verified")
+        .eq("id", pet.vet_of_record_id)
+        .maybeSingle()
+        .then(({ data }) => setVetOfRecord(data as any));
+    } else {
+      setVetOfRecord(null);
+    }
+  }, [pet.id, pet.vet_of_record_id]);
 
   const handleDeleteRecord = async () => {
     if (!recordToDelete) return;
@@ -158,6 +170,40 @@ export function PetDetail({ pet, onBack, onEdit }: PetDetailProps) {
           </CardContent>
         </Card>
       )}
+
+      {/* Vet of Record */}
+      <Card>
+        <CardContent className="p-4 flex items-start gap-3">
+          <Stethoscope className="h-8 w-8 text-primary shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">Vet of Record</p>
+            {vetOfRecord ? (
+              <>
+                <p className="font-semibold flex items-center gap-2 flex-wrap">
+                  {vetOfRecord.clinic_name}
+                  {vetOfRecord.fear_free_certified && (
+                    <Badge variant="secondary" className="text-xs gap-1">
+                      <BadgeCheck className="h-3 w-3" /> Fear Free
+                    </Badge>
+                  )}
+                </p>
+                {vetOfRecord.location && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                    <MapPin className="h-3 w-3" /> {vetOfRecord.location}
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                None set. Edit this pet to choose a primary vet.
+              </p>
+            )}
+          </div>
+          <Button variant="outline" size="sm" onClick={onEdit}>
+            {vetOfRecord ? "Change" : "Set"}
+          </Button>
+        </CardContent>
+      </Card>
 
       <Separator />
 

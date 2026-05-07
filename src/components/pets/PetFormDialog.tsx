@@ -9,9 +9,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/components/ui/sonner";
 import { createPet, updatePet, Pet, calculateAge } from "@/lib/pets-api";
+import { fetchApprovedVetsForPicker, type VetPickerOption } from "@/lib/vet-api";
 import { supabase } from "@/integrations/supabase/client";
 import { isValidImageFile, ACCEPTED_IMAGE_TYPES } from "@/lib/utils";
-import { Camera, PawPrint, X, CalendarIcon } from "lucide-react";
+import { Camera, PawPrint, X, CalendarIcon, BadgeCheck, AlertCircle } from "lucide-react";
 import { ImageCropDialog } from "@/components/ui/ImageCropDialog";
 import { getBreedsForSpecies } from "@/lib/breeds";
 import { BreedCombobox } from "@/components/pets/BreedCombobox";
@@ -48,7 +49,13 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
     weight_kg: pet?.weight_kg?.toString() ?? "",
     gender: pet?.gender ?? "",
     notes: pet?.notes ?? "",
+    vet_of_record_id: pet?.vet_of_record_id ?? "",
   });
+  const [vetOptions, setVetOptions] = useState<VetPickerOption[]>([]);
+
+  useEffect(() => {
+    fetchApprovedVetsForPicker().then(setVetOptions).catch(() => setVetOptions([]));
+  }, []);
 
   // Crop state
   const [cropOpen, setCropOpen] = useState(false);
@@ -66,6 +73,7 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
         weight_kg: pet?.weight_kg?.toString() ?? "",
         gender: pet?.gender ?? "",
         notes: pet?.notes ?? "",
+        vet_of_record_id: pet?.vet_of_record_id ?? "",
       });
       setPhotoPreview(pet?.photo_url ?? null);
       setPhotoFile(null);
@@ -153,6 +161,10 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
         notes: form.notes || null,
         owner_id: user.id,
         photo_url: removePhoto ? null : (pet?.photo_url ?? null),
+        vet_of_record_id: form.vet_of_record_id || null,
+        vet_of_record_set_at: form.vet_of_record_id && form.vet_of_record_id !== (pet?.vet_of_record_id ?? "")
+          ? new Date().toISOString()
+          : (pet?.vet_of_record_set_at ?? null),
       };
       let savedPet: Pet;
       if (pet) {
@@ -299,6 +311,44 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
                 <Label>Weight (lbs)</Label>
                 <Input type="number" min="0" step="0.1" value={form.weight_kg} onChange={(e) => setForm({ ...form, weight_kg: e.target.value })} />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Primary vet (Vet of Record)</Label>
+              <Select
+                value={form.vet_of_record_id || "none"}
+                onValueChange={(v) => setForm({ ...form, vet_of_record_id: v === "none" ? "" : v })}
+              >
+                <SelectTrigger><SelectValue placeholder="Select your pet's primary vet" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {vetOptions.map((v) => (
+                    <SelectItem key={v.id} value={v.id}>
+                      {v.clinic_name}
+                      {v.location ? ` — ${v.location}` : ""}
+                      {v.fear_free_certified ? " · Fear Free" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {!form.vet_of_record_id ? (
+                <p className="text-xs text-yellow-700 dark:text-yellow-400 flex items-start gap-1">
+                  <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                  <span>Optional, but adding a Vet of Record unlocks Fear Free pricing if your vet is certified.</span>
+                </p>
+              ) : (
+                (() => {
+                  const sel = vetOptions.find((v) => v.id === form.vet_of_record_id);
+                  if (sel?.fear_free_certified) {
+                    return (
+                      <p className="text-xs text-primary flex items-center gap-1">
+                        <BadgeCheck className="h-3.5 w-3.5" />
+                        Fear Free certified — you qualify for Fear Free member pricing.
+                      </p>
+                    );
+                  }
+                  return null;
+                })()
+              )}
             </div>
             <div className="space-y-2">
               <Label>Notes</Label>

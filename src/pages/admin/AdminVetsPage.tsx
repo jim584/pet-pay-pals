@@ -16,6 +16,7 @@ import { fetchAdminVets, setVetApproval, type AdminVetRow, type VetApprovalFilte
 
 const FILTERS: { value: VetApprovalFilter; label: string }[] = [
   { value: "pending", label: "Pending" },
+  { value: "pending_verification", label: "Pending verification" },
   { value: "approved", label: "Approved" },
   { value: "all", label: "All" },
 ];
@@ -122,6 +123,15 @@ export default function AdminVetsPage() {
                         <Badge variant={v.is_approved ? "default" : "secondary"}>
                           {v.is_approved ? "Approved" : "Pending"}
                         </Badge>
+                        {v.is_approved && v.license_document_url && !v.is_license_verified && (
+                          <Badge variant="outline" className="text-xs">License unverified</Badge>
+                        )}
+                        {v.is_approved && v.fear_free_cert_url && !v.fear_free_certified && (
+                          <Badge variant="outline" className="text-xs">Fear Free pending</Badge>
+                        )}
+                        {v.fear_free_certified && (
+                          <Badge className="text-xs bg-primary/10 text-primary hover:bg-primary/20">Fear Free ✓</Badge>
+                        )}
                       </div>
                       <p className="text-sm text-muted-foreground truncate">
                         {v.owner_full_name ?? "Unknown owner"}

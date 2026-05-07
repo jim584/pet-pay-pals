@@ -17,6 +17,7 @@ export default function PlansPage() {
   const [species, setSpecies] = useState<"dog" | "cat">("dog");
   const [billingInterval, setBillingInterval] = useState<"month" | "year">("month");
   const [isFearFree, setIsFearFree] = useState(false);
+  const [fearFreeReason, setFearFreeReason] = useState<string>("Add a Vet of Record to your pet to qualify for Fear Free pricing.");
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
   const [loadingPlans, setLoadingPlans] = useState(true);
 
@@ -24,6 +25,35 @@ export default function PlansPage() {
     setLoadingPlans(true);
     fetchPlans(species).then(setPlans).finally(() => setLoadingPlans(false));
   }, [species]);
+
+  // Auto-derive Fear Free status from any pet's Vet of Record
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const { data: pets } = await supabase
+        .from("pets")
+        .select("vet_of_record_id")
+        .eq("owner_id", user.id);
+      const vetIds = (pets ?? []).map((p: any) => p.vet_of_record_id).filter(Boolean);
+      if (vetIds.length === 0) {
+        setIsFearFree(false);
+        setFearFreeReason("Add a Vet of Record to your pet to qualify for Fear Free pricing.");
+        return;
+      }
+      const { data: vets } = await supabase
+        .from("vet_profiles")
+        .select("fear_free_certified, clinic_name")
+        .in("id", vetIds)
+        .eq("fear_free_certified", true);
+      if (vets && vets.length > 0) {
+        setIsFearFree(true);
+        setFearFreeReason(`Verified via your Vet of Record (${vets[0].clinic_name}).`);
+      } else {
+        setIsFearFree(false);
+        setFearFreeReason("Your Vet of Record isn't Fear Free certified yet.");
+      }
+    })();
+  }, [user]);
 
   if (!loading && !user) return <Navigate to="/auth" replace />;
 
@@ -46,7 +76,6 @@ export default function PlansPage() {
       const url = await startCheckout({
         plan_id: plan.id,
         billing_interval: billingInterval,
-        is_fear_free_member: isFearFree,
       });
       window.location.href = url;
     } catch (e: any) {
@@ -85,9 +114,15 @@ export default function PlansPage() {
             onCheckedChange={(v) => setBillingInterval(v ? "year" : "month")} />
         </div>
 
-        <div className="flex items-center gap-2">
-          <Label htmlFor="ff">Fear Free member (5% off membership)</Label>
-          <Switch id="ff" checked={isFearFree} onCheckedChange={setIsFearFree} />
+        <div className="flex items-center gap-2 text-sm">
+          {isFearFree ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 text-primary px-3 py-1 font-medium">
+              ✓ Fear Free member (5% off membership)
+            </span>
+          ) : (
+            <span className="text-muted-foreground">Fear Free pricing: not active</span>
+          )}
+          <span className="text-xs text-muted-foreground hidden md:inline">— {fearFreeReason}</span>
         </div>
       </div>
 

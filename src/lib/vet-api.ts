@@ -124,6 +124,24 @@ export async function fetchAllVets() {
   return data;
 }
 
+export interface VetPickerOption {
+  id: string;
+  clinic_name: string;
+  location: string | null;
+  fear_free_certified: boolean;
+  is_license_verified: boolean;
+}
+
+export async function fetchApprovedVetsForPicker(): Promise<VetPickerOption[]> {
+  const { data, error } = await supabase
+    .from("vet_profiles")
+    .select("id, clinic_name, location, fear_free_certified, is_license_verified")
+    .eq("is_approved", true)
+    .order("clinic_name");
+  if (error) throw error;
+  return (data ?? []) as VetPickerOption[];
+}
+
 export async function createAppointment(appointment: {
   pet_id: string;
   owner_id: string;
