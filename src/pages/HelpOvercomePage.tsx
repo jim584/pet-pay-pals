@@ -23,6 +23,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { openCheckoutUrl } from "@/lib/open-checkout";
 import {
   fetchSponsorshipPets,
   createSponsorshipPet,
@@ -357,6 +358,7 @@ function SponsorDialog({ pet, userId, onClose }: { pet: SponsorshipPet; userId?:
       window.location.href = url;
     } catch (e: any) {
       toast({ title: "Couldn't start checkout", description: e.message, variant: "destructive" });
+    } finally {
       setSubmitting(false);
     }
   };
