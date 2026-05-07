@@ -82,6 +82,10 @@ export default function AdminPaymentsPage() {
   const [syncing, setSyncing] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const reqIdRef = useRef(0);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const toggleExpand = (id: string) => setExpanded((p) => {
+    const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n;
+  });
 
   const fetchPage = useCallback(async (offset: number, reqId: number) => {
     let q = supabase
