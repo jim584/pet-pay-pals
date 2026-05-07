@@ -1,36 +1,72 @@
-## Goal
-Owner-submitted tickets must reach the assigned vet, not just admin. Today the form has a free-text "Clinic name" input and never sends `vet_profile_id`, so the vet's "Incoming Tickets" page is always empty.
+# Vet ticket messaging thread
 
-## Change
+Add a lightweight in-ticket conversation between the **pet owner**, the **assigned vet** (if any), and **admins** so they can ask follow-up questions, request more documents, share updates, etc., directly inside a ticket.
 
-### `src/pages/VetTicketsPage.tsx`
+## What the user will see
 
-1. In `OwnerVetTicketsView`, also load registered clinics:
-   ```ts
-   supabase.from("vet_profiles")
-     .select("id, clinic_name, location")
-     .eq("is_approved", true)
-     .order("clinic_name")
-   ```
-   Pass `clinics` into `NewTicketDialog` alongside `pets`.
+**Pet Owner — `/dashboard/vet-tickets`**
+- Each ticket card gets a **Messages (N)** button.
+- Clicking opens a dialog with the message thread, an input box, and a Send button.
+- Unread count badge appears on the button when there are new messages from vet/admin.
 
-2. In `NewTicketDialog`, replace the free-text **Clinic name** input with a **Clinic selector**:
-   - A `Select` listing every registered clinic (`clinic_name — location`), plus a final **"Other / not listed…"** option.
-   - When a registered clinic is picked → submit with `vet_profile_id = clinic.id` and `clinic_name = clinic.clinic_name` (denormalized for display).
-   - When "Other" is picked → reveal a text input for the clinic name; submit with `vet_profile_id = null` (admin-only review).
-   - Helper text under the field explains: registered clinic = visible to that clinic + admin; Other = admin-only.
+**Vet — `/dashboard/vet-tickets`** (Incoming Tickets)
+- Same Messages button on each incoming ticket card.
+- Vet can reply, ask the owner for more info, or post status updates visible to owner + admin.
 
-3. Toast message reflects routing:
-   - Registered: "Sent to your clinic and our admin team for review."
-   - Other: "Sent to our admin team for review (clinic isn't on Help A Pet yet)."
+**Admin — `/admin/vet-tickets`**
+- Same Messages button on every ticket in the queue, so admins can join either side of the conversation.
 
-### Why this works
-- `submit-vet-ticket` already accepts `vet_profile_id` and writes it to `vet_tickets.vet_profile_id`.
-- RLS on `vet_tickets` already lets the matching vet (`is_vet_profile_owner(vet_profile_id, auth.uid())`) and admins read the row.
-- `listTicketsForVet()` already filters by `vet_profile_id`, so once tickets carry that id, the vet's "Incoming Tickets" page populates automatically.
+All three see the same shared thread per ticket. Each message shows author name, role badge (Owner / Vet / Admin), timestamp, and body. Newest at the bottom, auto-scroll, basic Enter-to-send.
 
-No DB or edge function changes required.
+## Database (1 migration)
 
-## Out of scope
-- Searchable combobox (plain Select is fine for now; can upgrade if list grows).
-- Notifying the vet by email — not requested.
+New table `vet_ticket_messages`:
+
+```text
+id              uuid pk
+ticket_id       uuid  -> vet_tickets.id (indexed)
+sender_id       uuid  (auth user)
+sender_role     text  ('owner' | 'vet' | 'admin')
+body            text  not null, length-checked in trigger (1..4000)
+read_by_owner   bool  default false
+read_by_vet     bool  default false
+read_by_admin   bool  default false
+created_at      timestamptz default now()
+```
+
+RLS (SELECT + INSERT only — no edit/delete to keep an audit trail):
+
+- **SELECT** allowed if any of:
+  - `auth.uid()` is the ticket's `owner_id`
+  - `auth.uid()` owns the ticket's `vet_profile_id` (via existing `is_vet_profile_owner`)
+  - `has_role(auth.uid(), 'admin')`
+- **INSERT** allowed under the same conditions, and `sender_id = auth.uid()`. A `BEFORE INSERT` trigger sets `sender_role` automatically based on the user's relationship to the ticket (owner / vet / admin) so the client can't spoof it.
+- **UPDATE** allowed only to flip the appropriate `read_by_*` flag for the caller's role (small policy with `WITH CHECK` ensuring only that column changes).
+
+Realtime: `ALTER PUBLICATION supabase_realtime ADD TABLE public.vet_ticket_messages;` so the dialog updates live without polling.
+
+## Code changes
+
+**New: `src/lib/vet-ticket-messages-api.ts`**
+- `listMessages(ticketId)` — returns messages + joined sender display names from `profiles`.
+- `sendMessage(ticketId, body)` — insert; role is set by trigger.
+- `markRead(ticketId, role)` — updates the `read_by_{role}` flag for messages not authored by the caller.
+- `subscribeToTicketMessages(ticketId, onChange)` — supabase realtime channel.
+- `getUnreadCount(ticketId, role)` — count where `read_by_{role}=false AND sender_id <> me`.
+
+**New: `src/components/vet-tickets/TicketMessagesDialog.tsx`**
+- Reusable dialog. Props: `ticketId`, `viewerRole: 'owner' | 'vet' | 'admin'`.
+- Loads thread, subscribes to realtime, marks read on open, renders bubbles with role badge, has a textarea + Send.
+
+**Edits:**
+- `src/pages/VetTicketsPage.tsx`
+  - In `TicketCard` (owner view) and `VetIncomingTickets` cards, add a "Messages" button that opens `TicketMessagesDialog` with the appropriate `viewerRole`. Show unread badge.
+- `src/pages/AdminVetTicketsPage.tsx`
+  - Add the same button on admin ticket cards with `viewerRole="admin"`.
+
+No edge function needed — RLS + trigger handle authorization, realtime handles delivery.
+
+## Out of scope (can be follow-ups)
+- Email/push notifications when a new message arrives.
+- File attachments inside messages (estimate/attestation files already attach to the ticket itself).
+- Editing or deleting messages.
