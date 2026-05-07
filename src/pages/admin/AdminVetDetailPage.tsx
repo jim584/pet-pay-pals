@@ -132,6 +132,7 @@ export default function AdminVetDetailPage() {
     else toast({ title: "Could not open document", variant: "destructive" });
   };
 
+  const toggleServiceActive = async (svc: AdminVetService) => {
     setBusy(`svc-${svc.id}`);
     try {
       await setVetServiceActive(svc.id, !svc.is_active);
