@@ -322,6 +322,43 @@ Deno.serve(async (req) => {
           }
         }
 
+        // Per-month MEMBER RESERVE accrual (10% allocated to each member's personal reserve).
+        // Idempotent on invoice id.
+        const { data: existingReserve } = await admin
+          .from("member_reserve_accruals")
+          .select("id").eq("stripe_invoice_id", inv.id).limit(1).maybeSingle();
+        if (!existingReserve) {
+          const monthlyReserve = Number(plan.reserve_portion ?? 0);
+          const monthsCovered = m.billing_interval === "year" ? 12 : 1;
+          const nowR = new Date();
+          if (monthlyReserve > 0) {
+            for (let i = 0; i < monthsCovered; i++) {
+              const accrualMonth = new Date(nowR.getFullYear(), nowR.getMonth() + i, 1);
+              await admin.from("member_reserve_accruals").insert({
+                membership_id: m.id,
+                user_id: m.user_id,
+                accrual_month: accrualMonth.toISOString().slice(0, 10),
+                amount: monthlyReserve,
+                remaining_amount: monthlyReserve,
+                stripe_invoice_id: inv.id,
+              });
+            }
+          }
+
+          // Continuous-paid-months counter + reserve eligibility (12 consecutive months).
+          const monthsCount = m.billing_interval === "year" ? 12 : 1;
+          const newCount = (Number(m.continuous_paid_months ?? 0)) + monthsCount;
+          const eligibleSince = !m.reserve_eligible_since && newCount >= 12
+            ? new Date().toISOString()
+            : m.reserve_eligible_since;
+          const lastPaidMonth = new Date(nowR.getFullYear(), nowR.getMonth(), 1).toISOString().slice(0, 10);
+          await admin.from("memberships").update({
+            continuous_paid_months: newCount,
+            last_paid_month: lastPaidMonth,
+            reserve_eligible_since: eligibleSince,
+          }).eq("id", m.id);
+        }
+
         // Update period end
         const sub = await stripe.subscriptions.retrieve(subId);
         await admin.from("memberships").update({
