@@ -1,23 +1,9 @@
-## Problem
+Update `src/lib/open-checkout.ts` so `openCheckoutUrl()` navigates the current tab to Stripe instead of opening a new tab.
 
-`/admin/reserve` shows "Failed to load reserve data — Could not find a relationship between member_reserve_consumptions and vet_tickets in the schema cache". The DB has no foreign keys defined (per the schema), so PostgREST cannot embed `vet_tickets` from `member_reserve_consumptions`.
+- Remove the `window.open(url, "_blank")` path.
+- Update the toast to "Redirecting to secure checkout…".
+- If inside an iframe (Lovable preview) and `window.top` is reachable, set `window.top.location.href = url` so Stripe loads top-level.
+- Otherwise fall back to `window.location.href = url`.
+- Keep the function signature unchanged so all existing callers (PlansPage, AutopaySetupCard, BNPL, donations, vet card, customer portal, etc.) work without modification.
 
-The offending query is in `src/lib/admin-api.ts → fetchAdminReserveConsumptions`:
-
-```ts
-.from("member_reserve_consumptions")
-.select("*, ticket:vet_tickets(owner_id)")
-```
-
-The sister helper `fetchMyReserveHistory` (`src/lib/reserve-history-api.ts`) already does it correctly with two separate queries.
-
-## Fix
-
-Update `fetchAdminReserveConsumptions` in `src/lib/admin-api.ts` to drop the embed and resolve `ticket → owner → profile` with two follow-up queries:
-
-1. Select `*` from `member_reserve_consumptions` (no embed).
-2. Collect `ticket_id`s and fetch matching `vet_tickets(id, owner_id)`.
-3. Collect `owner_id`s and fetch matching `profiles(user_id, full_name)`.
-4. Map each row's `user_full_name` from the resolved owner profile.
-
-No DB or RLS changes required.
+Stripe sessions already define `success_url` / `cancel_url` back into the app, so the user returns to the right page in the same tab after completing or cancelling.
