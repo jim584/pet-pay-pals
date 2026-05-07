@@ -164,6 +164,7 @@ function AdminTicketCard({ ticket, onChanged }: { ticket: VetTicket; onChanged: 
               <FileText className="h-4 w-4 mr-1" /> Attestation
             </Button>
           )}
+          <TicketMessagesDialog ticketId={ticket.id} viewerRole="admin" />
         </div>
 
         <div className="flex items-center gap-2">
