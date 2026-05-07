@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { openCheckoutUrl } from "@/lib/open-checkout";
 
 export default function PlansPage() {
   const { user, loading } = useAuth();
@@ -57,7 +58,9 @@ export default function PlansPage() {
 
   if (!loading && !user) return <Navigate to="/auth" replace />;
 
+  const [subscribingId, setSubscribingId] = useState<string | null>(null);
   const handleSubscribe = async (plan: MembershipPlan) => {
+    setSubscribingId(plan.id);
     try {
       // Membership must be tied to a pet. Block checkout if user has no pet.
       const { count, error: petCountErr } = await supabase
@@ -77,9 +80,11 @@ export default function PlansPage() {
         plan_id: plan.id,
         billing_interval: billingInterval,
       });
-      window.location.href = url;
+      openCheckoutUrl(url);
     } catch (e: any) {
       toast.error(e.message || "Could not start checkout");
+    } finally {
+      setSubscribingId(null);
     }
   };
 
