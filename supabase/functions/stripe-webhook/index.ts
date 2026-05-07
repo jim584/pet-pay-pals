@@ -460,6 +460,15 @@ async function accrueReferralBounty(admin: any, args: {
     .eq("id", ref.referrer_id)
     .maybeSingle();
   if (!referrer || !referrer.is_active) return;
+  // Shelters earn through milestones, not subscription %
+  if (referrer.type === "shelter") {
+    if (ref.status === "pending_signup") {
+      await admin.from("referrals").update({
+        status: "active", activated_at: new Date().toISOString(), membership_id: args.membershipId,
+      }).eq("id", ref.id);
+    }
+    return;
+  }
   if (referrer.type === "vet" && !referrer.fear_free_certified) {
     // still mark activation but no bounty
     if (ref.status === "pending_signup") {
