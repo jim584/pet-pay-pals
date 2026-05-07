@@ -322,6 +322,43 @@ export async function recordMilestoneContribution(milestoneId: string, amount: n
   if (error) throw error;
 }
 
+export interface MilestoneContribution {
+  id: string;
+  milestone_id: string;
+  payment_history_id: string | null;
+  amount: number;
+  source: string;
+  created_at: string;
+  payment?: {
+    stripe_payment_intent_id: string | null;
+    stripe_charge_id: string | null;
+    stripe_invoice_id: string | null;
+    description: string | null;
+    user_id: string | null;
+    payer_name?: string | null;
+  } | null;
+}
+
+export async function listMilestoneContributions(milestoneId: string): Promise<MilestoneContribution[]> {
+  const { data, error } = await supabase
+    .from("shelter_milestone_contributions")
+    .select("*, payment:payment_history(stripe_payment_intent_id, stripe_charge_id, stripe_invoice_id, description, user_id)")
+    .eq("milestone_id", milestoneId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  const rows = (data ?? []) as any[];
+  const userIds = Array.from(new Set(rows.map(r => r.payment?.user_id).filter(Boolean)));
+  let nameMap = new Map<string, string>();
+  if (userIds.length) {
+    const { data: profs } = await supabase.from("profiles").select("user_id, full_name").in("user_id", userIds);
+    nameMap = new Map((profs ?? []).map((p: any) => [p.user_id, p.full_name]));
+  }
+  return rows.map(r => ({
+    ...r,
+    payment: r.payment ? { ...r.payment, payer_name: nameMap.get(r.payment.user_id) ?? null } : null,
+  })) as MilestoneContribution[];
+}
+
 export async function listMyMilestones(): Promise<ShelterMilestone[]> {
   const { data, error } = await supabase
     .from("shelter_referral_milestones").select("*").order("created_at", { ascending: false });
