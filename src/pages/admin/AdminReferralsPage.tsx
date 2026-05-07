@@ -35,6 +35,10 @@ export default function AdminReferralsPage() {
   const [referralFilter, setReferralFilter] = useState("all");
   const [bountyFilter, setBountyFilter] = useState("all");
   const [busy, setBusy] = useState(false);
+  const [milestones, setMilestones] = useState<ShelterMilestone[]>([]);
+  const [qrFor, setQrFor] = useState<Referrer | null>(null);
+  const [openMilestone, setOpenMilestone] = useState(false);
+  const [newMs, setNewMs] = useState({ referrer_id: "", pet_name: "", goal_amount: 0, payout_amount: 0 });
 
   // Create referrer dialog
   const [openCreate, setOpenCreate] = useState(false);
@@ -43,10 +47,11 @@ export default function AdminReferralsPage() {
   });
 
   const load = async () => {
-    const [r, rs, b, p, s] = await Promise.all([
-      listReferrers(), listReferrals(referralFilter), listBounties(bountyFilter), listPayouts(), getReferralSettings(),
+    const [r, rs, b, p, s, ms] = await Promise.all([
+      listReferrers(), listReferrals(referralFilter), listBounties(bountyFilter), listPayouts(),
+      getReferralSettings(), listMilestones(),
     ]);
-    setReferrers(r); setReferrals(rs); setBounties(b); setPayouts(p); setSettings(s);
+    setReferrers(r); setReferrals(rs); setBounties(b); setPayouts(p); setSettings(s); setMilestones(ms);
   };
 
   useEffect(() => { (async () => { try { await load(); } finally { setLoading(false); } })(); }, []);
@@ -93,6 +98,38 @@ export default function AdminReferralsPage() {
       toast.success(`Paid ${fmt(r.total)} (${r.count} bounties)`);
       await load();
     } catch (e: any) { toast.error(e.message); } finally { setBusy(false); }
+  };
+
+  const handleStripePayout = async (referrerId: string) => {
+    setBusy(true);
+    try {
+      const r = await payReferrerViaStripe(referrerId);
+      toast.success(`Stripe transfer $${r.amount.toFixed(2)} (${r.count} bounties)`);
+      await load();
+    } catch (e: any) { toast.error(e.message); } finally { setBusy(false); }
+  };
+
+  const handleCreateMilestone = async () => {
+    if (!newMs.referrer_id || !newMs.pet_name || !newMs.goal_amount || !newMs.payout_amount) {
+      toast.error("All fields required"); return;
+    }
+    setBusy(true);
+    try {
+      await createMilestone(newMs);
+      toast.success("Milestone created");
+      setOpenMilestone(false);
+      setNewMs({ referrer_id: "", pet_name: "", goal_amount: 0, payout_amount: 0 });
+      await load();
+    } catch (e: any) { toast.error(e.message); } finally { setBusy(false); }
+  };
+
+  const handleAddContribution = async (mid: string) => {
+    const v = window.prompt("Contribution amount ($):");
+    if (!v) return;
+    const n = parseFloat(v);
+    if (!n || n <= 0) return;
+    try { await recordMilestoneContribution(mid, n, "manual"); toast.success("Recorded"); await load(); }
+    catch (e: any) { toast.error(e.message); }
   };
 
   const saveSettings = async () => {
