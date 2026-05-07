@@ -482,7 +482,7 @@ export default function AdminReferralsPage() {
                           </TableCell>
                         </TableRow>
                       )}
-                    </>
+                    </Fragment>
                   );
                 })}
                 {milestones.length === 0 && <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">No milestones yet.</TableCell></TableRow>}
