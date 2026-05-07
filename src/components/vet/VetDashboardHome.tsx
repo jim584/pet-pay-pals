@@ -184,35 +184,53 @@ export function VetDashboardHome() {
             <p className="text-sm text-muted-foreground text-center py-6">No tickets assigned to your clinic yet.</p>
           ) : (
             <div className="space-y-3">
-              {tickets.map((t) => (
-                <div key={t.id} className="flex flex-col gap-2 py-3 border-b last:border-0 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex-1">
-                    <p className="font-semibold text-sm">
-                      {t.pet_name || "Pet"} — {t.owner_name || "Owner"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {t.clinic_name} · Estimate ${Number(t.estimate_amount).toFixed(2)}
-                      {t.approved_amount != null && ` · Approved $${Number(t.approved_amount).toFixed(2)}`}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Submitted {new Date(t.created_at).toLocaleString()}
-                    </p>
+              {tickets.map((t) => {
+                const b = t.coverage_breakdown;
+                return (
+                <div key={t.id} className="flex flex-col gap-2 py-3 border-b last:border-0">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex-1">
+                      <p className="font-semibold text-sm">
+                        {t.pet_name || "Pet"} — {t.owner_name || "Owner"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {t.clinic_name} · Estimate ${Number(t.estimate_amount).toFixed(2)}
+                        {t.approved_amount != null && ` · Approved $${Number(t.approved_amount).toFixed(2)}`}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Submitted {new Date(t.created_at).toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="secondary">{t.status}</Badge>
+                      {t.estimate_url && (
+                        <Button size="sm" variant="outline" onClick={() => openFile(t.estimate_url!)}>
+                          <FileText className="h-4 w-4 mr-1" /> Estimate
+                        </Button>
+                      )}
+                      {t.attestation_url && (
+                        <Button size="sm" variant="outline" onClick={() => openFile(t.attestation_url!)}>
+                          <FileText className="h-4 w-4 mr-1" /> Attestation
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="secondary">{t.status}</Badge>
-                    {t.estimate_url && (
-                      <Button size="sm" variant="outline" onClick={() => openFile(t.estimate_url!)}>
-                        <FileText className="h-4 w-4 mr-1" /> Estimate
-                      </Button>
-                    )}
-                    {t.attestation_url && (
-                      <Button size="sm" variant="outline" onClick={() => openFile(t.attestation_url!)}>
-                        <FileText className="h-4 w-4 mr-1" /> Attestation
-                      </Button>
-                    )}
-                  </div>
+                  {b && (
+                    <div className="rounded-md border p-3 bg-muted/30 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1 text-xs">
+                      <div><span className="text-muted-foreground block">Direct Pay</span><span className="font-medium">${Number(b.dp_use ?? 0).toFixed(2)}</span></div>
+                      <div><span className="text-muted-foreground block">BNPL</span><span className="font-medium">${Number(b.bnpl_use ?? 0).toFixed(2)}</span></div>
+                      <div><span className="text-muted-foreground block">Reserve</span><span className="font-medium">${Number(b.reserve_use ?? 0).toFixed(2)}</span></div>
+                      <div><span className="text-muted-foreground block">Owner portion</span><span className="font-medium">${Number(b.member_remainder ?? 0).toFixed(2)}</span></div>
+                      {b.plan_tier && (
+                        <div className="col-span-2 sm:col-span-4 text-muted-foreground pt-1 border-t">
+                          Plan: {b.plan_tier} · Year cap remaining: {b.plan_year_cap_remaining == null ? "∞" : `$${Number(b.plan_year_cap_remaining).toFixed(2)}`} · DP available: ${Number(b.dp_available ?? 0).toFixed(2)}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>
