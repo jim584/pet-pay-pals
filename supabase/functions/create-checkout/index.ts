@@ -41,6 +41,19 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Plan not found" }), { status: 404, headers: corsHeaders });
     }
 
+    // Guard: a membership must be tied to a pet. Reject checkout if the user has no pets.
+    const { count: petCount, error: petErr } = await admin
+      .from("pets").select("id", { count: "exact", head: true }).eq("owner_id", userId);
+    if (petErr) {
+      return new Response(JSON.stringify({ error: "Could not verify pet" }), { status: 500, headers: corsHeaders });
+    }
+    if (!petCount || petCount === 0) {
+      return new Response(
+        JSON.stringify({ error: "no_pet", message: "Add a pet before choosing a membership plan." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, { apiVersion: "2024-06-20" });
 
     // Get or create Stripe customer
