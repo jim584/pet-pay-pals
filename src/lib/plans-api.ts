@@ -101,7 +101,8 @@ export async function startCheckout(args: {
   plan_id: string;
   pet_id?: string | null;
   billing_interval: "month" | "year";
-  is_fear_free_member: boolean;
+  /** @deprecated Server now derives Fear Free status from Vet of Record. Ignored. */
+  is_fear_free_member?: boolean;
 }): Promise<string> {
   const { data, error } = await supabase.functions.invoke("create-checkout", { body: args });
   if (error) throw error;
