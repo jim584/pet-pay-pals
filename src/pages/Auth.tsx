@@ -45,7 +45,7 @@ export default function Auth() {
     }
     const redirect = params.get("redirect");
     const safeRedirect = redirect && redirect.startsWith("/") ? redirect : null;
-    if (role === "admin") navigate(safeRedirect ?? "/admin", { replace: true });
+    if (role === "admin") navigate("/admin", { replace: true });
     else if (role) navigate(safeRedirect ?? "/", { replace: true });
     else navigate("/select-role", { replace: true });
   }, [user, role, loading, roleLoading, navigate, params]);

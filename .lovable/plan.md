@@ -1,42 +1,26 @@
-## Problem
+## Goal
 
-After login, users with an existing role are redirected to `/select-role` even though their role is already saved. Then clicking a role throws an RLS violation (because a role row already exists), confirming the role is in fact stored.
+When an admin signs in, send them straight to the Admin Dashboard Overview (`/admin`), regardless of any `?redirect=` query param.
 
-## Root Cause
+## Current Behavior
 
-In `AuthContext.tsx`, when a user signs in, `onAuthStateChange` fires with `SIGNED_IN`. The handler sets `user`/`session` synchronously but kicks off `fetchRole(...)` inside `setTimeout(..., 0)` — it does NOT update any loading flag.
-
-Meanwhile, `Auth.tsx` has this effect:
+`src/pages/Auth.tsx` (line 48) already routes admins to `/admin`, but it honors `safeRedirect` first:
 
 ```ts
-useEffect(() => {
-  if (loading || !user) return;
-  ...
-  if (role === "admin") navigate(...);
-  else if (role) navigate("/", ...);
-  else navigate("/select-role", ...);   // <-- fires while role is still null
-}, [user, role, loading, ...]);
+if (role === "admin") navigate(safeRedirect ?? "/admin", { replace: true });
 ```
 
-`loading` was already `false` (from the initial `getSession()` call when no user existed). The moment `user` becomes truthy, the effect runs while `role` is still `null` (fetch hasn't returned yet) → it navigates to `/select-role` before the role arrives. Same race exists in `DashboardLayout.tsx` (`if (!role) return <Navigate to="/select-role" />`).
+So if the admin landed on `/auth?redirect=/some-pet-page` (e.g. clicked a "Sign in" link from a public page), they get bounced into the public app instead of the admin dashboard.
 
-## Fix
+Additionally, `src/pages/admin/AdminLayout.tsx` only checks `loading` — not the new `roleLoading` flag — so on a fresh admin login it can briefly evaluate `role !== "admin"` before the role fetch resolves and bounce them to `/`.
 
-Add an explicit `roleLoading` flag to `AuthContext` that is true whenever a user exists but their role hasn't been fetched yet. Gate the role-based redirects on it.
+## Changes
 
-### Changes
+1. **`src/pages/Auth.tsx`** — For admins, always navigate to `/admin` and ignore `safeRedirect`:
+   ```ts
+   if (role === "admin") navigate("/admin", { replace: true });
+   ```
 
-1. **`src/contexts/AuthContext.tsx`**
-   - Add `roleLoading: boolean` to context type and provider value.
-   - Set `roleLoading = true` whenever a new `user` is detected (initial `getSession` path AND `onAuthStateChange` `SIGNED_IN`/`TOKEN_REFRESHED` paths), and set it back to `false` in `fetchRole`'s `finally`.
-   - When user is null, `roleLoading = false`.
+2. **`src/pages/admin/AdminLayout.tsx`** — Pull `roleLoading` from `useAuth()` and treat `loading || (user && roleLoading)` as the loading state, so the layout waits for the role fetch before redirecting non-admins. Also send unauthenticated visitors to `/auth?redirect=/admin` so they come back to the admin dashboard after signing in.
 
-2. **`src/pages/Auth.tsx`**
-   - Read `roleLoading` from `useAuth()`.
-   - Change guard to `if (loading || roleLoading || !user) return;` so we only redirect once the role lookup has resolved.
-
-3. **`src/pages/DashboardLayout.tsx`**
-   - Read `roleLoading` from `useAuth()`.
-   - While `roleLoading` is true, render the existing skeleton/loader instead of redirecting to `/select-role`.
-
-No DB or RLS changes are needed — the role is being saved correctly; only the client-side redirect timing is wrong.
+No DB or routing-config changes needed.
