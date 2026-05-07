@@ -14,6 +14,7 @@ export interface MyObligation {
   next_due_date: string | null;
   default_at: string | null;
   created_at: string;
+  auto_pay_enabled?: boolean;
   clinic_name?: string | null;
   estimate_amount?: number | null;
 }
