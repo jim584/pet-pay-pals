@@ -21,6 +21,7 @@ import {
   type MyObligation,
   type MyInstallment,
 } from "@/lib/bnpl-api";
+import { openCheckoutUrl } from "@/lib/open-checkout";
 
 const fmt = (n: number) => `$${Number(n ?? 0).toFixed(2)}`;
 const fmtDate = (d?: string | null) => (d ? new Date(d).toLocaleDateString() : "—");
@@ -113,9 +114,10 @@ export default function PaymentPlansPage() {
     setBusyId(installmentId ?? obligationId);
     try {
       const url = await startInstallmentCheckout({ obligation_id: obligationId, installment_id: installmentId, pay_full: payFull });
-      window.location.href = url;
+      openCheckoutUrl(url);
     } catch (e) {
       toast({ title: "Checkout failed", description: (e as Error).message, variant: "destructive" });
+    } finally {
       setBusyId(null);
     }
   };
