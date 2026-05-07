@@ -80,6 +80,12 @@ export async function startAutopaySetup(): Promise<{ url: string; current_paymen
   return data;
 }
 
+export async function confirmAutopaySetup(sessionId: string): Promise<{ default_payment_method_id: string | null; status: string }> {
+  const { data, error } = await supabase.functions.invoke("confirm-bnpl-autopay", { body: { session_id: sessionId } });
+  if (error) throw error;
+  return data;
+}
+
 export async function setObligationAutopay(obligationId: string, enabled: boolean): Promise<void> {
   const { error } = await supabase
     .from("bnpl_obligations")
