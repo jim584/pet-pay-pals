@@ -81,6 +81,21 @@ export default function AdminPaymentPlansPage() {
   const [scheduleRows, setScheduleRows] = useState<AdminBnplInstallment[]>([]);
   const [scheduleLoading, setScheduleLoading] = useState(false);
   const [runningOverdue, setRunningOverdue] = useState(false);
+  const [runs, setRuns] = useState<BnplProcessorRun[]>([]);
+  const [runsLoading, setRunsLoading] = useState(false);
+
+  const loadRuns = async () => {
+    setRunsLoading(true);
+    try {
+      setRuns(await fetchBnplProcessorRuns(25));
+    } catch (e: any) {
+      toast({ title: "Failed to load run log", description: e.message, variant: "destructive" });
+    } finally {
+      setRunsLoading(false);
+    }
+  };
+
+  useEffect(() => { loadRuns(); }, []);
 
   const openSchedule = async (row: AdminBnplRow) => {
     setScheduleTarget(row);
