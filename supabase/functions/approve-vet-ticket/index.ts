@@ -99,19 +99,67 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Consume member Reserve (FIFO) if requested
+    // Consume member Reserve (FIFO) if requested — but re-validate server-side first.
+    let validatedReserveUse = 0;
     if (reserveUse > 0) {
+      // 1) Re-check eligibility from membership
+      let reserveEligible = false;
+      if (ticket.membership_id) {
+        const { data: m } = await admin
+          .from("memberships")
+          .select("reserve_eligible_since, status")
+          .eq("id", ticket.membership_id)
+          .maybeSingle();
+        reserveEligible = !!(m as any)?.reserve_eligible_since
+          && ["active", "past_due"].includes((m as any)?.status);
+      }
+      if (!reserveEligible) {
+        await admin.rpc("release_ticket_allocations", { _ticket_id: ticket_id });
+        return new Response(
+          JSON.stringify({ error: "Reserve not eligible: 12 months of continuous paid membership required." }),
+          { status: 400, headers: corsHeaders },
+        );
+      }
+
+      // 2) Re-check current available balance
+      const { data: rAccruals } = await admin
+        .from("member_reserve_accruals")
+        .select("remaining_amount")
+        .eq("user_id", ticket.owner_id);
+      const reserveAvailable = (rAccruals ?? [])
+        .reduce((s: number, r: any) => s + Number(r.remaining_amount ?? 0), 0);
+
+      // 3) Cap requested amount at available balance
+      validatedReserveUse = Math.min(reserveUse, reserveAvailable);
+      if (validatedReserveUse <= 0) {
+        await admin.rpc("release_ticket_allocations", { _ticket_id: ticket_id });
+        return new Response(
+          JSON.stringify({ error: "Reserve has no available balance." }),
+          { status: 400, headers: corsHeaders },
+        );
+      }
+
+      // 4) Consume FIFO
       const { data: rConsumed, error: rErr } = await admin.rpc("consume_reserve_for_ticket", {
-        _ticket_id: ticket_id, _user_id: ticket.owner_id, _amount: reserveUse,
+        _ticket_id: ticket_id, _user_id: ticket.owner_id, _amount: validatedReserveUse,
       });
       if (rErr) throw rErr;
-      if (Number(rConsumed) < reserveUse - 0.01) {
+      if (Number(rConsumed) < validatedReserveUse - 0.01) {
         await admin.rpc("release_ticket_allocations", { _ticket_id: ticket_id });
         await admin.rpc("release_reserve_for_ticket", { _ticket_id: ticket_id });
         return new Response(JSON.stringify({ error: `Reserve shortfall: only ${rConsumed} available` }),
           { status: 400, headers: corsHeaders });
       }
     }
+
+    // If we capped the reserve use below what was requested, push the difference into member_remainder
+    // and rewrite the breakdown so downstream funding/approval reflects reality.
+    const finalReserveUse = validatedReserveUse;
+    const reserveDelta = reserveUse - finalReserveUse;
+    const finalMemberRemainder = +(memberRemainder + reserveDelta).toFixed(2);
+    breakdown.reserve_use = +finalReserveUse.toFixed(2);
+    breakdown.member_remainder = finalMemberRemainder;
+    breakdown.reserve_validated_server_side = true;
 
     const newStatus = memberRemainder > 0 ? "approved" : "funded";
 
