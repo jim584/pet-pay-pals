@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { Copy, RefreshCw, Plus, DollarSign, QrCode, Zap } from "lucide-react";
+import { Copy, RefreshCw, Plus, DollarSign, QrCode, Zap, ChevronDown, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { QRCodeCard } from "@/components/QRCodeCard";
 import {
@@ -18,8 +18,9 @@ import {
   createReferrer, updateReferrer, runReferralHoldJob, createPayoutForReferrer,
   getReferralSettings, updateReferralSettings,
   payReferrerViaStripe, listMilestones, createMilestone, recordMilestoneContribution,
+  listMilestoneContributions,
   type Referrer, type Referral, type ReferralBounty, type ReferrerPayout, type ReferralSettings, type ReferrerType,
-  type ShelterMilestone,
+  type ShelterMilestone, type MilestoneContribution,
 } from "@/lib/referrals-api";
 
 const fmt = (n: number) => `$${Number(n ?? 0).toFixed(2)}`;
