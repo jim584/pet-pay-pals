@@ -672,6 +672,44 @@ export async function deleteBnplPayment(paymentId: string) {
   if (error) throw error;
 }
 
+export interface AdminBnplInstallment {
+  id: string;
+  obligation_id: string;
+  seq: number;
+  due_date: string;
+  amount: number;
+  paid_amount: number;
+  status: string;
+  paid_at: string | null;
+  last_reminded_at: string | null;
+}
+
+export async function fetchAdminBnplInstallments(obligationId: string): Promise<AdminBnplInstallment[]> {
+  const { data, error } = await supabase
+    .from("bnpl_installments")
+    .select("*")
+    .eq("obligation_id", obligationId)
+    .order("seq", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as AdminBnplInstallment[];
+}
+
+export async function regenerateBnplInstallments(obligationId: string) {
+  // Wipe existing rows then call generator via a no-op update to trigger regeneration.
+  const del = await supabase.from("bnpl_installments").delete().eq("obligation_id", obligationId);
+  if (del.error) throw del.error;
+  // Re-run generation by toggling updated_at; the trigger only fires on insert.
+  // Use RPC fallback: call the PostgREST function via a direct rpc call.
+  const { error } = await supabase.rpc("generate_bnpl_installments" as any, { _obligation_id: obligationId });
+  if (error) throw error;
+}
+
+export async function runProcessBnplOverdue(): Promise<{ processed?: number } & Record<string, unknown>> {
+  const { data, error } = await supabase.functions.invoke("process-bnpl-overdue", { body: {} });
+  if (error) throw error;
+  return (data ?? {}) as any;
+}
+
 // ============ Wallet & Reserve ============
 
 export interface ReserveKpis {

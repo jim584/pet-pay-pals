@@ -18,12 +18,15 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   Loader2, Search, DollarSign, CreditCard, AlertCircle, CheckCircle2, Pencil, History, Trash2,
+  CalendarDays, RefreshCw, PlayCircle,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import {
   fetchAdminBnpl, fetchAdminBnplStats, updateAdminBnpl,
   recordBnplPayment, fetchBnplPayments, deleteBnplPayment,
+  fetchAdminBnplInstallments, regenerateBnplInstallments, runProcessBnplOverdue,
   type AdminBnplRow, type BnplFilter, type BnplStatus, type BnplStats, type BnplPaymentRow,
+  type AdminBnplInstallment,
 } from "@/lib/admin-api";
 
 const FILTERS: { value: BnplFilter; label: string }[] = [
@@ -72,6 +75,48 @@ export default function AdminPaymentPlansPage() {
 
   const [defaultTarget, setDefaultTarget] = useState<AdminBnplRow | null>(null);
   const [cancelTarget, setCancelTarget] = useState<AdminBnplRow | null>(null);
+
+  const [scheduleTarget, setScheduleTarget] = useState<AdminBnplRow | null>(null);
+  const [scheduleRows, setScheduleRows] = useState<AdminBnplInstallment[]>([]);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
+  const [runningOverdue, setRunningOverdue] = useState(false);
+
+  const openSchedule = async (row: AdminBnplRow) => {
+    setScheduleTarget(row);
+    setScheduleLoading(true);
+    try {
+      setScheduleRows(await fetchAdminBnplInstallments(row.id));
+    } catch (e: any) {
+      toast({ title: "Failed to load schedule", description: e.message, variant: "destructive" });
+    } finally {
+      setScheduleLoading(false);
+    }
+  };
+
+  const regenerateSchedule = async () => {
+    if (!scheduleTarget) return;
+    try {
+      await regenerateBnplInstallments(scheduleTarget.id);
+      toast({ title: "Schedule regenerated" });
+      setScheduleRows(await fetchAdminBnplInstallments(scheduleTarget.id));
+    } catch (e: any) {
+      toast({ title: "Failed", description: e.message, variant: "destructive" });
+    }
+  };
+
+  const runOverdue = async () => {
+    setRunningOverdue(true);
+    try {
+      const r = await runProcessBnplOverdue();
+      toast({ title: "Overdue processor finished", description: JSON.stringify(r) });
+      await load();
+    } catch (e: any) {
+      toast({ title: "Failed", description: e.message, variant: "destructive" });
+    } finally {
+      setRunningOverdue(false);
+    }
+  };
+
 
   const load = async () => {
     setLoading(true);
@@ -199,9 +244,15 @@ export default function AdminPaymentPlansPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Payment Plans (BNPL)</h1>
-        <p className="text-muted-foreground">Review obligations, record payments, and manage agreement statuses.</p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Payment Plans (BNPL)</h1>
+          <p className="text-muted-foreground">Review obligations, record payments, and manage agreement statuses.</p>
+        </div>
+        <Button variant="outline" onClick={runOverdue} disabled={runningOverdue}>
+          {runningOverdue ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <PlayCircle className="h-4 w-4 mr-1" />}
+          Run overdue processor
+        </Button>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -289,6 +340,9 @@ export default function AdminPaymentPlansPage() {
                       </Button>
                       <Button size="sm" variant="outline" onClick={() => openHistory(row)} disabled={busyId === row.id}>
                         <History className="h-4 w-4 mr-1" /> History
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => openSchedule(row)} disabled={busyId === row.id}>
+                        <CalendarDays className="h-4 w-4 mr-1" /> Schedule
                       </Button>
                       <Button size="sm" variant="outline" onClick={() => openEdit(row)} disabled={busyId === row.id}>
                         <Pencil className="h-4 w-4 mr-1" /> Edit
@@ -478,6 +532,56 @@ export default function AdminPaymentPlansPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Schedule dialog */}
+      <Dialog open={!!scheduleTarget} onOpenChange={(o) => !o && setScheduleTarget(null)}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Installment schedule</DialogTitle>
+            <DialogDescription>
+              {scheduleTarget && <>Plan for {scheduleTarget.owner_full_name ?? "owner"} · {scheduleTarget.pet_name ?? "pet"}</>}
+            </DialogDescription>
+          </DialogHeader>
+          {scheduleLoading ? (
+            <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+          ) : scheduleRows.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">No installments generated yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {scheduleRows.map((i) => {
+                const remaining = Math.max(0, Number(i.amount) - Number(i.paid_amount));
+                return (
+                  <div key={i.id} className="flex items-center justify-between gap-3 p-3 rounded-md border">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold">#{i.seq} · {fmtMoney(Number(i.amount))}</span>
+                        <Badge variant={i.status === "paid" ? "outline" : i.status === "missed" ? "destructive" : i.status === "due" ? "default" : "secondary"}>
+                          {i.status}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Due {new Date(i.due_date).toLocaleDateString()}
+                        {i.paid_at ? ` · Paid ${new Date(i.paid_at).toLocaleDateString()}` : ""}
+                        {i.last_reminded_at ? ` · Reminded ${new Date(i.last_reminded_at).toLocaleDateString()}` : ""}
+                      </p>
+                    </div>
+                    <div className="text-sm text-right">
+                      <div>{fmtMoney(Number(i.paid_amount))} paid</div>
+                      <div className="text-xs text-muted-foreground">{fmtMoney(remaining)} left</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={regenerateSchedule}>
+              <RefreshCw className="h-4 w-4 mr-1" /> Regenerate
+            </Button>
+            <Button variant="outline" onClick={() => setScheduleTarget(null)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
