@@ -1,20 +1,46 @@
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
+import { Button } from "@/components/ui/button";
 
 export default function DashboardLayout() {
   const { user, role, loading } = useAuth();
+  const location = useLocation();
+  const [slow, setSlow] = useState(false);
+
+  useEffect(() => {
+    if (!loading) { setSlow(false); return; }
+    const t = setTimeout(() => setSlow(true), 8000);
+    return () => clearTimeout(t);
+  }, [loading]);
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-6 text-center">
+        <div className="animate-pulse text-muted-foreground">Loading your account…</div>
+        {slow && (
+          <div className="space-y-3 max-w-sm">
+            <p className="text-sm text-muted-foreground">
+              This is taking longer than expected. Try reloading or signing in again.
+            </p>
+            <div className="flex justify-center gap-2">
+              <Button size="sm" variant="outline" onClick={() => window.location.reload()}>Reload</Button>
+              <Button size="sm" asChild>
+                <a href={`/auth?redirect=${encodeURIComponent(location.pathname + location.search)}`}>Sign in</a>
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
 
-  if (!user) return <Navigate to="/auth" replace />;
+  if (!user) {
+    const redirect = encodeURIComponent(location.pathname + location.search);
+    return <Navigate to={`/auth?redirect=${redirect}`} replace />;
+  }
   if (!role) return <Navigate to="/select-role" replace />;
 
   return (
