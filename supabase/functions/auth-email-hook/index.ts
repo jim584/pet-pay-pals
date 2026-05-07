@@ -245,6 +245,16 @@ async function handleWebhook(req: Request): Promise<Response> {
     })
   }
 
+  // Kill-switch: skip sending until DNS for the sender domain is verified.
+  // Set EMAILS_ENABLED="true" to re-enable. Defaults to disabled.
+  if (Deno.env.get('EMAILS_ENABLED') !== 'true') {
+    console.log('Emails disabled (EMAILS_ENABLED!=true) — skipping auth email', { emailType, run_id })
+    return new Response(
+      JSON.stringify({ success: true, skipped: 'emails_disabled' }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  }
+
   let result: { message_id?: string }
   try {
     result = await sendLovableEmail(
