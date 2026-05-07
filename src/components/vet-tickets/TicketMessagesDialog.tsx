@@ -67,15 +67,39 @@ export function TicketMessagesDialog({
   useEffect(() => { if (open) load(); /* eslint-disable-next-line */ }, [open]);
 
   const send = async () => {
-    if (!draft.trim()) return;
+    if (!draft.trim() && pending.length === 0) return;
     setSending(true);
     try {
-      await sendTicketMessage(ticketId, draft);
+      const uploaded: TicketAttachment[] = [];
+      for (const f of pending) {
+        if (f.size > 20 * 1024 * 1024) {
+          throw new Error(`"${f.name}" exceeds 20MB.`);
+        }
+        uploaded.push(await uploadMessageAttachment(ticketId, f));
+      }
+      await sendTicketMessage(ticketId, draft, uploaded);
       setDraft("");
+      setPending([]);
+      if (fileRef.current) fileRef.current.value = "";
       await load();
     } catch (e: any) {
       toast({ title: "Couldn't send", description: e.message, variant: "destructive" });
     } finally { setSending(false); }
+  };
+
+  const openAttachment = async (path: string) => {
+    try {
+      const url = await getMessageAttachmentUrl(path);
+      window.open(url, "_blank");
+    } catch (e: any) {
+      toast({ title: "Couldn't open file", description: e.message, variant: "destructive" });
+    }
+  };
+
+  const formatSize = (b: number) => {
+    if (b < 1024) return `${b} B`;
+    if (b < 1024 * 1024) return `${(b / 1024).toFixed(0)} KB`;
+    return `${(b / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   return (
