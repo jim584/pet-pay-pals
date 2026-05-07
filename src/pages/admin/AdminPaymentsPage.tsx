@@ -1,0 +1,277 @@
+import { useEffect, useMemo, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
+import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { triggerStripeBackfill } from "@/lib/admin-api";
+import {
+  CreditCard, DollarSign, RefreshCw, ExternalLink, Loader2, FileText, TrendingUp,
+} from "lucide-react";
+
+type PaymentRow = {
+  id: string;
+  user_id: string;
+  amount: number;
+  currency: string;
+  status: string;
+  kind: string;
+  description: string | null;
+  occurred_at: string;
+  hosted_invoice_url: string | null;
+  invoice_pdf: string | null;
+  stripe_invoice_id: string | null;
+  stripe_payment_intent_id: string | null;
+  stripe_charge_id: string | null;
+  user_full_name?: string | null;
+};
+
+const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  paid: "default",
+  succeeded: "default",
+  refunded: "secondary",
+  failed: "destructive",
+  pending: "outline",
+};
+
+const KIND_LABEL: Record<string, string> = {
+  membership_invoice: "Membership",
+  member_remainder: "Member remainder",
+  donation: "Donation",
+  one_time: "One-time",
+};
+
+const fmt = (n: number, cur = "usd") =>
+  new Intl.NumberFormat("en-US", { style: "currency", currency: (cur || "usd").toUpperCase() }).format(Number(n ?? 0));
+
+export default function AdminPaymentsPage() {
+  const [rows, setRows] = useState<PaymentRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [kindFilter, setKindFilter] = useState<string>("all");
+  const [rangeDays, setRangeDays] = useState<string>("30");
+  const [syncing, setSyncing] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      let q = supabase
+        .from("payment_history")
+        .select("*")
+        .order("occurred_at", { ascending: false })
+        .limit(500);
+      if (rangeDays !== "all") {
+        const since = new Date(Date.now() - Number(rangeDays) * 86400000).toISOString();
+        q = q.gte("occurred_at", since);
+      }
+      const { data, error } = await q;
+      if (error) throw error;
+
+      const userIds = Array.from(new Set((data ?? []).map((r: any) => r.user_id).filter(Boolean)));
+      const profileMap = new Map<string, string>();
+      if (userIds.length) {
+        const { data: profs } = await supabase
+          .from("profiles").select("user_id, full_name").in("user_id", userIds);
+        (profs ?? []).forEach((p: any) => profileMap.set(p.user_id, p.full_name));
+      }
+      setRows(((data ?? []) as any[]).map((r) => ({
+        ...r, user_full_name: profileMap.get(r.user_id) ?? null,
+      })));
+    } catch (e: any) {
+      toast({ title: "Failed to load payments", description: e.message, variant: "destructive" });
+    } finally { setLoading(false); }
+  };
+
+  useEffect(() => { load(); }, [rangeDays]);
+
+  const filtered = useMemo(() => {
+    const s = search.trim().toLowerCase();
+    return rows.filter((r) => {
+      if (statusFilter !== "all" && r.status !== statusFilter) return false;
+      if (kindFilter !== "all" && r.kind !== kindFilter) return false;
+      if (!s) return true;
+      return (
+        (r.user_full_name ?? "").toLowerCase().includes(s) ||
+        (r.description ?? "").toLowerCase().includes(s) ||
+        (r.stripe_invoice_id ?? "").toLowerCase().includes(s) ||
+        (r.stripe_payment_intent_id ?? "").toLowerCase().includes(s)
+      );
+    });
+  }, [rows, search, statusFilter, kindFilter]);
+
+  const kpis = useMemo(() => {
+    const paid = filtered.filter((r) => r.status === "paid" || r.status === "succeeded");
+    const gross = paid.reduce((s, r) => s + Number(r.amount ?? 0), 0);
+    const refunded = filtered
+      .filter((r) => r.status === "refunded")
+      .reduce((s, r) => s + Number(r.amount ?? 0), 0);
+    return {
+      gross, refunded, count: paid.length, failed: filtered.filter((r) => r.status === "failed").length,
+    };
+  }, [filtered]);
+
+  const sync = async () => {
+    setSyncing(true);
+    try {
+      const res = await triggerStripeBackfill();
+      toast({ title: "Synced from Stripe", description: `Synced ${res.synced} · Created ${res.created}` });
+      await load();
+    } catch (e: any) {
+      toast({ title: "Sync failed", description: e.message, variant: "destructive" });
+    } finally { setSyncing(false); }
+  };
+
+  return (
+    <div className="space-y-6 max-w-7xl mx-auto">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold font-display">Payments</h1>
+          <p className="text-sm text-muted-foreground">All collected revenue, refunds, and failed charges.</p>
+        </div>
+        <Button onClick={sync} disabled={syncing} variant="outline">
+          {syncing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+          Sync from Stripe
+        </Button>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <KpiCard label="Gross collected" value={fmt(kpis.gross)} icon={DollarSign} accent="text-primary" />
+        <KpiCard label="Successful payments" value={String(kpis.count)} icon={CreditCard} accent="text-accent" />
+        <KpiCard label="Refunded" value={fmt(kpis.refunded)} icon={TrendingUp} accent="text-muted-foreground" />
+        <KpiCard label="Failed" value={String(kpis.failed)} icon={FileText} accent="text-destructive" />
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Transactions</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            <Input
+              placeholder="Search by name, description, or Stripe ID…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="max-w-xs"
+            />
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-40"><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
+                <SelectItem value="succeeded">Succeeded</SelectItem>
+                <SelectItem value="refunded">Refunded</SelectItem>
+                <SelectItem value="failed">Failed</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={kindFilter} onValueChange={setKindFilter}>
+              <SelectTrigger className="w-44"><SelectValue placeholder="Kind" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All kinds</SelectItem>
+                <SelectItem value="membership_invoice">Membership</SelectItem>
+                <SelectItem value="member_remainder">Member remainder</SelectItem>
+                <SelectItem value="donation">Donation</SelectItem>
+                <SelectItem value="one_time">One-time</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={rangeDays} onValueChange={setRangeDays}>
+              <SelectTrigger className="w-36"><SelectValue placeholder="Range" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7">Last 7 days</SelectItem>
+                <SelectItem value="30">Last 30 days</SelectItem>
+                <SelectItem value="90">Last 90 days</SelectItem>
+                <SelectItem value="365">Last year</SelectItem>
+                <SelectItem value="all">All time</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {loading ? (
+            <div className="text-muted-foreground animate-pulse py-10 text-center">Loading payments…</div>
+          ) : filtered.length === 0 ? (
+            <div className="text-muted-foreground py-10 text-center text-sm">
+              No payments match your filters.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>User</TableHead>
+                    <TableHead>Kind</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead className="text-right">Invoice</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
+                        {new Date(r.occurred_at).toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {r.user_full_name || <span className="text-muted-foreground">{r.user_id.slice(0, 8)}…</span>}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{KIND_LABEL[r.kind] ?? r.kind}</Badge>
+                      </TableCell>
+                      <TableCell className="text-sm max-w-xs truncate" title={r.description ?? ""}>
+                        {r.description ?? "—"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={STATUS_VARIANT[r.status] ?? "outline"}>{r.status}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-medium">{fmt(r.amount, r.currency)}</TableCell>
+                      <TableCell className="text-right">
+                        {r.hosted_invoice_url ? (
+                          <Button asChild variant="ghost" size="sm">
+                            <a href={r.hosted_invoice_url} target="_blank" rel="noreferrer">
+                              <ExternalLink className="h-4 w-4" />
+                            </a>
+                          </Button>
+                        ) : r.invoice_pdf ? (
+                          <Button asChild variant="ghost" size="sm">
+                            <a href={r.invoice_pdf} target="_blank" rel="noreferrer">
+                              <FileText className="h-4 w-4" />
+                            </a>
+                          </Button>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function KpiCard({ label, value, icon: Icon, accent }: { label: string; value: string; icon: any; accent: string }) {
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
+        <Icon className={`h-5 w-5 ${accent}`} />
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold font-display">{value}</div>
+      </CardContent>
+    </Card>
+  );
+}
