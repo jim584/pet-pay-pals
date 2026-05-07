@@ -14,6 +14,8 @@ export interface Referrer {
   payout_method: string;
   notes: string | null;
   created_at: string;
+  stripe_connect_account_id?: string | null;
+  stripe_connect_status?: string | null;
 }
 
 export interface Referral {
