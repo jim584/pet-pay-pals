@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "@/components/ui/sonner";
 import { ArrowLeft } from "lucide-react";
 import logoColor from "@/assets/logo-color.png";
+import { resolveReferralCode, attachReferralOnSignup } from "@/lib/referrals-api";
+import { supabase } from "@/integrations/supabase/client";
+
+const REF_KEY = "pending_referral_code";
 
 export default function Auth() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -15,14 +19,31 @@ export default function Auth() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [referrerName, setReferrerName] = useState<string | null>(null);
   const { signIn, signUp, user, role, loading } = useAuth();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+
+  useEffect(() => {
+    const code = params.get("ref") || localStorage.getItem(REF_KEY);
+    if (!code) return;
+    resolveReferralCode(code).then((r) => {
+      if (r) {
+        localStorage.setItem(REF_KEY, code);
+        setReferrerName(r.display_name);
+        setIsSignUp(true);
+      }
+    });
+  }, [params]);
 
   useEffect(() => {
     if (loading || !user) return;
+    const code = localStorage.getItem(REF_KEY);
+    if (code) {
+      attachReferralOnSignup(user.id, code).finally(() => localStorage.removeItem(REF_KEY));
+    }
     if (role === "admin") navigate("/admin", { replace: true });
     else if (role) navigate("/", { replace: true });
-    // if role is null, user needs to select role — handled elsewhere
   }, [user, role, loading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -32,6 +53,13 @@ export default function Auth() {
       if (isSignUp) {
         await signUp(email, password, fullName);
         toast.success("Account created successfully!");
+        // If session is auto-active, attach now (otherwise effect handles it on login)
+        const { data } = await supabase.auth.getSession();
+        const code = localStorage.getItem(REF_KEY);
+        if (data.session?.user && code) {
+          await attachReferralOnSignup(data.session.user.id, code);
+          localStorage.removeItem(REF_KEY);
+        }
       } else {
         await signIn(email, password);
       }
@@ -56,6 +84,9 @@ export default function Auth() {
           <CardDescription>
             {isSignUp ? "Join Help A Pet and take care of your furry friends" : "Sign in to your Help A Pet account"}
           </CardDescription>
+          {referrerName && isSignUp && (
+            <p className="text-xs text-primary font-medium">Referred by {referrerName}</p>
+          )}
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">

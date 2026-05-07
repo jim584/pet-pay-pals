@@ -1095,6 +1095,236 @@ export type Database = {
         }
         Relationships: []
       }
+      referral_bounties: {
+        Row: {
+          bounty_amount: number
+          created_at: string
+          gross_membership_amount: number
+          hold_until: string
+          id: string
+          membership_id: string | null
+          paid_at: string | null
+          payment_history_id: string | null
+          payout_id: string | null
+          period: string
+          rate: number
+          referral_id: string
+          referrer_id: string
+          status: string
+        }
+        Insert: {
+          bounty_amount: number
+          created_at?: string
+          gross_membership_amount: number
+          hold_until: string
+          id?: string
+          membership_id?: string | null
+          paid_at?: string | null
+          payment_history_id?: string | null
+          payout_id?: string | null
+          period: string
+          rate: number
+          referral_id: string
+          referrer_id: string
+          status?: string
+        }
+        Update: {
+          bounty_amount?: number
+          created_at?: string
+          gross_membership_amount?: number
+          hold_until?: string
+          id?: string
+          membership_id?: string | null
+          paid_at?: string | null
+          payment_history_id?: string | null
+          payout_id?: string | null
+          period?: string
+          rate?: number
+          referral_id?: string
+          referrer_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_bounties_payout_id_fkey"
+            columns: ["payout_id"]
+            isOneToOne: false
+            referencedRelation: "referrer_payouts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_bounties_referral_id_fkey"
+            columns: ["referral_id"]
+            isOneToOne: false
+            referencedRelation: "referrals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_bounties_referrer_id_fkey"
+            columns: ["referrer_id"]
+            isOneToOne: false
+            referencedRelation: "referrers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referral_program_settings: {
+        Row: {
+          hold_days: number
+          id: string
+          intro_months: number
+          intro_rate: number
+          ongoing_rate: number
+          updated_at: string
+        }
+        Insert: {
+          hold_days?: number
+          id?: string
+          intro_months?: number
+          intro_rate?: number
+          ongoing_rate?: number
+          updated_at?: string
+        }
+        Update: {
+          hold_days?: number
+          id?: string
+          intro_months?: number
+          intro_rate?: number
+          ongoing_rate?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      referrals: {
+        Row: {
+          activated_at: string | null
+          code_used: string
+          created_at: string
+          id: string
+          membership_id: string | null
+          referred_user_id: string
+          referrer_id: string
+          status: string
+        }
+        Insert: {
+          activated_at?: string | null
+          code_used: string
+          created_at?: string
+          id?: string
+          membership_id?: string | null
+          referred_user_id: string
+          referrer_id: string
+          status?: string
+        }
+        Update: {
+          activated_at?: string | null
+          code_used?: string
+          created_at?: string
+          id?: string
+          membership_id?: string | null
+          referred_user_id?: string
+          referrer_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referrals_referrer_id_fkey"
+            columns: ["referrer_id"]
+            isOneToOne: false
+            referencedRelation: "referrers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referrer_payouts: {
+        Row: {
+          amount: number
+          created_at: string
+          external_ref: string | null
+          id: string
+          method: string
+          notes: string | null
+          paid_at: string | null
+          referrer_id: string
+          status: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          external_ref?: string | null
+          id?: string
+          method?: string
+          notes?: string | null
+          paid_at?: string | null
+          referrer_id: string
+          status?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          external_ref?: string | null
+          id?: string
+          method?: string
+          notes?: string | null
+          paid_at?: string | null
+          referrer_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referrer_payouts_referrer_id_fkey"
+            columns: ["referrer_id"]
+            isOneToOne: false
+            referencedRelation: "referrers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referrers: {
+        Row: {
+          code: string
+          created_at: string
+          display_name: string
+          fear_free_certified: boolean
+          id: string
+          is_active: boolean
+          notes: string | null
+          payout_email: string | null
+          payout_method: string
+          type: Database["public"]["Enums"]["referrer_type"]
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          display_name: string
+          fear_free_certified?: boolean
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          payout_email?: string | null
+          payout_method?: string
+          type: Database["public"]["Enums"]["referrer_type"]
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          display_name?: string
+          fear_free_certified?: boolean
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          payout_email?: string | null
+          payout_method?: string
+          type?: Database["public"]["Enums"]["referrer_type"]
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       services: {
         Row: {
           created_at: string
@@ -1673,6 +1903,7 @@ export type Database = {
         }
         Returns: number
       }
+      gen_referral_code: { Args: never; Returns: string }
       get_plan_year_window: {
         Args: { _membership_id: string }
         Returns: {
@@ -1716,6 +1947,14 @@ export type Database = {
         Args: { _ticket_id: string }
         Returns: undefined
       }
+      resolve_referral_code: {
+        Args: { _code: string }
+        Returns: {
+          display_name: string
+          referrer_id: string
+          type: Database["public"]["Enums"]["referrer_type"]
+        }[]
+      }
       set_status_context: {
         Args: { _changer: string; _source: string }
         Returns: undefined
@@ -1730,6 +1969,7 @@ export type Database = {
         | "paid_off"
         | "defaulted"
         | "cancelled"
+      referrer_type: "vet" | "shelter" | "influencer" | "partner"
       transaction_type:
         | "donation_received"
         | "donation_sent"
@@ -1888,6 +2128,7 @@ export const Constants = {
         "defaulted",
         "cancelled",
       ],
+      referrer_type: ["vet", "shelter", "influencer", "partner"],
       transaction_type: [
         "donation_received",
         "donation_sent",
