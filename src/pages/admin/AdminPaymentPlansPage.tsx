@@ -532,6 +532,56 @@ export default function AdminPaymentPlansPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Schedule dialog */}
+      <Dialog open={!!scheduleTarget} onOpenChange={(o) => !o && setScheduleTarget(null)}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Installment schedule</DialogTitle>
+            <DialogDescription>
+              {scheduleTarget && <>Plan for {scheduleTarget.owner_full_name ?? "owner"} · {scheduleTarget.pet_name ?? "pet"}</>}
+            </DialogDescription>
+          </DialogHeader>
+          {scheduleLoading ? (
+            <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+          ) : scheduleRows.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">No installments generated yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {scheduleRows.map((i) => {
+                const remaining = Math.max(0, Number(i.amount) - Number(i.paid_amount));
+                return (
+                  <div key={i.id} className="flex items-center justify-between gap-3 p-3 rounded-md border">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold">#{i.seq} · {fmtMoney(Number(i.amount))}</span>
+                        <Badge variant={i.status === "paid" ? "outline" : i.status === "missed" ? "destructive" : i.status === "due" ? "default" : "secondary"}>
+                          {i.status}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Due {new Date(i.due_date).toLocaleDateString()}
+                        {i.paid_at ? ` · Paid ${new Date(i.paid_at).toLocaleDateString()}` : ""}
+                        {i.last_reminded_at ? ` · Reminded ${new Date(i.last_reminded_at).toLocaleDateString()}` : ""}
+                      </p>
+                    </div>
+                    <div className="text-sm text-right">
+                      <div>{fmtMoney(Number(i.paid_amount))} paid</div>
+                      <div className="text-xs text-muted-foreground">{fmtMoney(remaining)} left</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={regenerateSchedule}>
+              <RefreshCw className="h-4 w-4 mr-1" /> Regenerate
+            </Button>
+            <Button variant="outline" onClick={() => setScheduleTarget(null)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
