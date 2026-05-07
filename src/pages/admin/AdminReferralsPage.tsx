@@ -40,6 +40,27 @@ export default function AdminReferralsPage() {
   const [qrFor, setQrFor] = useState<Referrer | null>(null);
   const [openMilestone, setOpenMilestone] = useState(false);
   const [newMs, setNewMs] = useState({ referrer_id: "", pet_name: "", goal_amount: 0, payout_amount: 0 });
+  const [expandedMs, setExpandedMs] = useState<Record<string, boolean>>({});
+  const [contribsByMs, setContribsByMs] = useState<Record<string, MilestoneContribution[]>>({});
+  const [contribsLoading, setContribsLoading] = useState<Record<string, boolean>>({});
+
+  const toggleMilestone = async (id: string) => {
+    setExpandedMs(s => ({ ...s, [id]: !s[id] }));
+    if (!contribsByMs[id]) {
+      setContribsLoading(s => ({ ...s, [id]: true }));
+      try {
+        const rows = await listMilestoneContributions(id);
+        setContribsByMs(s => ({ ...s, [id]: rows }));
+      } catch (e: any) { toast.error(e.message); }
+      finally { setContribsLoading(s => ({ ...s, [id]: false })); }
+    }
+  };
+  const refreshContribs = async (id: string) => {
+    try {
+      const rows = await listMilestoneContributions(id);
+      setContribsByMs(s => ({ ...s, [id]: rows }));
+    } catch {}
+  };
 
   // Create referrer dialog
   const [openCreate, setOpenCreate] = useState(false);
