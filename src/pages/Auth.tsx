@@ -36,8 +36,9 @@ export default function Auth() {
     });
   }, [params]);
 
+  const { signIn, signUp, user, role, loading, roleLoading } = useAuth();
   useEffect(() => {
-    if (loading || !user) return;
+    if (loading || !user || roleLoading) return;
     const code = localStorage.getItem(REF_KEY);
     if (code) {
       attachReferralOnSignup(user.id, code).finally(() => localStorage.removeItem(REF_KEY));
@@ -47,7 +48,7 @@ export default function Auth() {
     if (role === "admin") navigate(safeRedirect ?? "/admin", { replace: true });
     else if (role) navigate(safeRedirect ?? "/", { replace: true });
     else navigate("/select-role", { replace: true });
-  }, [user, role, loading, navigate, params]);
+  }, [user, role, loading, roleLoading, navigate, params]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
