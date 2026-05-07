@@ -40,6 +40,7 @@ import AdminPaymentPlansPage from "./pages/admin/AdminPaymentPlansPage";
 import AdminPaymentsPage from "./pages/admin/AdminPaymentsPage";
 import AdminReservePage from "./pages/admin/AdminReservePage";
 import AdminReferralsPage from "./pages/admin/AdminReferralsPage";
+import ReferrerDashboard from "./pages/ReferrerDashboard";
 
 const queryClient = new QueryClient();
 
@@ -85,6 +86,7 @@ function AppRoutes() {
         <Route path="/help-behave" element={<HelpBehavePage />} />
         <Route path="/vetted" element={<VettedPage />} />
         <Route path="/plans" element={<PlansPage />} />
+        <Route path="/referrer" element={<ReferrerDashboard />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       {isMobile && <MobileBottomNav />}
