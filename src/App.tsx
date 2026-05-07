@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { MobileBottomNav } from "@/components/home/MobileBottomNav";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -62,6 +62,7 @@ function AppRoutes() {
           <Route path="wallet" element={<WalletPage />} />
           <Route path="wallet/reserve-history" element={<ReserveHistoryPage />} />
           <Route path="payment-plans" element={<PaymentPlansPage />} />
+          <Route path="paymentplans" element={<Navigate to="/dashboard/payment-plans" replace />} />
           <Route path="vet-profile" element={<VetProfilePage />} />
           <Route path="vet-services" element={<VetServicesPage />} />
           <Route path="profile" element={<ProfileSettingsPage />} />

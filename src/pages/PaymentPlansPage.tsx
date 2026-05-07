@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Navigate, useSearchParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,7 @@ const INSTALLMENT_VARIANT: Record<string, "default" | "secondary" | "destructive
 };
 
 export default function PaymentPlansPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, role, loading: authLoading } = useAuth();
   const [params, setParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -45,26 +45,40 @@ export default function PaymentPlansPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const load = async () => {
+    if (!user) { setLoading(false); return; }
     setLoading(true);
     setLoadError(null);
+    // Hard timeout safety net so we never get stuck on a skeleton.
+    const timeout = setTimeout(() => {
+      setLoading((cur) => {
+        if (cur) setLoadError("Loading is taking longer than expected. Please retry.");
+        return false;
+      });
+    }, 15000);
     try {
-      const { data: { user: u } } = await supabase.auth.getUser();
-      if (!u) { setObligations([]); return; }
-      const obs = await listMyObligations(u.id);
+      const obs = await listMyObligations(user.id);
       setObligations(obs);
-      const entries = await Promise.all(
-        obs.map(async (o) => [o.id, await listInstallments(o.id)] as const),
-      );
-      setInstallmentsMap(Object.fromEntries(entries));
+      if (obs.length === 0) {
+        setInstallmentsMap({});
+      } else {
+        const results = await Promise.allSettled(obs.map((o) => listInstallments(o.id)));
+        const map: Record<string, MyInstallment[]> = {};
+        results.forEach((r, i) => { map[obs[i].id] = r.status === "fulfilled" ? r.value : []; });
+        setInstallmentsMap(map);
+      }
     } catch (e) {
       const msg = (e as Error).message;
       setLoadError(msg);
       toast({ title: "Failed to load payment plans", description: msg, variant: "destructive" });
-    } finally { setLoading(false); }
+    } finally {
+      clearTimeout(timeout);
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    if (authLoading || !user) return;
+    if (authLoading) return;
+    if (!user) { setLoading(false); return; }
     load();
     /* eslint-disable-next-line */
   }, [authLoading, user?.id]);
@@ -107,6 +121,15 @@ export default function PaymentPlansPage() {
     );
   }
   if (!user) return <Navigate to="/auth" replace />;
+  if (role && role !== "pet_owner") {
+    return (
+      <Card>
+        <CardContent className="py-12 text-center text-muted-foreground">
+          Payment Plans are only available to pet owner accounts.
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">
