@@ -4,10 +4,12 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { fetchPlans, startCheckout, MembershipPlan } from "@/lib/plans-api";
+import { fetchPlans, startCheckout, fetchMyMembership, openCustomerPortal, MembershipPlan, Membership } from "@/lib/plans-api";
 import { PlanCard } from "@/components/plans/PlanCard";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { openCheckoutUrl } from "@/lib/open-checkout";
@@ -21,11 +23,24 @@ export default function PlansPage() {
   const [fearFreeReason, setFearFreeReason] = useState<string>("Add a Vet of Record to your pet to qualify for Fear Free pricing.");
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
   const [loadingPlans, setLoadingPlans] = useState(true);
+  const [membership, setMembership] = useState<(Membership & { plan: MembershipPlan }) | null>(null);
+  const [portalLoading, setPortalLoading] = useState(false);
 
   useEffect(() => {
     setLoadingPlans(true);
     fetchPlans(species).then(setPlans).finally(() => setLoadingPlans(false));
   }, [species]);
+
+  // Load current membership
+  useEffect(() => {
+    if (!user) return;
+    fetchMyMembership(user.id).then((m) => {
+      if (!m) return;
+      setMembership(m);
+      if (m.plan?.species) setSpecies(m.plan.species);
+      if (m.billing_interval) setBillingInterval(m.billing_interval);
+    }).catch(() => {});
+  }, [user]);
 
   // Auto-derive Fear Free status from any pet's Vet of Record
   useEffect(() => {
