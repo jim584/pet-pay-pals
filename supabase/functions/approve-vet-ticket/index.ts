@@ -78,11 +78,24 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Create BNPL obligation
+    // Create BNPL obligation (with plan-driven schedule)
     if (bnplUse > 0) {
+      let installmentCount = 4;
+      let intervalDays = 30;
+      if (ticket.membership_id) {
+        const { data: mp } = await admin.from("memberships")
+          .select("plan:membership_plans(bnpl_default_installments, bnpl_default_interval_days)")
+          .eq("id", ticket.membership_id).maybeSingle();
+        const p = (mp as any)?.plan;
+        if (p?.bnpl_default_installments) installmentCount = Number(p.bnpl_default_installments);
+        if (p?.bnpl_default_interval_days) intervalDays = Number(p.bnpl_default_interval_days);
+      }
       await admin.from("bnpl_obligations").insert({
         pet_id: ticket.pet_id, owner_id: ticket.owner_id, ticket_id,
-        provider: "manual", original_amount: bnplUse, outstanding_amount: bnplUse, status: "pending",
+        provider: "manual", original_amount: bnplUse, outstanding_amount: bnplUse,
+        status: "pending",
+        installment_count: installmentCount,
+        installment_interval_days: intervalDays,
       });
     }
 
