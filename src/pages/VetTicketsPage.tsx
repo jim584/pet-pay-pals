@@ -16,10 +16,11 @@ import {
 import { toast } from "@/hooks/use-toast";
 import {
   listMyTickets, listTicketsForVet, submitVetTicket, uploadTicketFile, startMemberRemainderCheckout,
-  getTicketFileSignedUrl, type VetTicket,
+  getTicketFileSignedUrl, computeTicketCoverage, type VetTicket, type CoverageBreakdown,
 } from "@/lib/vet-tickets-api";
 import { fetchVetProfile } from "@/lib/vet-api";
-import { Loader2, Plus, FileText, ExternalLink } from "lucide-react";
+import { Loader2, Plus, FileText, ExternalLink, ShieldCheck, Info } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { TicketMessagesDialog } from "@/components/vet-tickets/TicketMessagesDialog";
 
 const STATUS_VARIANT: Record<string, string> = {
