@@ -37,6 +37,7 @@ import AdminPlaceholder from "./pages/admin/AdminPlaceholder";
 import AdminVetsPage from "./pages/admin/AdminVetsPage";
 import AdminVetDetailPage from "./pages/admin/AdminVetDetailPage";
 import AdminPaymentPlansPage from "./pages/admin/AdminPaymentPlansPage";
+import AdminPaymentsPage from "./pages/admin/AdminPaymentsPage";
 
 const queryClient = new QueryClient();
 
@@ -66,7 +67,7 @@ function AppRoutes() {
           <Route path="vets/:vetProfileId" element={<AdminVetDetailPage />} />
           <Route path="vet-tickets" element={<AdminVetTicketsPage />} />
           <Route path="memberships" element={<AdminMembershipsPage />} />
-          <Route path="payments" element={<AdminPlaceholder title="Payments" />} />
+          <Route path="payments" element={<AdminPaymentsPage />} />
           <Route path="payment-plans" element={<AdminPaymentPlansPage />} />
           <Route path="reserve" element={<AdminPlaceholder title="Wallet & Reserve" />} />
         </Route>

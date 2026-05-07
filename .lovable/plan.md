@@ -1,43 +1,25 @@
-# Show Vet Tickets in the Vet Dashboard
+# Build Admin Payments Page
 
-Currently, when a pet owner submits a vet ticket they can pick a `vet_profile_id`, but the assigned vet has no way to see it. This plan adds a "Vet Tickets" section visible to vets in their dashboard.
+Replace the "Coming soon" placeholder at `/admin/payments` with a full payments dashboard backed by the existing `payment_history` table (already populated by Stripe webhook + backfill function).
 
-## What will change
+## What you'll see
 
-### 1. Database (migration)
-Add an RLS policy on `vet_tickets` so a vet can SELECT tickets where `vet_profile_id` belongs to them:
+- **KPI cards** (filtered by current range): Gross collected, # successful payments, Refunded total, Failed count
+- **Filters**: search (name / description / Stripe invoice ID / payment intent), status, kind (Membership / Member remainder / Donation / One-time), and time range (7d / 30d / 90d / 1y / all)
+- **Transactions table**: date, user (full name from profiles), kind badge, description, status badge, amount (currency-formatted), invoice link (hosted Stripe URL or PDF)
+- **Sync from Stripe** button — calls the existing `backfill-payment-history` edge function and refreshes
 
-```sql
-CREATE POLICY "Vets can view tickets assigned to them"
-ON public.vet_tickets FOR SELECT
-TO authenticated
-USING (
-  vet_profile_id IS NOT NULL
-  AND public.is_vet_profile_owner(vet_profile_id, auth.uid())
-);
-```
+## Files
 
-(No changes to owner/admin policies; uses the existing `is_vet_profile_owner` security-definer function so there is no recursion risk.)
+1. **Create** `src/pages/admin/AdminPaymentsPage.tsx` — full page implementation using shadcn `Card`, `Table`, `Select`, `Input`, `Badge`, `Button`. Reads `payment_history` directly (admin RLS already grants SELECT) and joins user names from `profiles` in JS.
+2. **Edit** `src/App.tsx` — replace
+   ```tsx
+   <Route path="payments" element={<AdminPlaceholder title="Payments" />} />
+   ```
+   with `<Route path="payments" element={<AdminPaymentsPage />} />` and import the new page.
 
-### 2. API (`src/lib/vet-tickets-api.ts`)
-Add:
-```ts
-listTicketsForVet(vetProfileId: string): Promise<VetTicket[]>
-```
-Selects from `vet_tickets` filtered by `vet_profile_id`, ordered by `created_at desc`.
+## Notes
 
-### 3. UI — Vet Dashboard (`src/components/vet/VetDashboardHome.tsx`)
-- After loading `vetProfile`, also fetch assigned tickets.
-- Add a new card/section "Funding Tickets" listing each ticket with:
-  - Pet name (looked up via `pets` table by id), owner name (via `profiles`)
-  - Clinic name, estimate amount, approved amount
-  - Status badge (submitted / approved / funded / card_issued / settled / rejected …)
-  - Submitted date
-  - Buttons to open the estimate / attestation file (signed URLs from the existing `vet-tickets` storage bucket via `getTicketFileSignedUrl`)
-- Read-only for now — vets cannot approve/reject (that stays admin-only).
-
-No changes needed to the submit flow or admin queue.
-
-## Out of scope
-- Vet actions on tickets (approve, mark services rendered) — can be added later if you want.
-- A dedicated `/vet/tickets` page — section lives inside the existing dashboard for now.
+- No DB changes, no new edge functions — everything reuses existing schema (`payment_history`) and the `backfill-payment-history` edge function already wired in `admin-api.ts` via `triggerStripeBackfill()`.
+- Currency formatted with `Intl.NumberFormat`. Status colors via existing semantic tokens.
+- Out of scope for this task: refund/void actions (would require a new edge function with Stripe secret) and the separate `/admin/reserve` (Wallet & Reserve) placeholder — let me know if you want those next.
