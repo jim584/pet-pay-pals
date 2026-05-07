@@ -417,8 +417,8 @@ export default function AdminReferralsPage() {
                   const contribs = contribsByMs[m.id];
                   const pct = m.goal_amount > 0 ? Math.min(100, (Number(m.raised_amount) / Number(m.goal_amount)) * 100) : 0;
                   return (
-                    <>
-                      <TableRow key={m.id} className="cursor-pointer" onClick={() => toggleMilestone(m.id)}>
+                    <Fragment key={m.id}>
+                      <TableRow className="cursor-pointer" onClick={() => toggleMilestone(m.id)}>
                         <TableCell>{isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</TableCell>
                         <TableCell>{m.pet_name}</TableCell>
                         <TableCell>{ref?.display_name ?? "—"}</TableCell>
