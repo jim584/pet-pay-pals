@@ -71,3 +71,28 @@ export async function startInstallmentCheckout(args: {
   if (!data?.url) throw new Error("No checkout URL returned");
   return data.url as string;
 }
+
+export async function startAutopaySetup(): Promise<{ url: string; current_payment_method_id: string | null }> {
+  const { data, error } = await supabase.functions.invoke("setup-bnpl-autopay", { body: {} });
+  if (error) throw error;
+  if (!data?.url) throw new Error("No setup URL returned");
+  return data;
+}
+
+export async function setObligationAutopay(obligationId: string, enabled: boolean): Promise<void> {
+  const { error } = await supabase
+    .from("bnpl_obligations")
+    .update({ auto_pay_enabled: enabled })
+    .eq("id", obligationId);
+  if (error) throw error;
+}
+
+export async function getAutopayStatus(userId: string): Promise<{ default_payment_method_id: string | null }> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("default_payment_method_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw error;
+  return { default_payment_method_id: (data as any)?.default_payment_method_id ?? null };
+}
