@@ -441,6 +441,14 @@ export async function fetchAdminVetDetail(vetProfileId: string): Promise<AdminVe
     updated_at: v.updated_at,
     owner_full_name: prof?.full_name ?? null,
     owner_avatar_url: prof?.avatar_url ?? null,
+    license_number: v.license_number ?? null,
+    license_state: v.license_state ?? null,
+    license_document_url: v.license_document_url ?? null,
+    is_license_verified: !!v.is_license_verified,
+    fear_free_certified: !!v.fear_free_certified,
+    fear_free_cert_number: v.fear_free_cert_number ?? null,
+    fear_free_cert_url: v.fear_free_cert_url ?? null,
+    fear_free_verified_at: v.fear_free_verified_at ?? null,
   };
 }
 
