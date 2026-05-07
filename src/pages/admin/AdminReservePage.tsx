@@ -273,6 +273,99 @@ export default function AdminReservePage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Member Reserve ledger */}
+      <Card>
+        <CardHeader className="flex flex-row items-start justify-between gap-3 flex-wrap">
+          <div>
+            <CardTitle className="text-lg font-display">Member Reserve Accruals</CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              10% of each membership invoice is allocated to the member's personal Reserve. Latest 200.
+            </p>
+          </div>
+          <Input
+            placeholder="Search by member name…"
+            value={memberSearch}
+            onChange={(e) => setMemberSearch(e.target.value)}
+            className="w-[220px]"
+          />
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="space-y-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
+          ) : memberAccruals.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">No member reserve accruals yet.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Member</TableHead>
+                    <TableHead>Month</TableHead>
+                    <TableHead className="text-right">Accrued</TableHead>
+                    <TableHead className="text-right">Remaining</TableHead>
+                    <TableHead>Invoice</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {memberAccruals.map((a) => (
+                    <TableRow key={a.id}>
+                      <TableCell className="font-medium">{a.user_full_name ?? <span className="text-muted-foreground">Unknown</span>}</TableCell>
+                      <TableCell>{fmtMonth(a.accrual_month)}</TableCell>
+                      <TableCell className="text-right">{fmt(a.amount)}</TableCell>
+                      <TableCell className="text-right font-medium">{fmt(a.remaining_amount)}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{a.stripe_invoice_id ?? "—"}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-display">Member Reserve Consumptions</CardTitle>
+          <p className="text-xs text-muted-foreground">FIFO draws against member reserves when used as ticket fallback. Latest 200.</p>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="space-y-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
+          ) : memberConsumptions.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">No reserve consumptions yet.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Member</TableHead>
+                    <TableHead>Ticket</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {memberConsumptions.map((c) => (
+                    <TableRow key={c.id}>
+                      <TableCell>{fmtDate(c.created_at)}</TableCell>
+                      <TableCell className="font-medium">{c.user_full_name ?? <span className="text-muted-foreground">Unknown</span>}</TableCell>
+                      <TableCell className="text-xs font-mono">{c.ticket_id.slice(0, 8)}…</TableCell>
+                      <TableCell className="text-right font-medium">{fmt(c.amount_consumed)}</TableCell>
+                      <TableCell>
+                        {c.released
+                          ? <Badge variant="outline">Released</Badge>
+                          : <Badge>Consumed</Badge>}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
