@@ -244,9 +244,15 @@ export default function AdminPaymentPlansPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Payment Plans (BNPL)</h1>
-        <p className="text-muted-foreground">Review obligations, record payments, and manage agreement statuses.</p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Payment Plans (BNPL)</h1>
+          <p className="text-muted-foreground">Review obligations, record payments, and manage agreement statuses.</p>
+        </div>
+        <Button variant="outline" onClick={runOverdue} disabled={runningOverdue}>
+          {runningOverdue ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <PlayCircle className="h-4 w-4 mr-1" />}
+          Run overdue processor
+        </Button>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
