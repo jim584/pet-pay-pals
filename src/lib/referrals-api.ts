@@ -324,17 +324,14 @@ export interface ReconcileSummary {
 }
 
 export async function reconcileReferrerPayouts(days = 90): Promise<{ summary: ReconcileSummary; rows: ReconcileRow[] }> {
-  const { data, error } = await supabase.functions.invoke("referrer-reconcile", {
-    body: {},
-    headers: {},
-    method: "GET" as any,
-    // supabase-js doesn't pass query for invoke; fall back to fetch below if needed
-  } as any);
-  if (!error && data) return data as any;
-  // Fallback using direct fetch to support query params
   const { data: { session } } = await supabase.auth.getSession();
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/referrer-reconcile?days=${days}`;
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${session?.access_token}` } });
+  const res = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${session?.access_token ?? ""}`,
+      apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+    },
+  });
   if (!res.ok) throw new Error(await res.text());
   return await res.json();
 }
