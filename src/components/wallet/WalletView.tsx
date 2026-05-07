@@ -111,9 +111,14 @@ export function WalletView() {
             <CardTitle className="text-lg font-display flex items-center gap-2">
               <ShieldCheck className="h-5 w-5 text-primary" /> My Reserve
             </CardTitle>
-            {reserve.eligible
-              ? <Badge>Eligible</Badge>
-              : <Badge variant="outline">Locked</Badge>}
+            <div className="flex items-center gap-2">
+              {reserve.eligible
+                ? <Badge>Eligible</Badge>
+                : <Badge variant="outline">Locked</Badge>}
+              <Button asChild size="sm" variant="outline">
+                <Link to="/dashboard/wallet/reserve-history">History</Link>
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-3">
