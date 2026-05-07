@@ -141,11 +141,28 @@ export default function PaymentPlansPage() {
             <Button variant="outline" size="sm" onClick={load}>Retry</Button>
           </CardContent>
         </Card>
+      ) : obligations.length === 0 ? (
+        <Card>
+          <CardContent className="py-16 text-center space-y-3">
+            <div className="mx-auto h-14 w-14 rounded-full bg-muted flex items-center justify-center">
+              <CreditCard className="h-7 w-7 text-muted-foreground" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold">No payment plans yet</h3>
+              <p className="text-sm text-muted-foreground max-w-md mx-auto mt-1">
+                When a vet visit is partially covered by your plan, the remainder is split into
+                interest-free installments and shown here. Set up autopay above so future
+                installments charge automatically.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       ) : filtered.length === 0 ? (
         <Card>
-          <CardContent className="py-12 text-center text-muted-foreground">
-            <CreditCard className="h-10 w-10 mx-auto mb-3 opacity-50" />
-            No payment plans here yet.
+          <CardContent className="py-12 text-center text-muted-foreground space-y-2">
+            <CreditCard className="h-10 w-10 mx-auto opacity-50" />
+            <div>No {filter} payment plans.</div>
+            <Button variant="link" size="sm" onClick={() => setFilter("all")}>View all</Button>
           </CardContent>
         </Card>
       ) : (
