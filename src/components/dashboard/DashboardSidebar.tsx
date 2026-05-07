@@ -23,6 +23,7 @@ const ownerNav = [
   { title: "Home", url: "/", icon: Home },
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "My Pets", url: "/dashboard/pets", icon: PawPrint },
+  { title: "Vet Tickets", url: "/dashboard/vet-tickets", icon: FileText },
   { title: "Community", url: "/dashboard/community", icon: Users },
   { title: "Plans", url: "/plans", icon: Shield },
   { title: "Wallet", url: "/dashboard/wallet", icon: Wallet },
