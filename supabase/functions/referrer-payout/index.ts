@@ -44,22 +44,31 @@ Deno.serve(async (req) => {
     const total = avail.reduce((s: number, b: any) => s + Number(b.bounty_amount), 0);
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, { apiVersion: "2024-06-20" });
 
-    const transfer = await stripe.transfers.create({
-      amount: Math.round(total * 100),
-      currency: "usd",
-      destination: referrer.stripe_connect_account_id,
-      description: `Referral payout to ${referrer.display_name}`,
-      metadata: { referrer_id },
-    });
+    // Deterministic idempotency key — same referrer + same set of bounty ids => same key.
+    // Stripe will return the original transfer if this is a retry.
+    const sortedIds = avail.map((b: any) => b.id).sort();
+    const idempotencyKey = `referrer-payout:${referrer_id}:${await sha1Hex(sortedIds.join(","))}`;
 
-    const { data: payout, error: e2 } = await admin.from("referrer_payouts").insert({
+    const transfer = await stripe.transfers.create(
+      {
+        amount: Math.round(total * 100),
+        currency: "usd",
+        destination: referrer.stripe_connect_account_id,
+        description: `Referral payout to ${referrer.display_name}`,
+        metadata: { referrer_id, idempotency_key: idempotencyKey },
+      },
+      { idempotencyKey },
+    );
+
+    // Insert payout. Unique index on stripe_transfer_id prevents duplicates on retry.
+    const { data: payout, error: e2 } = await admin.from("referrer_payouts").upsert({
       referrer_id,
       amount: total,
       method: "stripe_connect",
       status: "paid",
       stripe_transfer_id: transfer.id,
       paid_at: new Date().toISOString(),
-    }).select().single();
+    }, { onConflict: "stripe_transfer_id" }).select().single();
     if (e2) throw e2;
 
     await admin.from("referral_bounties")
@@ -77,4 +86,10 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status, headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+async function sha1Hex(s: string): Promise<string> {
+  const data = new TextEncoder().encode(s);
+  const digest = await crypto.subtle.digest("SHA-1", data);
+  return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, "0")).join("");
 }

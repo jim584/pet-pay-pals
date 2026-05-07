@@ -23,6 +23,26 @@ Deno.serve(async (req) => {
     return new Response(`Webhook Error: ${(e as Error).message}`, { status: 400 });
   }
 
+  // ---- Replay protection: record event id; skip if already processed ----
+  const { error: dedupErr } = await admin.from("webhook_events").insert({
+    provider: "stripe",
+    event_id: event.id,
+    event_type: event.type,
+    payload: event as any,
+    status: "processing",
+  });
+  if (dedupErr) {
+    // Unique violation = already processed (or in-flight). Ack with 200 so Stripe stops retrying.
+    if ((dedupErr as any).code === "23505") {
+      console.log(`Duplicate webhook event ignored: ${event.id} (${event.type})`);
+      return new Response(JSON.stringify({ received: true, duplicate: true }), {
+        status: 200, headers: { "Content-Type": "application/json" },
+      });
+    }
+    console.error("webhook_events insert failed:", dedupErr);
+    // continue — don't block processing on logging failure
+  }
+
   try {
     switch (event.type) {
       case "checkout.session.completed": {
@@ -404,12 +424,19 @@ Deno.serve(async (req) => {
       }
     }
 
+    await admin.from("webhook_events")
+      .update({ status: "processed" })
+      .eq("provider", "stripe").eq("event_id", event.id);
+
     return new Response(JSON.stringify({ received: true }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("stripe-webhook handler error:", e);
+    await admin.from("webhook_events")
+      .update({ status: "failed", error: (e as Error).message })
+      .eq("provider", "stripe").eq("event_id", event.id);
     return new Response(JSON.stringify({ error: (e as Error).message }), { status: 500 });
   }
 });
