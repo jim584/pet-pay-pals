@@ -25,8 +25,9 @@ import {
   fetchAdminBnpl, fetchAdminBnplStats, updateAdminBnpl,
   recordBnplPayment, fetchBnplPayments, deleteBnplPayment,
   fetchAdminBnplInstallments, regenerateBnplInstallments, runProcessBnplOverdue,
+  fetchBnplProcessorRuns,
   type AdminBnplRow, type BnplFilter, type BnplStatus, type BnplStats, type BnplPaymentRow,
-  type AdminBnplInstallment,
+  type AdminBnplInstallment, type BnplProcessorRun,
 } from "@/lib/admin-api";
 
 const FILTERS: { value: BnplFilter; label: string }[] = [
