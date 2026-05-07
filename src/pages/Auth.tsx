@@ -42,10 +42,12 @@ export default function Auth() {
     if (code) {
       attachReferralOnSignup(user.id, code).finally(() => localStorage.removeItem(REF_KEY));
     }
-    if (role === "admin") navigate("/admin", { replace: true });
-    else if (role) navigate("/", { replace: true });
+    const redirect = params.get("redirect");
+    const safeRedirect = redirect && redirect.startsWith("/") ? redirect : null;
+    if (role === "admin") navigate(safeRedirect ?? "/admin", { replace: true });
+    else if (role) navigate(safeRedirect ?? "/", { replace: true });
     else navigate("/select-role", { replace: true });
-  }, [user, role, loading, navigate]);
+  }, [user, role, loading, navigate, params]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
