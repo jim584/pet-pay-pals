@@ -143,6 +143,24 @@ export function TicketMessagesDialog({
                       </span>
                     </div>
                     <p className="whitespace-pre-wrap break-words">{m.body}</p>
+                    {m.attachments.length > 0 && (
+                      <div className="mt-2 space-y-1">
+                        {m.attachments.map((a) => (
+                          <button
+                            key={a.path}
+                            onClick={() => openAttachment(a.path)}
+                            className={`flex items-center gap-2 text-xs underline-offset-2 hover:underline ${mine ? "text-primary-foreground" : "text-foreground"}`}
+                          >
+                            <FileText className="h-3.5 w-3.5" />
+                            <span className="truncate max-w-[200px]">{a.name}</span>
+                            <span className={`${mine ? "opacity-80" : "text-muted-foreground"}`}>
+                              ({formatSize(a.size)})
+                            </span>
+                            <Download className="h-3 w-3" />
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               );
