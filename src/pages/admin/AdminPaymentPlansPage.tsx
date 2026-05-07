@@ -386,6 +386,54 @@ export default function AdminPaymentPlansPage() {
         </CardContent>
       </Card>
 
+      {/* Processor run log */}
+      <Card>
+        <CardContent className="p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-semibold">Overdue processor run log</h2>
+              <p className="text-xs text-muted-foreground">Last 25 runs (cron + manual triggers).</p>
+            </div>
+            <Button size="sm" variant="ghost" onClick={loadRuns} disabled={runsLoading}>
+              {runsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Refresh"}
+            </Button>
+          </div>
+          {runs.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-6 text-center">No runs recorded yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {runs.map((r) => {
+                const dur = r.finished_at
+                  ? Math.max(0, new Date(r.finished_at).getTime() - new Date(r.started_at).getTime())
+                  : null;
+                return (
+                  <div key={r.id} className="rounded-md border p-3 text-sm">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge variant={r.status === "success" ? "default" : r.status === "error" ? "destructive" : "secondary"}>
+                          {r.status}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">{r.trigger_source}</Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(r.started_at).toLocaleString()}
+                          {dur !== null ? ` · ${(dur / 1000).toFixed(1)}s` : " · running"}
+                        </span>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        due {r.installments_marked_due} · missed {r.installments_marked_missed} · defaulted {r.obligations_defaulted} · reminders {r.reminders_sent}
+                      </div>
+                    </div>
+                    {r.error_message && (
+                      <p className="mt-2 text-xs text-destructive break-words">{r.error_message}</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Record payment dialog */}
       <Dialog open={!!paymentTarget} onOpenChange={(o) => !o && setPaymentTarget(null)}>
         <DialogContent className="max-h-[85vh] overflow-y-auto">
