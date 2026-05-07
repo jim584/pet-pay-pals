@@ -340,8 +340,21 @@ export default function AdminPaymentsPage() {
                 <TableBody>
                   {loading
                     ? Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={`s-${i}`} />)
-                    : filtered.map((r) => (
-                    <TableRow key={r.id}>
+                    : filtered.map((r) => {
+                    const isRemainder = r.kind === "member_remainder";
+                    const expandable = isRemainder || !!r.obligation;
+                    const isOpen = expanded.has(r.id);
+                    return (
+                    <Fragment key={r.id}>
+                    <TableRow>
+                      <TableCell className="w-8">
+                        {expandable ? (
+                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0"
+                            onClick={() => toggleExpand(r.id)} aria-label="Expand">
+                            {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                          </Button>
+                        ) : null}
+                      </TableCell>
                       <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
                         {new Date(r.occurred_at).toLocaleString()}
                       </TableCell>
@@ -376,7 +389,15 @@ export default function AdminPaymentsPage() {
                         )}
                       </TableCell>
                     </TableRow>
-                  ))}
+                    {expandable && isOpen && (
+                      <TableRow className="bg-muted/30 hover:bg-muted/30">
+                        <TableCell colSpan={8} className="p-4">
+                          <BnplDetails row={r} />
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    </Fragment>
+                  );})}
                   {!loading && loadingMore && Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={`m-${i}`} />)}
                 </TableBody>
               </Table>
