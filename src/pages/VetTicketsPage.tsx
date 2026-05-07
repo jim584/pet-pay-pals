@@ -41,18 +41,21 @@ function OwnerVetTicketsView() {
   const { user } = useAuth();
   const [tickets, setTickets] = useState<VetTicket[]>([]);
   const [pets, setPets] = useState<{ id: string; name: string }[]>([]);
+  const [clinics, setClinics] = useState<{ id: string; clinic_name: string; location: string | null }[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
 
   const load = async () => {
     if (!user) return;
     setLoading(true);
-    const [t, p] = await Promise.all([
+    const [t, p, c] = await Promise.all([
       listMyTickets(user.id),
       supabase.from("pets").select("id, name").eq("owner_id", user.id),
+      supabase.from("vet_profiles").select("id, clinic_name, location").eq("is_approved", true).order("clinic_name"),
     ]);
     setTickets(t);
     setPets((p.data ?? []) as any);
+    setClinics((c.data ?? []) as any);
     setLoading(false);
   };
 
@@ -69,7 +72,7 @@ function OwnerVetTicketsView() {
           <DialogTrigger asChild>
             <Button><Plus className="h-4 w-4 mr-1" /> New ticket</Button>
           </DialogTrigger>
-          <NewTicketDialog pets={pets} onCreated={() => { setOpen(false); load(); }} />
+          <NewTicketDialog pets={pets} clinics={clinics} onCreated={() => { setOpen(false); load(); }} />
         </Dialog>
       </div>
 
@@ -190,19 +193,29 @@ function VetIncomingTickets() {
   );
 }
 
-function NewTicketDialog({ pets, onCreated }: { pets: { id: string; name: string }[]; onCreated: () => void }) {
+function NewTicketDialog({ pets, clinics, onCreated }: {
+  pets: { id: string; name: string }[];
+  clinics: { id: string; clinic_name: string; location: string | null }[];
+  onCreated: () => void;
+}) {
   const { user } = useAuth();
   const [petId, setPetId] = useState<string>("");
-  const [clinicName, setClinicName] = useState("");
+  const [clinicMode, setClinicMode] = useState<"registered" | "other">("registered");
+  const [clinicId, setClinicId] = useState<string>("");
+  const [clinicNameOther, setClinicNameOther] = useState("");
   const [estimateAmount, setEstimateAmount] = useState("");
   const [notes, setNotes] = useState("");
   const [estimateFile, setEstimateFile] = useState<File | null>(null);
   const [attestationFile, setAttestationFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const selectedClinic = clinics.find((c) => c.id === clinicId);
+  const effectiveClinicName = clinicMode === "registered" ? selectedClinic?.clinic_name ?? "" : clinicNameOther.trim();
+  const effectiveVetProfileId = clinicMode === "registered" ? clinicId || null : null;
+
   const submit = async () => {
     if (!user) return;
-    if (!petId || !clinicName || !estimateAmount) {
+    if (!petId || !effectiveClinicName || !estimateAmount) {
       toast({ title: "Missing info", description: "Pet, clinic, and amount are required.", variant: "destructive" });
       return;
     }
@@ -213,12 +226,19 @@ function NewTicketDialog({ pets, onCreated }: { pets: { id: string; name: string
       if (estimateFile) estimateUrl = await uploadTicketFile(user.id, estimateFile, "estimate");
       if (attestationFile) attestationUrl = await uploadTicketFile(user.id, attestationFile, "attestation");
       await submitVetTicket({
-        pet_id: petId, clinic_name: clinicName,
+        pet_id: petId,
+        clinic_name: effectiveClinicName,
+        vet_profile_id: effectiveVetProfileId,
         estimate_amount: Number(estimateAmount),
         estimate_url: estimateUrl, attestation_url: attestationUrl,
         notes: notes || null,
       });
-      toast({ title: "Ticket submitted", description: "An admin will review it shortly." });
+      toast({
+        title: "Ticket submitted",
+        description: effectiveVetProfileId
+          ? "Sent to your clinic and our admin team for review."
+          : "Sent to our admin team for review (clinic isn't on Help A Pet yet).",
+      });
       onCreated();
     } catch (e: any) {
       toast({ title: "Couldn't submit", description: e.message, variant: "destructive" });
@@ -239,8 +259,39 @@ function NewTicketDialog({ pets, onCreated }: { pets: { id: string; name: string
           </Select>
         </div>
         <div>
-          <Label>Clinic name</Label>
-          <Input value={clinicName} onChange={(e) => setClinicName(e.target.value)} placeholder="e.g. North Hills Vet" />
+          <Label>Clinic</Label>
+          <Select
+            value={clinicMode === "other" ? "__other__" : clinicId}
+            onValueChange={(v) => {
+              if (v === "__other__") { setClinicMode("other"); setClinicId(""); }
+              else { setClinicMode("registered"); setClinicId(v); }
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={clinics.length ? "Select a registered clinic" : "No registered clinics yet"} />
+            </SelectTrigger>
+            <SelectContent>
+              {clinics.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.clinic_name}{c.location ? ` — ${c.location}` : ""}
+                </SelectItem>
+              ))}
+              <SelectItem value="__other__">Other / not listed…</SelectItem>
+            </SelectContent>
+          </Select>
+          {clinicMode === "other" && (
+            <Input
+              className="mt-2"
+              value={clinicNameOther}
+              onChange={(e) => setClinicNameOther(e.target.value)}
+              placeholder="Enter clinic name"
+            />
+          )}
+          <p className="text-xs text-muted-foreground mt-1">
+            {clinicMode === "registered"
+              ? "Selecting a registered clinic shares the ticket with them so they can see it in their dashboard."
+              : "This ticket will only be visible to our admin team for review."}
+          </p>
         </div>
         <div>
           <Label>Estimate amount (USD)</Label>
