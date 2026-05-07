@@ -64,6 +64,16 @@ Deno.serve(async (req) => {
               occurred_at: new Date().toISOString(),
             });
           }
+          if (md.milestone_id) {
+            try {
+              await admin.rpc("record_milestone_contribution", {
+                _milestone_id: md.milestone_id,
+                _amount: amount,
+                _source: "donation",
+                _payment_history_id: null,
+              });
+            } catch (e) { console.error("milestone contribution failed:", e); }
+          }
           break;
         }
 
