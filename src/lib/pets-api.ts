@@ -12,6 +12,8 @@ export interface Pet {
   gender: string | null;
   photo_url: string | null;
   notes: string | null;
+  vet_of_record_id: string | null;
+  vet_of_record_set_at: string | null;
   created_at: string;
   updated_at: string;
 }
