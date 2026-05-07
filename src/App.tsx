@@ -38,6 +38,7 @@ import AdminVetsPage from "./pages/admin/AdminVetsPage";
 import AdminVetDetailPage from "./pages/admin/AdminVetDetailPage";
 import AdminPaymentPlansPage from "./pages/admin/AdminPaymentPlansPage";
 import AdminPaymentsPage from "./pages/admin/AdminPaymentsPage";
+import AdminReservePage from "./pages/admin/AdminReservePage";
 
 const queryClient = new QueryClient();
 
@@ -69,7 +70,7 @@ function AppRoutes() {
           <Route path="memberships" element={<AdminMembershipsPage />} />
           <Route path="payments" element={<AdminPaymentsPage />} />
           <Route path="payment-plans" element={<AdminPaymentPlansPage />} />
-          <Route path="reserve" element={<AdminPlaceholder title="Wallet & Reserve" />} />
+          <Route path="reserve" element={<AdminReservePage />} />
         </Route>
         <Route path="/vet-tickets/:id/card" element={<VetCardPage />} />
         {/* Compass menu placeholder routes */}
