@@ -34,6 +34,14 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "installment_id and stage required" }), { status: 400, headers: corsHeaders });
     }
 
+    // Kill-switch: skip sending until DNS for the sender domain is verified.
+    // Set EMAILS_ENABLED="true" to re-enable. Defaults to disabled. Skips DB
+    // side-effects (last_reminded_at) so the reminder will be retried later.
+    if (Deno.env.get("EMAILS_ENABLED") !== "true") {
+      console.log("Emails disabled (EMAILS_ENABLED!=true) — skipping BNPL reminder", { installment_id, stage });
+      return new Response(JSON.stringify({ ok: true, skipped: "emails_disabled" }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const { data: inst } = await admin.from("bnpl_installments").select("*").eq("id", installment_id).maybeSingle();
     if (!inst) return new Response(JSON.stringify({ error: "Installment not found" }), { status: 404, headers: corsHeaders });
