@@ -15,8 +15,11 @@ import {
 } from "lucide-react";
 import {
   fetchReserveKpis, fetchAdminAccruals, fetchAdminDpExpiryLedger, runDpExpiryJob,
+  fetchAdminReserveAccruals, fetchAdminReserveConsumptions,
   type ReserveKpis, type AdminAccrualRow, type AdminDpLedgerRow,
+  type AdminReserveAccrualRow, type AdminReserveConsumptionRow,
 } from "@/lib/admin-api";
+import { Input } from "@/components/ui/input";
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(Number(n ?? 0));
@@ -31,6 +34,9 @@ export default function AdminReservePage() {
   const [kpis, setKpis] = useState<ReserveKpis | null>(null);
   const [accruals, setAccruals] = useState<AdminAccrualRow[]>([]);
   const [ledger, setLedger] = useState<AdminDpLedgerRow[]>([]);
+  const [memberAccruals, setMemberAccruals] = useState<AdminReserveAccrualRow[]>([]);
+  const [memberConsumptions, setMemberConsumptions] = useState<AdminReserveConsumptionRow[]>([]);
+  const [memberSearch, setMemberSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "active" | "expired">("active");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -38,14 +44,18 @@ export default function AdminReservePage() {
 
   const load = async () => {
     try {
-      const [k, a, l] = await Promise.all([
+      const [k, a, l, ma, mc] = await Promise.all([
         fetchReserveKpis(),
         fetchAdminAccruals(filter),
         fetchAdminDpExpiryLedger(),
+        fetchAdminReserveAccruals(memberSearch),
+        fetchAdminReserveConsumptions(),
       ]);
       setKpis(k);
       setAccruals(a);
       setLedger(l);
+      setMemberAccruals(ma);
+      setMemberConsumptions(mc);
     } catch (e: any) {
       toast({ title: "Failed to load reserve data", description: e.message, variant: "destructive" });
     } finally {
@@ -57,7 +67,7 @@ export default function AdminReservePage() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter]);
+  }, [filter, memberSearch]);
 
   const handleRefresh = () => { setRefreshing(true); load(); };
 
@@ -255,6 +265,99 @@ export default function AdminReservePage() {
                       <TableCell className="text-right">{fmt(l.help_now_portion)}</TableCell>
                       <TableCell className="text-right">{fmt(l.admin_portion)}</TableCell>
                       <TableCell className="text-xs text-muted-foreground capitalize">{l.reason.replace(/_/g, " ")}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Member Reserve ledger */}
+      <Card>
+        <CardHeader className="flex flex-row items-start justify-between gap-3 flex-wrap">
+          <div>
+            <CardTitle className="text-lg font-display">Member Reserve Accruals</CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              10% of each membership invoice is allocated to the member's personal Reserve. Latest 200.
+            </p>
+          </div>
+          <Input
+            placeholder="Search by member name…"
+            value={memberSearch}
+            onChange={(e) => setMemberSearch(e.target.value)}
+            className="w-[220px]"
+          />
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="space-y-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
+          ) : memberAccruals.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">No member reserve accruals yet.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Member</TableHead>
+                    <TableHead>Month</TableHead>
+                    <TableHead className="text-right">Accrued</TableHead>
+                    <TableHead className="text-right">Remaining</TableHead>
+                    <TableHead>Invoice</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {memberAccruals.map((a) => (
+                    <TableRow key={a.id}>
+                      <TableCell className="font-medium">{a.user_full_name ?? <span className="text-muted-foreground">Unknown</span>}</TableCell>
+                      <TableCell>{fmtMonth(a.accrual_month)}</TableCell>
+                      <TableCell className="text-right">{fmt(a.amount)}</TableCell>
+                      <TableCell className="text-right font-medium">{fmt(a.remaining_amount)}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{a.stripe_invoice_id ?? "—"}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-display">Member Reserve Consumptions</CardTitle>
+          <p className="text-xs text-muted-foreground">FIFO draws against member reserves when used as ticket fallback. Latest 200.</p>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="space-y-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
+          ) : memberConsumptions.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">No reserve consumptions yet.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Member</TableHead>
+                    <TableHead>Ticket</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {memberConsumptions.map((c) => (
+                    <TableRow key={c.id}>
+                      <TableCell>{fmtDate(c.created_at)}</TableCell>
+                      <TableCell className="font-medium">{c.user_full_name ?? <span className="text-muted-foreground">Unknown</span>}</TableCell>
+                      <TableCell className="text-xs font-mono">{c.ticket_id.slice(0, 8)}…</TableCell>
+                      <TableCell className="text-right font-medium">{fmt(c.amount_consumed)}</TableCell>
+                      <TableCell>
+                        {c.released
+                          ? <Badge variant="outline">Released</Badge>
+                          : <Badge>Consumed</Badge>}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

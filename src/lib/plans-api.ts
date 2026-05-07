@@ -67,6 +67,48 @@ export async function fetchMyDpSummary(userId: string) {
   return { available, expiringSoon: soon };
 }
 
+export type ReserveSummary = {
+  balance: number;
+  lifetimeAccrued: number;
+  lifetimeConsumed: number;
+  eligible: boolean;
+  eligibleSince: string | null;
+  continuousPaidMonths: number;
+  monthsUntilEligible: number;
+};
+
+export async function fetchMyReserveSummary(userId: string): Promise<ReserveSummary> {
+  const [accruals, membership] = await Promise.all([
+    supabase
+      .from("member_reserve_accruals")
+      .select("amount, remaining_amount")
+      .eq("user_id", userId),
+    supabase
+      .from("memberships")
+      .select("reserve_eligible_since, continuous_paid_months, status")
+      .eq("user_id", userId)
+      .in("status", ["active", "past_due", "pending"])
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+  const rows = (accruals.data ?? []) as any[];
+  const balance = rows.reduce((s, r) => s + Number(r.remaining_amount ?? 0), 0);
+  const lifetimeAccrued = rows.reduce((s, r) => s + Number(r.amount ?? 0), 0);
+  const m = membership.data as any;
+  const months = Number(m?.continuous_paid_months ?? 0);
+  const eligibleSince = m?.reserve_eligible_since ?? null;
+  return {
+    balance,
+    lifetimeAccrued,
+    lifetimeConsumed: lifetimeAccrued - balance,
+    eligible: !!eligibleSince,
+    eligibleSince,
+    continuousPaidMonths: months,
+    monthsUntilEligible: Math.max(12 - months, 0),
+  };
+}
+
 export async function openCustomerPortal(): Promise<string> {
   const { data, error } = await supabase.functions.invoke("customer-portal", { body: {} });
   if (error) throw error;

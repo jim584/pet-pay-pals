@@ -4,9 +4,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Wallet as WalletIcon, ArrowDownRight, ArrowUpRight, CreditCard, Shield, Clock } from "lucide-react";
+import { Wallet as WalletIcon, ArrowDownRight, ArrowUpRight, CreditCard, Shield, Clock, ShieldCheck } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import { fetchWallet, fetchTransactions, Wallet, WalletTransaction } from "@/lib/community-api";
-import { fetchMyMembership, fetchMyDpSummary, openCustomerPortal, fetchPaymentHistory, PaymentHistoryRow } from "@/lib/plans-api";
+import { fetchMyMembership, fetchMyDpSummary, openCustomerPortal, fetchPaymentHistory, fetchMyReserveSummary, PaymentHistoryRow, ReserveSummary } from "@/lib/plans-api";
 import { toast } from "@/hooks/use-toast";
 
 export function WalletView() {
@@ -16,6 +17,7 @@ export function WalletView() {
   const [membership, setMembership] = useState<any>(null);
   const [dpSummary, setDpSummary] = useState<{ available: number; expiringSoon: number }>({ available: 0, expiringSoon: 0 });
   const [payments, setPayments] = useState<PaymentHistoryRow[]>([]);
+  const [reserve, setReserve] = useState<ReserveSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
 
@@ -42,6 +44,7 @@ export function WalletView() {
       fetchMyMembership(user.id).then(setMembership).catch(() => {}),
       fetchMyDpSummary(user.id).then(setDpSummary).catch(() => {}),
       fetchPaymentHistory(user.id).then(setPayments).catch(() => {}),
+      fetchMyReserveSummary(user.id).then(setReserve).catch(() => {}),
     ]).finally(() => setLoading(false));
   }, [user]);
 
@@ -98,6 +101,59 @@ export function WalletView() {
                 <p className="text-2xl font-bold font-display">${dpSummary.expiringSoon.toFixed(2)}</p>
               </div>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {membership && reserve && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-lg font-display flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5 text-primary" /> My Reserve
+            </CardTitle>
+            {reserve.eligible
+              ? <Badge>Eligible</Badge>
+              : <Badge variant="outline">Locked</Badge>}
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">Reserve Balance</p>
+                <p className="text-2xl font-bold font-display">${reserve.balance.toFixed(2)}</p>
+              </div>
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">Lifetime Accrued</p>
+                <p className="text-2xl font-bold font-display">${reserve.lifetimeAccrued.toFixed(2)}</p>
+              </div>
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">Used</p>
+                <p className="text-2xl font-bold font-display">${reserve.lifetimeConsumed.toFixed(2)}</p>
+              </div>
+            </div>
+            {!reserve.eligible && (
+              <div className="mt-4 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">
+                    {reserve.continuousPaidMonths} / 12 paid months
+                  </span>
+                  <span className="text-muted-foreground">
+                    {reserve.monthsUntilEligible} month{reserve.monthsUntilEligible === 1 ? "" : "s"} to go
+                  </span>
+                </div>
+                <Progress value={(reserve.continuousPaidMonths / 12) * 100} />
+                <p className="text-xs text-muted-foreground">
+                  Reserve unlocks after 12 consecutive months of paid membership. Cancellations or
+                  unpaid invoices reset the counter.
+                </p>
+              </div>
+            )}
+            {reserve.eligible && (
+              <p className="text-xs text-muted-foreground mt-3">
+                Eligible since {new Date(reserve.eligibleSince!).toLocaleDateString()}. Reserve is a
+                limited safety net — it's used <strong>after</strong> Direct Pay and BNPL when you opt in
+                on a vet ticket.
+              </p>
+            )}
           </CardContent>
         </Card>
       )}
