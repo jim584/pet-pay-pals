@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -15,8 +15,15 @@ export default function Auth() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, user, role, loading } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (loading || !user) return;
+    if (role === "admin") navigate("/admin", { replace: true });
+    else if (role) navigate("/", { replace: true });
+    // if role is null, user needs to select role — handled elsewhere
+  }, [user, role, loading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,10 +32,8 @@ export default function Auth() {
       if (isSignUp) {
         await signUp(email, password, fullName);
         toast.success("Account created successfully!");
-        navigate("/");
       } else {
         await signIn(email, password);
-        navigate("/");
       }
     } catch (err: any) {
       toast.error(err.message || "Something went wrong");
