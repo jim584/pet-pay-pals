@@ -306,6 +306,15 @@ export interface AdminVetRow {
   updated_at: string;
   owner_full_name: string | null;
   owner_avatar_url: string | null;
+  // Verification
+  license_number: string | null;
+  license_state: string | null;
+  license_document_url: string | null;
+  is_license_verified: boolean;
+  fear_free_certified: boolean;
+  fear_free_cert_number: string | null;
+  fear_free_cert_url: string | null;
+  fear_free_verified_at: string | null;
 }
 
 export interface AdminVetService {
