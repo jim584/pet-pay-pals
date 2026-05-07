@@ -464,14 +464,26 @@ export async function fetchAdminVetAppointments(
 ): Promise<AdminVetAppointment[]> {
   let q = supabase
     .from("appointments")
-    .select("*, pets(name, species), profiles:owner_id(full_name), services(name, price)")
+    .select("*, pets(name, species), services(name, price)")
     .eq("vet_id", vetProfileId)
     .order("scheduled_at", { ascending: false });
   if (statusFilter && statusFilter !== "all") q = q.eq("status", statusFilter);
 
   const { data, error } = await q;
   if (error) throw error;
-  return (data ?? []).map((a: any) => ({
+  const rows = data ?? [];
+
+  const ownerIds = Array.from(new Set(rows.map((a: any) => a.owner_id).filter(Boolean)));
+  let profileMap = new Map<string, string>();
+  if (ownerIds.length) {
+    const { data: profs } = await supabase
+      .from("profiles")
+      .select("user_id, full_name")
+      .in("user_id", ownerIds);
+    profileMap = new Map((profs ?? []).map((p: any) => [p.user_id, p.full_name]));
+  }
+
+  return rows.map((a: any) => ({
     id: a.id,
     vet_id: a.vet_id,
     owner_id: a.owner_id,
@@ -483,7 +495,7 @@ export async function fetchAdminVetAppointments(
     created_at: a.created_at,
     pet_name: a.pets?.name ?? null,
     pet_species: a.pets?.species ?? null,
-    owner_full_name: a.profiles?.full_name ?? null,
+    owner_full_name: profileMap.get(a.owner_id) ?? null,
     service_name: a.services?.name ?? null,
     service_price: a.services?.price ?? null,
   })) as AdminVetAppointment[];

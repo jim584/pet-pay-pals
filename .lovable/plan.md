@@ -1,19 +1,20 @@
-## Goal
-When an admin signs in, land them directly on `/admin` (the Admin dashboard with sidebar: Overview, Users & Roles, Vets, Vet Tickets, Memberships, Payments, Payment Plans, Wallet & Reserve, plus Shortcuts) instead of the public home page.
+## Bug
+On `/admin/vets/:id`, loading details fails with: *"Could not find a relationship between 'appointments' and 'owner_id' in the schema cache."*
 
-## Current behavior
-`src/pages/Auth.tsx` calls `navigate("/")` after both sign-in and sign-up, regardless of role. Admins then have to manually click into `/admin`.
+## Cause
+`fetchAdminVetAppointments` in `src/lib/admin-api.ts` (line ~467) embeds the owner via PostgREST relationship syntax:
 
-## Change
+```
+.select("*, pets(name, species), profiles:owner_id(full_name), services(name, price)")
+```
 
-**`src/pages/Auth.tsx`**
-- Pull `user` and `role` from `useAuth()` in addition to `signIn`/`signUp`.
-- Remove the immediate `navigate("/")` calls inside `handleSubmit`.
-- Add a `useEffect` that watches `user` and `role`: once a session exists, redirect to `/admin` if `role === "admin"`, otherwise `/`. This handles the async role fetch in `AuthContext` (role is loaded via `setTimeout` after sign-in, so we can't read it synchronously right after `await signIn`).
-- Keep the existing toast on successful signup.
-- Also: if a user is already authenticated when they land on `/auth`, the same effect will route them appropriately (nice side-effect, no extra code).
+There is no foreign key from `appointments.owner_id` to `profiles`, so PostgREST cannot resolve the join. `pets` and `services` also lack declared FKs but happen to work via the table name; the explicit `profiles:owner_id(...)` hint forces FK resolution and fails.
 
-## Out of scope
-- No changes to `AdminLayout` (it already guards non-admins).
-- No changes to the sidebar contents — those modules already render at `/admin`.
-- No changes to `Index`/home routing for non-admins.
+## Fix
+**`src/lib/admin-api.ts` — `fetchAdminVetAppointments` only:**
+
+1. Remove `profiles:owner_id(full_name)` from the select.
+2. After the appointments query, collect distinct `owner_id`s and run a second query: `supabase.from("profiles").select("user_id, full_name").in("user_id", ownerIds)`.
+3. Build a `Map<user_id, full_name>` and use it to populate `owner_full_name` in the returned rows.
+
+No DB migration, no other files touched. The `pets`/`services` embeds remain unchanged since they currently work; if they later break, apply the same two-query pattern.
