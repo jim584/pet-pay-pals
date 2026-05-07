@@ -159,6 +159,9 @@ export function WalletView() {
       )}
 
       <div className="grid gap-4 sm:grid-cols-3">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Balance</CardTitle>
             <WalletIcon className="h-5 w-5 text-primary" />
           </CardHeader>
           <CardContent>
