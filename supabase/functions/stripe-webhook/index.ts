@@ -203,6 +203,16 @@ Deno.serve(async (req) => {
           status: "active",
           current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
         }).eq("id", m.id);
+
+        // Referral bounty accrual (best-effort; never block invoice processing)
+        try {
+          await accrueReferralBounty(admin, {
+            userId: m.user_id,
+            membershipId: m.id,
+            invoiceId: inv.id,
+            paidAmount: (inv.amount_paid ?? 0) / 100,
+          });
+        } catch (e) { console.error("referral accrual failed:", e); }
         break;
       }
 
