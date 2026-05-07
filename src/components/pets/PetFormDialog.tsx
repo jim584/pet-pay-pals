@@ -212,7 +212,7 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
                   onChange={handlePhotoSelect}
                 />
               </div>
-              <p className="text-xs text-muted-foreground">Click to upload photo</p>
+              <p className="text-xs text-muted-foreground">Click to upload photo (required)</p>
             </div>
             <div className="space-y-2">
               <Label>Name *</Label>
