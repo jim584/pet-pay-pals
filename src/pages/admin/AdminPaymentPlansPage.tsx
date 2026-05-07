@@ -76,6 +76,48 @@ export default function AdminPaymentPlansPage() {
   const [defaultTarget, setDefaultTarget] = useState<AdminBnplRow | null>(null);
   const [cancelTarget, setCancelTarget] = useState<AdminBnplRow | null>(null);
 
+  const [scheduleTarget, setScheduleTarget] = useState<AdminBnplRow | null>(null);
+  const [scheduleRows, setScheduleRows] = useState<AdminBnplInstallment[]>([]);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
+  const [runningOverdue, setRunningOverdue] = useState(false);
+
+  const openSchedule = async (row: AdminBnplRow) => {
+    setScheduleTarget(row);
+    setScheduleLoading(true);
+    try {
+      setScheduleRows(await fetchAdminBnplInstallments(row.id));
+    } catch (e: any) {
+      toast({ title: "Failed to load schedule", description: e.message, variant: "destructive" });
+    } finally {
+      setScheduleLoading(false);
+    }
+  };
+
+  const regenerateSchedule = async () => {
+    if (!scheduleTarget) return;
+    try {
+      await regenerateBnplInstallments(scheduleTarget.id);
+      toast({ title: "Schedule regenerated" });
+      setScheduleRows(await fetchAdminBnplInstallments(scheduleTarget.id));
+    } catch (e: any) {
+      toast({ title: "Failed", description: e.message, variant: "destructive" });
+    }
+  };
+
+  const runOverdue = async () => {
+    setRunningOverdue(true);
+    try {
+      const r = await runProcessBnplOverdue();
+      toast({ title: "Overdue processor finished", description: JSON.stringify(r) });
+      await load();
+    } catch (e: any) {
+      toast({ title: "Failed", description: e.message, variant: "destructive" });
+    } finally {
+      setRunningOverdue(false);
+    }
+  };
+
+
   const load = async () => {
     setLoading(true);
     try {
