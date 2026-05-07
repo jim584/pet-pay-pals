@@ -131,9 +131,24 @@ export default function PaymentPlansPage() {
                         Created {fmtDate(o.created_at)} · {o.installment_count} installments × {o.installment_interval_days} days
                       </p>
                     </div>
-                    <Badge variant={STATUS_VARIANT[o.status] ?? "outline"} className="capitalize">
-                      {o.status.replace("_", " ")}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={STATUS_VARIANT[o.status] ?? "outline"} className="capitalize">
+                        {o.status.replace("_", " ")}
+                      </Badge>
+                      {canPay && nextDue && (
+                        <Button
+                          size="sm"
+                          onClick={() => pay(o.id, nextDue.id)}
+                          disabled={busyId === nextDue.id}
+                        >
+                          {busyId === nextDue.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <>Pay next due ({fmt(Math.max(0, Number(nextDue.amount) - Number(nextDue.paid_amount ?? 0)))})</>
+                          )}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
