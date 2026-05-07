@@ -137,18 +137,14 @@ export default function AdminPaymentsPage() {
 
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
-    return rows.filter((r) => {
-      if (statusFilter !== "all" && r.status !== statusFilter) return false;
-      if (kindFilter !== "all" && r.kind !== kindFilter) return false;
-      if (!s) return true;
-      return (
-        (r.user_full_name ?? "").toLowerCase().includes(s) ||
-        (r.description ?? "").toLowerCase().includes(s) ||
-        (r.stripe_invoice_id ?? "").toLowerCase().includes(s) ||
-        (r.stripe_payment_intent_id ?? "").toLowerCase().includes(s)
-      );
-    });
-  }, [rows, search, statusFilter, kindFilter]);
+    if (!s) return rows;
+    return rows.filter((r) =>
+      (r.user_full_name ?? "").toLowerCase().includes(s) ||
+      (r.description ?? "").toLowerCase().includes(s) ||
+      (r.stripe_invoice_id ?? "").toLowerCase().includes(s) ||
+      (r.stripe_payment_intent_id ?? "").toLowerCase().includes(s)
+    );
+  }, [rows, search]);
 
   const kpis = useMemo(() => {
     const paid = filtered.filter((r) => r.status === "paid" || r.status === "succeeded");
