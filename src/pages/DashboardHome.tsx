@@ -42,12 +42,6 @@ export default function DashboardHome() {
           </Link>
         ))}
       </div>
-
-      <Card>
-        <CardContent className="p-6 text-center text-muted-foreground">
-          <p>Appointments, payments, and membership features coming in Phase 3 & 4. 🚀</p>
-        </CardContent>
-      </Card>
     </div>
   );
 }
