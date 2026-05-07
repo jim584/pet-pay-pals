@@ -473,6 +473,20 @@ function BnplDetails({ row }: { row: PaymentRow }) {
     );
   }
 
+  // Estimate cadence + remaining installments
+  const isPaidOff = Number(ob.outstanding_amount) <= 0 || ob.status === "paid_off";
+  const avgInstallment = installments.length
+    ? paidTotal / installments.length
+    : Number(ob.original_amount) / 4; // assume 4 if unknown
+  const remainingCount = isPaidOff
+    ? 0
+    : Math.max(1, Math.ceil(Number(ob.outstanding_amount) / Math.max(avgInstallment, 1)));
+  const lastPaidAt = installments.length
+    ? new Date(Math.max(...installments.map((i) => new Date(i.paid_at).getTime())))
+    : new Date(ob.created_at);
+  const nextDue = isPaidOff ? null : new Date(lastPaidAt.getTime() + 30 * 86400000);
+  const isOverdue = nextDue ? nextDue.getTime() < Date.now() : false;
+
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <Card>
@@ -485,7 +499,27 @@ function BnplDetails({ row }: { row: PaymentRow }) {
             <Badge variant={BNPL_STATUS_VARIANT[ob.status] ?? "outline"}>{ob.status}</Badge>
           </Detail>
           <Detail label="Original" value={fmt(ob.original_amount)} />
-          <Detail label="Outstanding" value={fmt(ob.outstanding_amount)} />
+          <Detail label="Outstanding">
+            <span className={Number(ob.outstanding_amount) > 0 ? "text-primary" : ""}>
+              {fmt(ob.outstanding_amount)}
+            </span>
+          </Detail>
+          <Detail label="Remaining installments">
+            {isPaidOff ? (
+              <Badge variant="default">Paid off</Badge>
+            ) : (
+              <span>~{remainingCount} (est.)</span>
+            )}
+          </Detail>
+          <Detail label="Next installment due">
+            {nextDue ? (
+              <span className={isOverdue ? "text-destructive font-semibold" : ""}>
+                {nextDue.toLocaleDateString()}{isOverdue ? " · overdue" : ""}
+              </span>
+            ) : (
+              <span className="text-muted-foreground">—</span>
+            )}
+          </Detail>
           <Detail label="External ref" value={ob.external_ref ?? "—"} />
           <Detail label="Created" value={new Date(ob.created_at).toLocaleDateString()} />
         </CardContent>
