@@ -13,6 +13,7 @@ import {
 } from "@/lib/vet-tickets-api";
 import { Loader2, FileText, ShieldAlert } from "lucide-react";
 import { Navigate } from "react-router-dom";
+import { TicketMessagesDialog } from "@/components/vet-tickets/TicketMessagesDialog";
 
 const STATUS_VARIANT: Record<string, string> = {
   submitted: "secondary", under_review: "secondary",
