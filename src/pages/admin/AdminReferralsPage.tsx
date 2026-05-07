@@ -199,6 +199,7 @@ export default function AdminReferralsPage() {
           <TabsTrigger value="referrals">Referrals ({referrals.length})</TabsTrigger>
           <TabsTrigger value="bounties">Bounties ({bounties.length})</TabsTrigger>
           <TabsTrigger value="payouts">Payouts ({payouts.length})</TabsTrigger>
+          <TabsTrigger value="milestones">Milestones ({milestones.length})</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
@@ -224,11 +225,17 @@ export default function AdminReferralsPage() {
                       </TableCell>
                       <TableCell><Switch checked={r.is_active} onCheckedChange={() => toggleActive(r)} /></TableCell>
                       <TableCell className="text-right font-mono">{fmt(outstandingByReferrer.get(r.id) ?? 0)}</TableCell>
-                      <TableCell className="text-right">
-                        <Button size="sm" variant="ghost" onClick={() => copyLink(r.code)}><Copy className="h-3 w-3" /></Button>
-                        <Button size="sm" variant="ghost" disabled={!(outstandingByReferrer.get(r.id) ?? 0)} onClick={() => handlePayout(r.id)}>
-                          <DollarSign className="h-3 w-3" /> Pay out
+                      <TableCell className="text-right space-x-1">
+                        <Button size="sm" variant="ghost" onClick={() => copyLink(r.code)} title="Copy link"><Copy className="h-3 w-3" /></Button>
+                        <Button size="sm" variant="ghost" onClick={() => setQrFor(r)} title="Show QR"><QrCode className="h-3 w-3" /></Button>
+                        <Button size="sm" variant="ghost" disabled={busy || !(outstandingByReferrer.get(r.id) ?? 0)} onClick={() => handlePayout(r.id)} title="Manual payout">
+                          <DollarSign className="h-3 w-3" />
                         </Button>
+                        {r.stripe_connect_status === "active" && (
+                          <Button size="sm" variant="default" disabled={busy || !(outstandingByReferrer.get(r.id) ?? 0)} onClick={() => handleStripePayout(r.id)} title="Stripe payout">
+                            <Zap className="h-3 w-3" />
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
