@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { Copy, RefreshCw, Plus, DollarSign, QrCode, Zap } from "lucide-react";
+import { Copy, RefreshCw, Plus, DollarSign, QrCode, Zap, ChevronDown, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { QRCodeCard } from "@/components/QRCodeCard";
 import {
@@ -18,8 +18,9 @@ import {
   createReferrer, updateReferrer, runReferralHoldJob, createPayoutForReferrer,
   getReferralSettings, updateReferralSettings,
   payReferrerViaStripe, listMilestones, createMilestone, recordMilestoneContribution,
+  listMilestoneContributions,
   type Referrer, type Referral, type ReferralBounty, type ReferrerPayout, type ReferralSettings, type ReferrerType,
-  type ShelterMilestone,
+  type ShelterMilestone, type MilestoneContribution,
 } from "@/lib/referrals-api";
 
 const fmt = (n: number) => `$${Number(n ?? 0).toFixed(2)}`;
@@ -39,6 +40,27 @@ export default function AdminReferralsPage() {
   const [qrFor, setQrFor] = useState<Referrer | null>(null);
   const [openMilestone, setOpenMilestone] = useState(false);
   const [newMs, setNewMs] = useState({ referrer_id: "", pet_name: "", goal_amount: 0, payout_amount: 0 });
+  const [expandedMs, setExpandedMs] = useState<Record<string, boolean>>({});
+  const [contribsByMs, setContribsByMs] = useState<Record<string, MilestoneContribution[]>>({});
+  const [contribsLoading, setContribsLoading] = useState<Record<string, boolean>>({});
+
+  const toggleMilestone = async (id: string) => {
+    setExpandedMs(s => ({ ...s, [id]: !s[id] }));
+    if (!contribsByMs[id]) {
+      setContribsLoading(s => ({ ...s, [id]: true }));
+      try {
+        const rows = await listMilestoneContributions(id);
+        setContribsByMs(s => ({ ...s, [id]: rows }));
+      } catch (e: any) { toast.error(e.message); }
+      finally { setContribsLoading(s => ({ ...s, [id]: false })); }
+    }
+  };
+  const refreshContribs = async (id: string) => {
+    try {
+      const rows = await listMilestoneContributions(id);
+      setContribsByMs(s => ({ ...s, [id]: rows }));
+    } catch {}
+  };
 
   // Create referrer dialog
   const [openCreate, setOpenCreate] = useState(false);
@@ -128,8 +150,12 @@ export default function AdminReferralsPage() {
     if (!v) return;
     const n = parseFloat(v);
     if (!n || n <= 0) return;
-    try { await recordMilestoneContribution(mid, n, "manual"); toast.success("Recorded"); await load(); }
-    catch (e: any) { toast.error(e.message); }
+    try {
+      await recordMilestoneContribution(mid, n, "manual");
+      toast.success("Recorded");
+      await load();
+      if (expandedMs[mid]) await refreshContribs(mid);
+    } catch (e: any) { toast.error(e.message); }
   };
 
   const saveSettings = async () => {
@@ -377,28 +403,89 @@ export default function AdminReferralsPage() {
           <Card><CardContent className="p-0">
             <Table>
               <TableHeader><TableRow>
+                <TableHead className="w-8"></TableHead>
                 <TableHead>Pet</TableHead><TableHead>Shelter</TableHead>
                 <TableHead className="text-right">Goal</TableHead><TableHead className="text-right">Raised</TableHead>
-                <TableHead className="text-right">Payout</TableHead><TableHead>Status</TableHead><TableHead></TableHead>
+                <TableHead className="text-right">Payout</TableHead>
+                <TableHead className="text-right">Contribs</TableHead>
+                <TableHead>Status</TableHead><TableHead></TableHead>
               </TableRow></TableHeader>
               <TableBody>
                 {milestones.map(m => {
                   const ref = referrers.find(r => r.id === m.referrer_id);
+                  const isOpen = !!expandedMs[m.id];
+                  const contribs = contribsByMs[m.id];
+                  const pct = m.goal_amount > 0 ? Math.min(100, (Number(m.raised_amount) / Number(m.goal_amount)) * 100) : 0;
                   return (
-                    <TableRow key={m.id}>
-                      <TableCell>{m.pet_name}</TableCell>
-                      <TableCell>{ref?.display_name ?? "—"}</TableCell>
-                      <TableCell className="text-right font-mono">{fmt(m.goal_amount)}</TableCell>
-                      <TableCell className="text-right font-mono">{fmt(m.raised_amount)}</TableCell>
-                      <TableCell className="text-right font-mono">{fmt(m.payout_amount)}</TableCell>
-                      <TableCell><Badge variant={m.status === "completed" ? "default" : "outline"}>{m.status}</Badge></TableCell>
-                      <TableCell className="text-right">
-                        {m.status === "open" && <Button size="sm" variant="ghost" onClick={() => handleAddContribution(m.id)}>+ Contribution</Button>}
-                      </TableCell>
-                    </TableRow>
+                    <Fragment key={m.id}>
+                      <TableRow className="cursor-pointer" onClick={() => toggleMilestone(m.id)}>
+                        <TableCell>{isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</TableCell>
+                        <TableCell>{m.pet_name}</TableCell>
+                        <TableCell>{ref?.display_name ?? "—"}</TableCell>
+                        <TableCell className="text-right font-mono">{fmt(m.goal_amount)}</TableCell>
+                        <TableCell className="text-right font-mono">{fmt(m.raised_amount)}</TableCell>
+                        <TableCell className="text-right font-mono">{fmt(m.payout_amount)}</TableCell>
+                        <TableCell className="text-right text-xs text-muted-foreground">{contribs ? contribs.length : "—"}</TableCell>
+                        <TableCell><Badge variant={m.status === "completed" ? "default" : "outline"}>{m.status}</Badge></TableCell>
+                        <TableCell className="text-right" onClick={e => e.stopPropagation()}>
+                          {m.status === "open" && <Button size="sm" variant="ghost" onClick={() => handleAddContribution(m.id)}>+ Contribution</Button>}
+                        </TableCell>
+                      </TableRow>
+                      {isOpen && (
+                        <TableRow key={m.id + "-detail"}>
+                          <TableCell colSpan={9} className="bg-muted/30 p-4">
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between gap-4">
+                                <div className="flex-1">
+                                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                    <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+                                  </div>
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    {fmt(m.raised_amount)} of {fmt(m.goal_amount)} ({pct.toFixed(1)}%)
+                                  </p>
+                                </div>
+                              </div>
+                              {contribsLoading[m.id] ? (
+                                <Skeleton className="h-20 w-full" />
+                              ) : !contribs || contribs.length === 0 ? (
+                                <p className="text-sm text-muted-foreground text-center py-4">No contributions yet.</p>
+                              ) : (
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>Date</TableHead>
+                                      <TableHead>Source</TableHead>
+                                      <TableHead>Payer</TableHead>
+                                      <TableHead>Stripe ref</TableHead>
+                                      <TableHead>Description</TableHead>
+                                      <TableHead className="text-right">Amount</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {contribs.map(c => {
+                                      const ref = c.payment?.stripe_payment_intent_id ?? c.payment?.stripe_charge_id ?? c.payment?.stripe_invoice_id ?? null;
+                                      return (
+                                        <TableRow key={c.id}>
+                                          <TableCell className="text-xs">{new Date(c.created_at).toLocaleString()}</TableCell>
+                                          <TableCell><Badge variant="outline" className="text-xs">{c.source}</Badge></TableCell>
+                                          <TableCell className="text-xs">{c.payment?.payer_name ?? "—"}</TableCell>
+                                          <TableCell className="text-xs font-mono">{ref ? <span title={ref}>{ref.slice(0, 18)}…</span> : "—"}</TableCell>
+                                          <TableCell className="text-xs">{c.payment?.description ?? "—"}</TableCell>
+                                          <TableCell className="text-right font-mono">{fmt(c.amount)}</TableCell>
+                                        </TableRow>
+                                      );
+                                    })}
+                                  </TableBody>
+                                </Table>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </Fragment>
                   );
                 })}
-                {milestones.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No milestones yet.</TableCell></TableRow>}
+                {milestones.length === 0 && <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">No milestones yet.</TableCell></TableRow>}
               </TableBody>
             </Table>
           </CardContent></Card>
