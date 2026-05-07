@@ -424,12 +424,19 @@ Deno.serve(async (req) => {
       }
     }
 
+    await admin.from("webhook_events")
+      .update({ status: "processed" })
+      .eq("provider", "stripe").eq("event_id", event.id);
+
     return new Response(JSON.stringify({ received: true }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("stripe-webhook handler error:", e);
+    await admin.from("webhook_events")
+      .update({ status: "failed", error: (e as Error).message })
+      .eq("provider", "stripe").eq("event_id", event.id);
     return new Response(JSON.stringify({ error: (e as Error).message }), { status: 500 });
   }
 });
