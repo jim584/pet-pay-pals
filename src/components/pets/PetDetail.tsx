@@ -171,6 +171,40 @@ export function PetDetail({ pet, onBack, onEdit }: PetDetailProps) {
         </Card>
       )}
 
+      {/* Vet of Record */}
+      <Card>
+        <CardContent className="p-4 flex items-start gap-3">
+          <Stethoscope className="h-8 w-8 text-primary shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">Vet of Record</p>
+            {vetOfRecord ? (
+              <>
+                <p className="font-semibold flex items-center gap-2 flex-wrap">
+                  {vetOfRecord.clinic_name}
+                  {vetOfRecord.fear_free_certified && (
+                    <Badge variant="secondary" className="text-xs gap-1">
+                      <BadgeCheck className="h-3 w-3" /> Fear Free
+                    </Badge>
+                  )}
+                </p>
+                {vetOfRecord.location && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                    <MapPin className="h-3 w-3" /> {vetOfRecord.location}
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                None set. Edit this pet to choose a primary vet.
+              </p>
+            )}
+          </div>
+          <Button variant="outline" size="sm" onClick={onEdit}>
+            {vetOfRecord ? "Change" : "Set"}
+          </Button>
+        </CardContent>
+      </Card>
+
       <Separator />
 
       {/* Health Records */}
