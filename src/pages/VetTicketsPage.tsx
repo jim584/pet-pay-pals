@@ -23,6 +23,7 @@ import { Loader2, Plus, FileText, ExternalLink, ShieldCheck, Info } from "lucide
 import { Switch } from "@/components/ui/switch";
 import { TicketMessagesDialog } from "@/components/vet-tickets/TicketMessagesDialog";
 import { openCheckoutUrl } from "@/lib/open-checkout";
+import { ReconsiderationButton } from "@/components/vet/ReconsiderationButton";
 
 const STATUS_VARIANT: Record<string, string> = {
   submitted: "secondary", under_review: "secondary",
