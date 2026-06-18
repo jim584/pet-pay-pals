@@ -29,8 +29,12 @@ export function PlanCard({ plan, isFearFree, billingInterval, onSubscribe, isCur
   const monthly = isFearFree ? plan.fear_free_member_charge : plan.membership_fee;
   const annualMembership = isFearFree ? plan.fear_free_member_charge * 12 : plan.annual_price;
   const displayMembership = billingInterval === "year" ? annualMembership : monthly;
-  const platformDisplay = billingInterval === "year" ? plan.platform_fee * 12 : plan.platform_fee;
+  const platformMonthly = plan.platform_fee_monthly ?? plan.platform_fee ?? 10;
+  const platformAnnualPerMonth = plan.platform_fee_annual ?? Math.min(platformMonthly, 5);
+  const platformDisplay = billingInterval === "year" ? platformAnnualPerMonth * 12 : platformMonthly;
+  const platformPerMonthShown = billingInterval === "year" ? platformAnnualPerMonth : platformMonthly;
   const totalDisplay = displayMembership + platformDisplay;
+  const txnPct = (plan.transaction_fee_pct ?? 0.05) * 100;
 
   const handle = async () => {
     setLoading(true);
@@ -58,6 +62,10 @@ export function PlanCard({ plan, isFearFree, billingInterval, onSubscribe, isCur
           </div>
           <p className="text-xs text-muted-foreground mt-1">
             ${displayMembership.toFixed(2)} membership + ${platformDisplay.toFixed(2)} platform fee
+            {" "}<span className="opacity-75">(${platformPerMonthShown.toFixed(2)}/mo on {billingInterval === "year" ? "annual" : "monthly"} billing)</span>
+          </p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            + {txnPct.toFixed(1)}% transaction fee applied to payments
           </p>
           {isFearFree && (
             <p className="text-xs text-accent mt-1">Fear Free 5% discount applied to membership</p>
