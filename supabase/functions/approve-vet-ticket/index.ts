@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
     if (!ticket) {
       return new Response(JSON.stringify({ error: "Ticket not found" }), { status: 404, headers: corsHeaders });
     }
-    if (!["submitted","under_review"].includes(ticket.status)) {
+    if (!["submitted","under_review","awaiting_secondary_review"].includes(ticket.status)) {
       return new Response(JSON.stringify({ error: `Ticket already ${ticket.status}` }), { status: 400, headers: corsHeaders });
     }
 
