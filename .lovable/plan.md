@@ -1,37 +1,52 @@
 ## Problem
 
-When the user clicks Subscribe / Autopay / Donate, Stripe opens correctly in a new tab — but the original app tab also gets navigated to Stripe's loading skeleton, leaving the app in a broken empty state.
+Clicking "Add/Remove" role on an admin's Users page fails with an edge function error. The `admin-assign-role` function returns **401 Unauthorized** before doing anything.
 
-The cause is in `src/lib/open-checkout.ts`. After successfully calling `window.open(url, "_blank")`, the helper still falls through to `window.top.location.href = url` / `window.location.href = url` in some code paths and timing conditions, which navigates the original tab to Stripe.
+**Root cause:** The function pins `https://esm.sh/@supabase/supabase-js@2.49.1`, which bundles `@supabase/auth-js@2.68.0`. That version does **not** include the `auth.getClaims()` method (it was added in auth-js 2.71). So the call
+
+```ts
+const { data: claims } = await supabase.auth.getClaims(token);
+if (!claims?.claims) return 401;
+```
+
+throws/returns undefined and the request is rejected before the admin check ever runs. (No logs appear because the runtime swallows the error and the response is the early 401.)
+
+The same bug exists in several other edge functions that use `getClaims` with the 2.49.1 SDK (`admin-update-membership`, `approve-vet-ticket`, `reject-vet-ticket`, `pay-bnpl-installment`, `collect-member-remainder`, `get-card-ephemeral-key`, `issue-vet-card`, `request-physical-vet-card`). Several of those are likely also failing silently for admins/users.
 
 ## Fix
 
-Rework `openCheckoutUrl` so the original app tab is **never** navigated, while still guaranteeing the user can reach Stripe whether or not popups are allowed.
+Replace `auth.getClaims(token)` with `auth.getUser(token)` (which exists in the bundled SDK and returns the authenticated user from the JWT). It does the same job here — verify the token and pull the caller's user id.
 
-New behavior:
+In every affected edge function, change:
 
-1. Call `const win = window.open(url, "_blank", "noopener,noreferrer")`.
-2. **If `win` is truthy (popup opened):**
-   - Show the existing toast: "Opening secure checkout — Stripe opened in a new tab."
-   - Return. Do nothing to the current tab. (No more `window.location.href` fallback.)
-3. **If `win` is null (popup blocked):**
-   - The user sees nothing happen, so we must surface a clear, clickable way to continue.
-   - Show a sonner toast with `duration: Infinity` containing:
-     - Title: "Popup blocked"
-     - Description: "Your browser blocked the checkout window. Click Continue to open it."
-     - An action button labeled **Continue to checkout** that calls `window.open(url, "_blank")` from the click handler (a fresh user gesture, which browsers allow).
-   - Return `false`.
+```ts
+const { data: claims } = await supabase.auth.getClaims(token);
+if (!claims?.claims) return 401;
+const callerId = claims.claims.sub as string;
+```
 
-This way:
-- **Popups allowed (the normal case):** Stripe opens in a new tab, app tab stays put. No confusion.
-- **Popups blocked:** A persistent toast appears in the app tab with a Continue button. One click opens Stripe in a new tab. The app tab still never navigates away.
+to:
 
-## Why not navigate the top frame as a fallback?
+```ts
+const { data: userData, error: userErr } = await supabase.auth.getUser(token);
+if (userErr || !userData?.user) return 401;
+const callerId = userData.user.id;
+```
 
-The previous fallback (`window.top.location.href = url`) is exactly what causes the user-reported bug: it replaces the app with Stripe's skeleton. Browsers reliably allow `window.open` from a direct click handler, so the popup-blocked path is rare in practice. When it does happen, a persistent toast with a one-click retry is a better UX than silently swapping the app for Stripe.
+### Files to update
 
-## Files to change
+1. `supabase/functions/admin-assign-role/index.ts` — primary fix for the reported bug.
+2. `supabase/functions/admin-update-membership/index.ts`
+3. `supabase/functions/approve-vet-ticket/index.ts`
+4. `supabase/functions/reject-vet-ticket/index.ts`
+5. `supabase/functions/pay-bnpl-installment/index.ts`
+6. `supabase/functions/collect-member-remainder/index.ts`
+7. `supabase/functions/get-card-ephemeral-key/index.ts`
+8. `supabase/functions/issue-vet-card/index.ts`
+9. `supabase/functions/request-physical-vet-card/index.ts`
 
-- `src/lib/open-checkout.ts` — remove both `window.top.location.href` and `window.location.href` fallbacks; replace with a persistent sonner toast that has a "Continue to checkout" action button.
+No client/UI or DB changes needed. Functions auto-deploy.
 
-No callers need changes — `PlansPage`, `PaymentPlansPage`, `AutopaySetupCard`, `HelpOvercomePage`, and `VetTicketsPage` all already use `openCheckoutUrl` and inherit the new behavior.
+## Verification
+
+After the change, re-test from the admin Users page (Add Vet → Remove Vet). Should succeed and the user's roles list updates.
