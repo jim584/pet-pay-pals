@@ -42,6 +42,8 @@ import AdminPaymentPlansPage from "./pages/admin/AdminPaymentPlansPage";
 import AdminPaymentsPage from "./pages/admin/AdminPaymentsPage";
 import AdminReservePage from "./pages/admin/AdminReservePage";
 import AdminReferralsPage from "./pages/admin/AdminReferralsPage";
+import AdminContentPage from "./pages/admin/AdminContentPage";
+import AdminReconsiderationsPage from "./pages/admin/AdminReconsiderationsPage";
 import ReferrerDashboard from "./pages/ReferrerDashboard";
 
 const queryClient = new QueryClient();
