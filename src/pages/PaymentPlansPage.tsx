@@ -226,6 +226,7 @@ export default function PaymentPlansPage() {
             const pct = o.original_amount > 0 ? Math.min(100, (paid / o.original_amount) * 100) : 0;
             const nextDue = installments.find((i) => i.status === "due") ?? installments.find((i) => i.status === "scheduled");
             const canPay = ["pending", "active", "defaulted"].includes(o.status) && o.outstanding_amount > 0;
+            const isPaused = !!o.paused;
             return (
               <Card key={o.id}>
                 <CardHeader className="pb-3">
@@ -240,7 +241,12 @@ export default function PaymentPlansPage() {
                       <Badge variant={STATUS_VARIANT[o.status] ?? "outline"} className="capitalize">
                         {o.status.replace("_", " ")}
                       </Badge>
-                      {canPay && nextDue && (
+                      {isPaused && (
+                        <Badge variant="outline" className="border-amber-500 text-amber-700">
+                          Paused — membership inactive
+                        </Badge>
+                      )}
+                      {canPay && !isPaused && nextDue && (
                         <Button
                           size="sm"
                           onClick={() => pay(o.id, nextDue.id)}
@@ -255,6 +261,13 @@ export default function PaymentPlansPage() {
                       )}
                     </div>
                   </div>
+                  {isPaused && (
+                    <p className="text-xs text-muted-foreground pt-2">
+                      Auto-charges are paused while your Help A Pet membership isn't active.
+                      Installments will resume automatically once your membership is reactivated.
+                      You can still pay manually at any time.
+                    </p>
+                  )}
                   {canPay && (
                     <div className="flex items-center gap-2 pt-2">
                       <Switch
