@@ -96,12 +96,13 @@ Deno.serve(async (req) => {
     // 1b. Attempt autopay for any due installment with autopay enabled and a saved card
     const { data: dueForAutopay } = await admin
       .from("bnpl_installments")
-      .select("id, obligation_id, auto_charge_attempts, bnpl_obligations!inner(auto_pay_enabled, owner_id, status)")
+      .select("id, obligation_id, auto_charge_attempts, bnpl_obligations!inner(auto_pay_enabled, owner_id, status, paused)")
       .eq("status", "due")
       .lte("due_date", todayISO)
       .lt("auto_charge_attempts", 3);
     const eligibleAutopay = (dueForAutopay ?? []).filter((r: any) =>
       r.bnpl_obligations?.auto_pay_enabled
+      && !r.bnpl_obligations?.paused
       && ["pending", "active"].includes(r.bnpl_obligations?.status));
     for (const row of eligibleAutopay) {
       autoAttempted++;
