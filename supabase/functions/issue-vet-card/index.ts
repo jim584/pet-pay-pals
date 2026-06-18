@@ -27,9 +27,9 @@ Deno.serve(async (req) => {
       if (!authHeader?.startsWith("Bearer ")) return json({ error: "Unauthorized" }, 401);
       const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!,
         { global: { headers: { Authorization: authHeader } } });
-      const { data: claims } = await sb.auth.getClaims(authHeader.replace("Bearer ", ""));
-      if (!claims?.claims) return json({ error: "Unauthorized" }, 401);
-      callerId = claims.claims.sub as string;
+      const { data: userData, error: userErr } = await sb.auth.getUser(authHeader.replace("Bearer ", ""));
+      if (userErr || !userData?.user) return json({ error: "Unauthorized" }, 401);
+      callerId = userData.user.id;
     }
 
     const { data: ticket } = await admin.from("vet_tickets").select("*").eq("id", ticket_id).maybeSingle();
