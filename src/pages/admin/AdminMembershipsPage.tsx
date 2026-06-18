@@ -264,6 +264,12 @@ export default function AdminMembershipsPage() {
                   Stripe subscription will also be {actionTarget.action === "cancel" ? "cancelled" : "paused"}.
                 </p>
               )}
+              {(actionTarget.action === "cancel" || actionTarget.action === "pause") && (
+                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-2">
+                  Any active BNPL repayment plans for this member will be paused automatically.
+                  Auto-charges will resume if the membership is reactivated.
+                </p>
+              )}
             </div>
           )}
           <DialogFooter>
