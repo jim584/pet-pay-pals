@@ -408,7 +408,7 @@ function TicketCard({ ticket, onChanged }: { ticket: VetTicket; onChanged: () =>
             <span className="text-muted-foreground">Direct Pay</span><span>{fmt(b.dp_use)}</span>
             <span className="text-muted-foreground">BNPL</span><span>{fmt(b.bnpl_use)}</span>
             <span className="text-muted-foreground">Reserve</span><span>{fmt(b.reserve_use)}</span>
-            <span className="text-muted-foreground">Your portion</span><span className="font-medium">{fmt(b.member_remainder)}</span>
+            <span className="text-muted-foreground">Your portion (paid to Help A Pet)</span><span className="font-medium">{fmt(b.member_remainder)}</span>
           </div>
         )}
 
