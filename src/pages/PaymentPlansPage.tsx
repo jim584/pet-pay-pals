@@ -146,10 +146,13 @@ export default function PaymentPlansPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-          <CreditCard className="h-7 w-7" /> Payment Plans
+          <CreditCard className="h-7 w-7" /> BNPL Plans (via Stripe)
         </h1>
         <p className="text-muted-foreground">
-          Pay your vet-bill installments and track your active payment plans.
+          Pay your vet-bill remainder through external Buy Now Pay Later providers
+          (Affirm, Klarna and other Stripe-supported options). Help A Pet does not
+          carry the financing — plan terms and approval come from the BNPL provider
+          at checkout.
         </p>
       </div>
 
