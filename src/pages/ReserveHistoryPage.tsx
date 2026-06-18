@@ -71,7 +71,7 @@ export default function ReserveHistoryPage() {
             </div>
           ) : rows.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-10">
-              Your Reserve hasn't been used yet. It will appear here once you opt in on a ticket and it's drawn from.
+              The community pool hasn't covered any of your tickets yet. It will appear here when you opt in on a ticket and the pool covers part of it.
             </p>
           ) : (
             <div className="overflow-x-auto">
