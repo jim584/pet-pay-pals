@@ -8,6 +8,9 @@ export type MembershipPlan = {
   species: "dog" | "cat";
   membership_fee: number;
   platform_fee: number;
+  platform_fee_monthly: number | null;
+  platform_fee_annual: number | null;
+  transaction_fee_pct: number | null;
   direct_pay_portion: number;
   reserve_portion: number;
   admin_portion: number;

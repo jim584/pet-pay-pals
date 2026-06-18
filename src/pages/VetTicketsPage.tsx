@@ -23,6 +23,7 @@ import { Loader2, Plus, FileText, ExternalLink, ShieldCheck, Info } from "lucide
 import { Switch } from "@/components/ui/switch";
 import { TicketMessagesDialog } from "@/components/vet-tickets/TicketMessagesDialog";
 import { openCheckoutUrl } from "@/lib/open-checkout";
+import { ReconsiderationButton } from "@/components/vet/ReconsiderationButton";
 
 const STATUS_VARIANT: Record<string, string> = {
   submitted: "secondary", under_review: "secondary",
@@ -463,7 +464,20 @@ function TicketCard({ ticket, onChanged }: { ticket: VetTicket; onChanged: () =>
 
 
         {ticket.status === "rejected" && ticket.rejection_reason && (
-          <p className="text-sm text-destructive">Reason: {ticket.rejection_reason}</p>
+          <div className="space-y-2">
+            <p className="text-sm text-destructive">Reason: {ticket.rejection_reason}</p>
+            <ReconsiderationButton ticketId={ticket.id} />
+          </div>
+        )}
+
+        {ticket.status === "awaiting_secondary_review" && (
+          <div className="space-y-2">
+            <p className="text-sm text-amber-600 dark:text-amber-400">
+              This ticket needs a secondary admin review because reserve-pool funds
+              were requested after all BNPL providers declined.
+            </p>
+            <ReconsiderationButton ticketId={ticket.id} label="Add context for reviewer" />
+          </div>
         )}
 
         {ticket.status === "approved" && Number(b?.member_remainder ?? 0) > 0 && (

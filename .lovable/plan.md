@@ -1,73 +1,107 @@
-## Goals from the addendum
+# Plan: Addendum 2 — Automation, CMS, Fees, BNPL via Stripe, Reconsideration
 
-1. BNPL: when membership pauses/cancels, **pause the obligation entirely** — no auto-charges, no overdue/default escalation. Resume on reactivation.
-2. Reserve: stop talking about each member's "reserve balance / lifetime accrued." Frame it as **shared community pool access** with eligibility and limits — not a personal ledger.
-3. Vet tickets: **auto-approve under a dollar threshold** when attestation is attached, so members can use any clinic (Fear Free, Banfield, etc.) without admin review.
-4. QR-code partner cards: out of scope for now.
+## 1. Automated vet-ticket approval (expand existing $500 auto-approve)
 
-## 1. Pause BNPL on membership pause/cancel
+Extend `submit-vet-ticket` and `referral_program_settings` to evaluate a full rules checklist before auto-approving. Manual admin review only fires when a check fails or a risk flag trips.
 
-**Database (migration)**
-- Add `paused boolean default false`, `paused_at timestamptz`, `paused_reason text` to `public.bnpl_obligations`.
-- Add a SECURITY DEFINER function `public.sync_bnpl_paused_for_user(_user_id uuid)`:
-  - If user has an `active`/`past_due` membership → set `paused=false`, `paused_reason=null` on all the user's `pending`/`active` obligations.
-  - Else → set `paused=true`, `paused_at=now()`, `paused_reason='membership_inactive'` on `pending`/`active` obligations.
-- Trigger on `public.memberships` AFTER INSERT/UPDATE OF status → calls the function with `NEW.user_id` (and `OLD.user_id` on update if different).
+**Settings (new fields on `referral_program_settings`):**
+- `auto_approve_ticket_threshold` (already exists, default $500)
+- `excluded_procedures` (text[]) — keyword list matched against ticket description
+- `risk_flag_thresholds` jsonb — `{tickets_per_30d, pets_added_per_7d, tickets_per_24h}`
 
-**Edge functions**
-- `charge-bnpl-installment`: skip with `skipped: "obligation_paused"` when the obligation is `paused`. Also skip when the owner's latest membership is not `active`/`past_due` (belt-and-suspenders).
-- `process-bnpl-overdue`: exclude paused obligations from the overdue/default sweep so paused balances don't trip the default timer.
-- `pay-bnpl-installment` (manual): still allowed — the member can voluntarily pay down a paused obligation, but autopay won't fire.
+**Auto-approve conditions (all must pass):**
+1. Vet attestation present (file in `vet-tickets` bucket + `attestation_signed_at`)
+2. Vet `is_approved = true` AND `is_license_verified = true` (good standing)
+3. Procedure description does not match any `excluded_procedures` keyword
+4. Estimate ≤ `auto_approve_threshold`
+5. Member membership `active` or `past_due`
+6. `compute-ticket-coverage` (use_reserve=false) yields full coverage
+7. No risk flags: ticket count, recent pet adds, ticket velocity within thresholds
 
-**UI**
-- `PaymentPlansPage`: show a "Paused — membership inactive" badge on paused obligations with a one-liner explaining auto-charges are stopped until membership reactivates. Hide the "Next due" date.
-- `AdminMembershipsPage` pause/cancel confirm dialog: mention "Any active BNPL repayment plans for this member will be paused."
+If any fail → route to admin queue with the failed-check reason recorded on the ticket (`auto_approval_blockers` text[]).
 
-## 2. Reframe Reserve as a community pool (UI/copy)
+**Reserve-pool secondary review:** when a ticket is approved but `coverage_breakdown.reserve_use > 0` AND `bnpl_denied_all_providers = true`, set ticket to `awaiting_secondary_review` (new status). Admin must approve before reserve consumption commits.
 
-No data deletion. The `member_reserve_accruals` table stays as the internal accounting ledger, but member-facing surfaces stop presenting it as personal money.
+## 2. Reconsideration request flow
 
-**Member-facing changes**
-- `WalletView.tsx` "My Reserve" card → rename to **"Community Reserve Pool"**. Replace the three tiles (Reserve Balance / Lifetime Accrued / Used) with:
-  - **Access status**: Eligible / Locked (12-month gate unchanged).
-  - **Pool access this year**: amount drawn on the member's tickets year-to-date (and annual cap if their plan defines one).
-  - **Last used**: date of last ticket the pool was drawn for, or "Not used yet."
-- Helper copy:
-  > "The Reserve is a shared community safety net funded by member contributions. Access is discretionary — it's only used after Direct Pay and BNPL on eligible tickets, while funds are available in the pool."
-- `ReserveHistoryPage`: rename header to **"Community Reserve Pool — My Usage"**, subtitle "Times the community pool covered part of your vet ticket." Keep the rows; reword "Total Consumed" → "Total drawn for you."
-- `VetTicketsPage` reserve opt-in card: change "Available: $X" (which today shows the user's per-user remaining) to **"Pool availability: $X"** and add tooltip: "Shared community funds. May change as other members use it."
+New table `ticket_reconsideration_requests`:
+- `ticket_id`, `requester_id`, `reason` text, `status` ('open'|'approved'|'denied'|'needs_info'), `admin_notes`, `resolved_by`, `resolved_at`
 
-**Admin-facing changes**
-- `AdminReservePage`: rename "Member Reserve Accruals" → **"Member Contributions to Reserve Pool"** with subtitle "10% of each membership payment flows into the shared community pool." Rename "Member Reserve Consumptions" → **"Community Reserve Pool Draws"**.
+UI:
+- Denied / reserve-denied tickets show a **"Request reconsideration"** button on `VetTicketsPage` and `ReserveHistoryPage` → modal with reason textarea
+- `AdminVetTicketsPage` gets a **Reconsiderations** tab listing open requests with Approve/Deny/Request more info actions
 
-**No business-logic changes** in this section. The FIFO `consume_reserve_for_ticket` still runs as the accounting mechanism — that's fine, it just isn't surfaced as "your balance" anywhere member-facing anymore.
+Approve flips ticket back to `pending` and admin can then approve via existing flow.
 
-## 3. Auto-approve vet tickets under a threshold
+## 3. Lightweight in-app CMS
 
-**Threshold source**
-- Add `auto_approve_threshold numeric default 500` to `public.referral_program_settings` (already a singleton config table), or create a new `public.platform_settings` row. Simpler: reuse `referral_program_settings`. Configurable from the admin UI later; for now hard-coded default of $500.
+New table `content_blocks`:
+- `key` text unique (e.g. `landing.hero.title`, `membership.benefits`, `partner.fearfree.disclaimer`)
+- `kind` ('text'|'richtext'|'image'|'image_list')
+- `value_text` / `value_json` / `value_image_url`
+- `updated_by`, `updated_at`
 
-**Edge function changes**
-- New internal helper `auto-approve-vet-ticket` (or fold into `submit-vet-ticket`): after a ticket is inserted, if all of the following are true, immediately run the same approval logic the admin runs:
-  1. `attestation_url` is non-null.
-  2. `estimate_amount <= auto_approve_threshold`.
-  3. The member has an `active`/`past_due` membership.
-  4. Coverage (computed via `compute-ticket-coverage` with `use_reserve=false`) yields `dp_use + bnpl_use >= estimate_amount` (no reserve draw needed). If there's any remainder, it's still allowed — that just means the member pays the remainder to Help A Pet, as designed.
-- On auto-approve, set `reviewed_by = NULL`, `admin_notes = 'auto-approved (under threshold + attestation present)'`, and skip the admin-only check in `approve-vet-ticket` for this code path (we'll factor the approval logic into an internal function callable with the service role).
-- Anything failing the gates falls back to the current `submitted` → admin-review flow.
+New role `content_editor` (added to `app_role` enum) so marketing team gets edit access without full admin.
 
-**UI**
-- `VetTicketsPage` empty-state and submit flow: add helper text "Tickets with a vet attestation under $500 are approved automatically. Larger or missing-attestation tickets go to admin review."
-- Admin queue (`AdminVetTicketsPage`) keeps the same review UI for the rest. Add a small "auto-approved" badge in any list that surfaces approved tickets so admins can see what was handled automatically.
+Admin UI: `AdminContentPage` — searchable list of keys grouped by page, inline edit (text/richtext/image upload to existing `behave-media` bucket, drag-reorder for image lists).
 
-## 4. QR-code partner cards
+Wire these surfaces to read from `content_blocks` with a `useContentBlock(key, fallback)` hook so existing copy stays as defaults if no row exists:
+- Landing/marketing pages (hero, sections)
+- Membership feature/benefit lists, pricing copy, partner-sensitive wording
+- Rotating image carousels on home/landing
 
-Out of scope. I'll add a note to project memory so future sessions know this is a planned-but-deferred feature, not something to remove or design around.
+No external CMS dependency.
 
-## Out of scope for this plan
+## 4. Fees & pricing display
 
-- No changes to Stripe Issuing, member-remainder collection, donation splits, or DP accrual math.
-- No removal of the `member_reserve_accruals` table or its FIFO consumption — only renaming/reframing on the surface.
-- QR partner cards — flagged in memory as deferred.
+**Membership pricing (UI only on `PlansPage` and membership marketing):**
+- Base plan fee
+- **Platform fee:** $10/month on monthly billing, $5/month on annual billing
+- **5% transaction fee** shown on donation/payment breakdowns and ticket payment confirmations
+- Show 70/20/10 allocation breakdown clearly
 
-Once approved I'll ship sections 1–3 in one pass: one migration (BNPL pause columns + trigger + settings field), edge function updates (`charge-bnpl-installment`, `process-bnpl-overdue`, `submit-vet-ticket` + a shared approval helper, plus internal-call permission in `approve-vet-ticket`), and the UI rename/copy changes across Wallet, Reserve history, Vet tickets, Payment plans, and Admin reserve/membership pages.
+Add `platform_fee_monthly` / `platform_fee_annual` / `transaction_fee_pct` columns to `membership_plans` (defaults 10/5/0.05) so they're editable per plan. Charge logic in `create-checkout` adds the platform fee line item; donation/ticket flows surface the 5% fee in summaries.
+
+## 5. BNPL via Stripe Checkout (Affirm/Klarna)
+
+Confirm scope: we are **not** building custom Help A Pet financing. All "payment plans" come from Stripe Checkout with `payment_method_types: ['card','affirm','klarna']` (and `afterpay_clearpay` where eligible).
+
+Changes:
+- `pay-bnpl-installment` / new `create-bnpl-checkout` edge function creates a Stripe Checkout Session for the member's remainder with BNPL methods enabled; Stripe returns the real approved plans/terms at checkout — no plan calculation on our side.
+- Remove internal "Help A Pet payment plan" copy from `PaymentPlansPage`; rename to "BNPL Plans (via Stripe)". Card shows: provider (filled in via webhook), term, monthly, status.
+- `stripe-webhook` already handles checkout/invoice events — extend to record the chosen BNPL provider + plan onto `bnpl_obligations` from the session's `payment_method_options`.
+- Keep existing pause-on-membership-inactive logic (Addendum 1) — when paused, our reimbursement charges stop but the member's obligation to the BNPL provider remains with Stripe.
+- Before creating a new BNPL session, check `bnpl_obligations` for open obligations the user already has and surface them in the UI ("You have $X across N open plans currently being reimbursed").
+
+Affirm/Klarna are enabled on the Stripe account by the user; no per-provider API integration on our side.
+
+## 6. Out of scope this round
+- QR partner cards (still deferred)
+- Direct Affirm/Klarna API integrations (covered via Stripe)
+- Donation-split math changes
+- Velocity/abuse ML — we ship simple threshold flags only
+
+## Technical sections
+
+### Migrations
+- `referral_program_settings` add `excluded_procedures text[] default '{}'`, `risk_flag_thresholds jsonb`
+- `vet_tickets` add `auto_approval_blockers text[]`, status enum value `awaiting_secondary_review`
+- `bnpl_obligations` add `provider text`, `plan_term_months int`, `stripe_checkout_session_id text`, `bnpl_denied_all_providers boolean default false`
+- create `ticket_reconsideration_requests`, `content_blocks`
+- add `content_editor` to `app_role`
+- `membership_plans` add `platform_fee_monthly`, `platform_fee_annual`, `transaction_fee_pct`
+- GRANTs + RLS per project convention
+
+### Edge functions
+- Update `submit-vet-ticket`: full auto-approve checklist + risk-flag query + blockers recording
+- Update `approve-vet-ticket`: handle `awaiting_secondary_review` resolution
+- New `create-bnpl-checkout`: builds Stripe Checkout session with `affirm`/`klarna`
+- Update `stripe-webhook`: record provider/term on obligation; emit reconsideration events
+- New `request-reconsideration`, `resolve-reconsideration`
+
+### Frontend
+- `AdminContentPage`, `useContentBlock` hook, image upload helper
+- `AdminVetTicketsPage` — Reconsiderations tab, secondary-review badge
+- `VetTicketsPage` / `ReserveHistoryPage` — reconsideration button + modal
+- `PlansPage` and membership marketing — fee breakdown component
+- `PaymentPlansPage` — "via Stripe BNPL" rename, existing-plan summary, new checkout button

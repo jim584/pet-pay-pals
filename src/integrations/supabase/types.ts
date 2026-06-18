@@ -341,8 +341,10 @@ export type Database = {
           paused_at: string | null
           paused_reason: string | null
           pet_id: string
+          plan_term_months: number | null
           provider: string
           status: Database["public"]["Enums"]["bnpl_obligation_status"]
+          stripe_checkout_session_id: string | null
           stripe_payment_intent_id: string | null
           ticket_id: string
           updated_at: string
@@ -364,8 +366,10 @@ export type Database = {
           paused_at?: string | null
           paused_reason?: string | null
           pet_id: string
+          plan_term_months?: number | null
           provider?: string
           status?: Database["public"]["Enums"]["bnpl_obligation_status"]
+          stripe_checkout_session_id?: string | null
           stripe_payment_intent_id?: string | null
           ticket_id: string
           updated_at?: string
@@ -387,8 +391,10 @@ export type Database = {
           paused_at?: string | null
           paused_reason?: string | null
           pet_id?: string
+          plan_term_months?: number | null
           provider?: string
           status?: Database["public"]["Enums"]["bnpl_obligation_status"]
+          stripe_checkout_session_id?: string | null
           stripe_payment_intent_id?: string | null
           ticket_id?: string
           updated_at?: string
@@ -543,6 +549,42 @@ export type Database = {
           balance?: number
           id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      content_blocks: {
+        Row: {
+          created_at: string
+          id: string
+          key: string
+          kind: string
+          updated_at: string
+          updated_by: string | null
+          value_image_url: string | null
+          value_json: Json | null
+          value_text: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key: string
+          kind?: string
+          updated_at?: string
+          updated_by?: string | null
+          value_image_url?: string | null
+          value_json?: Json | null
+          value_text?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key?: string
+          kind?: string
+          updated_at?: string
+          updated_by?: string | null
+          value_image_url?: string | null
+          value_json?: Json | null
+          value_text?: string | null
         }
         Relationships: []
       }
@@ -889,6 +931,8 @@ export type Database = {
           plan_cap: number | null
           plan_code: string
           platform_fee: number
+          platform_fee_annual: number | null
+          platform_fee_monthly: number | null
           reserve_portion: number
           species: string
           stripe_platform_price_id_monthly: string | null
@@ -896,6 +940,7 @@ export type Database = {
           stripe_price_id_monthly: string | null
           tier: string
           tier_label: string
+          transaction_fee_pct: number | null
           updated_at: string
         }
         Insert: {
@@ -918,6 +963,8 @@ export type Database = {
           plan_cap?: number | null
           plan_code: string
           platform_fee: number
+          platform_fee_annual?: number | null
+          platform_fee_monthly?: number | null
           reserve_portion: number
           species: string
           stripe_platform_price_id_monthly?: string | null
@@ -925,6 +972,7 @@ export type Database = {
           stripe_price_id_monthly?: string | null
           tier: string
           tier_label: string
+          transaction_fee_pct?: number | null
           updated_at?: string
         }
         Update: {
@@ -947,6 +995,8 @@ export type Database = {
           plan_cap?: number | null
           plan_code?: string
           platform_fee?: number
+          platform_fee_annual?: number | null
+          platform_fee_monthly?: number | null
           reserve_portion?: number
           species?: string
           stripe_platform_price_id_monthly?: string | null
@@ -954,6 +1004,7 @@ export type Database = {
           stripe_price_id_monthly?: string | null
           tier?: string
           tier_label?: string
+          transaction_fee_pct?: number | null
           updated_at?: string
         }
         Relationships: []
@@ -1428,29 +1479,35 @@ export type Database = {
       referral_program_settings: {
         Row: {
           auto_approve_ticket_threshold: number
+          excluded_procedures: string[] | null
           hold_days: number
           id: string
           intro_months: number
           intro_rate: number
           ongoing_rate: number
+          risk_flag_thresholds: Json | null
           updated_at: string
         }
         Insert: {
           auto_approve_ticket_threshold?: number
+          excluded_procedures?: string[] | null
           hold_days?: number
           id?: string
           intro_months?: number
           intro_rate?: number
           ongoing_rate?: number
+          risk_flag_thresholds?: Json | null
           updated_at?: string
         }
         Update: {
           auto_approve_ticket_threshold?: number
+          excluded_procedures?: string[] | null
           hold_days?: number
           id?: string
           intro_months?: number
           intro_rate?: number
           ongoing_rate?: number
+          risk_flag_thresholds?: Json | null
           updated_at?: string
         }
         Relationships: []
@@ -1926,6 +1983,53 @@ export type Database = {
         }
         Relationships: []
       }
+      ticket_reconsideration_requests: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          id: string
+          reason: string
+          requester_id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          ticket_id: string
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          id?: string
+          reason: string
+          requester_id: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          ticket_id: string
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          id?: string
+          reason?: string
+          requester_id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          ticket_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_reconsideration_requests_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "vet_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -2103,6 +2207,8 @@ export type Database = {
           approved_amount: number | null
           attestation_url: string | null
           authorized_until: string | null
+          auto_approval_blockers: string[] | null
+          bnpl_denied_all_providers: boolean | null
           card_id: string | null
           clinic_merchant_id: string | null
           clinic_name: string
@@ -2132,6 +2238,8 @@ export type Database = {
           approved_amount?: number | null
           attestation_url?: string | null
           authorized_until?: string | null
+          auto_approval_blockers?: string[] | null
+          bnpl_denied_all_providers?: boolean | null
           card_id?: string | null
           clinic_merchant_id?: string | null
           clinic_name: string
@@ -2161,6 +2269,8 @@ export type Database = {
           approved_amount?: number | null
           attestation_url?: string | null
           authorized_until?: string | null
+          auto_approval_blockers?: string[] | null
+          bnpl_denied_all_providers?: boolean | null
           card_id?: string | null
           clinic_merchant_id?: string | null
           clinic_name?: string
@@ -2462,7 +2572,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "pet_owner" | "vet" | "admin"
+      app_role: "pet_owner" | "vet" | "admin" | "content_editor"
       bnpl_obligation_status:
         | "pending"
         | "active"
@@ -2493,6 +2603,8 @@ export type Database = {
         | "settled"
         | "expired"
         | "cancelled"
+        | "awaiting_secondary_review"
+        | "auto_approved"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2620,7 +2732,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["pet_owner", "vet", "admin"],
+      app_role: ["pet_owner", "vet", "admin", "content_editor"],
       bnpl_obligation_status: [
         "pending",
         "active",
@@ -2648,6 +2760,8 @@ export const Constants = {
         "settled",
         "expired",
         "cancelled",
+        "awaiting_secondary_review",
+        "auto_approved",
       ],
     },
   },
