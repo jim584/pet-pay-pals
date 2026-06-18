@@ -492,7 +492,9 @@ function AdminTicketCard({
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 rounded-md border p-3 bg-muted/30">
                 {(["dp_use", "bnpl_use", "reserve_use", "member_remainder"] as const).map((k) => (
                   <div key={k}>
-                    <Label className="text-xs capitalize">{k.replace("_", " ")}</Label>
+                    <Label className="text-xs capitalize">
+                      {k === "member_remainder" ? "Member remainder (charged by Help A Pet)" : k.replace("_", " ")}
+                    </Label>
                     <Input type="number" step="0.01" value={Number((breakdown as any)[k] ?? 0)}
                       onChange={(e) => setField(k, Number(e.target.value))} />
                   </div>

@@ -216,17 +216,22 @@ export function VetDashboardHome() {
                     </div>
                   </div>
                   {b && (
-                    <div className="rounded-md border p-3 bg-muted/30 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1 text-xs">
-                      <div><span className="text-muted-foreground block">Direct Pay</span><span className="font-medium">${Number(b.dp_use ?? 0).toFixed(2)}</span></div>
-                      <div><span className="text-muted-foreground block">BNPL</span><span className="font-medium">${Number(b.bnpl_use ?? 0).toFixed(2)}</span></div>
-                      <div><span className="text-muted-foreground block">Reserve</span><span className="font-medium">${Number(b.reserve_use ?? 0).toFixed(2)}</span></div>
-                      <div><span className="text-muted-foreground block">Owner portion</span><span className="font-medium">${Number(b.member_remainder ?? 0).toFixed(2)}</span></div>
-                      {b.plan_tier && (
-                        <div className="col-span-2 sm:col-span-4 text-muted-foreground pt-1 border-t">
-                          Plan: {b.plan_tier} · Year cap remaining: {b.plan_year_cap_remaining == null ? "∞" : `$${Number(b.plan_year_cap_remaining).toFixed(2)}`} · DP available: ${Number(b.dp_available ?? 0).toFixed(2)}
-                        </div>
-                      )}
-                    </div>
+                    <>
+                      <div className="rounded-md border p-3 bg-muted/30 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1 text-xs">
+                        <div><span className="text-muted-foreground block">Direct Pay</span><span className="font-medium">${Number(b.dp_use ?? 0).toFixed(2)}</span></div>
+                        <div><span className="text-muted-foreground block">BNPL</span><span className="font-medium">${Number(b.bnpl_use ?? 0).toFixed(2)}</span></div>
+                        <div><span className="text-muted-foreground block">Reserve</span><span className="font-medium">${Number(b.reserve_use ?? 0).toFixed(2)}</span></div>
+                        <div><span className="text-muted-foreground block">Collected by Help A Pet</span><span className="font-medium">${Number(b.member_remainder ?? 0).toFixed(2)}</span></div>
+                        {b.plan_tier && (
+                          <div className="col-span-2 sm:col-span-4 text-muted-foreground pt-1 border-t">
+                            Plan: {b.plan_tier} · Year cap remaining: {b.plan_year_cap_remaining == null ? "∞" : `$${Number(b.plan_year_cap_remaining).toFixed(2)}`} · DP available: ${Number(b.dp_available ?? 0).toFixed(2)}
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        You don't collect any of this from the pet owner. Once funded, Help A Pet pays you via a Visa card issued to this ticket.
+                      </p>
+                    </>
                   )}
                 </div>
                 );

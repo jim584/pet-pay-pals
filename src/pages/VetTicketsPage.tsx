@@ -408,7 +408,7 @@ function TicketCard({ ticket, onChanged }: { ticket: VetTicket; onChanged: () =>
             <span className="text-muted-foreground">Direct Pay</span><span>{fmt(b.dp_use)}</span>
             <span className="text-muted-foreground">BNPL</span><span>{fmt(b.bnpl_use)}</span>
             <span className="text-muted-foreground">Reserve</span><span>{fmt(b.reserve_use)}</span>
-            <span className="text-muted-foreground">Your portion</span><span className="font-medium">{fmt(b.member_remainder)}</span>
+            <span className="text-muted-foreground">Your portion (paid to Help A Pet)</span><span className="font-medium">{fmt(b.member_remainder)}</span>
           </div>
         )}
 
@@ -461,24 +461,34 @@ function TicketCard({ ticket, onChanged }: { ticket: VetTicket; onChanged: () =>
         )}
 
         {ticket.status === "approved" && Number(b?.member_remainder ?? 0) > 0 && (
-          <Button onClick={payRemainder} disabled={paying}>
-            {paying && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
-            Pay your portion ({fmt(b?.member_remainder)})
-          </Button>
+          <div className="space-y-1">
+            <Button onClick={payRemainder} disabled={paying}>
+              {paying && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+              Pay your portion to Help A Pet ({fmt(b?.member_remainder)})
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              We charge your card on file. Once paid, Help A Pet issues a Visa card that the clinic runs as a normal card transaction.
+            </p>
+          </div>
         )}
 
         {ticket.status === "funded" && (
           <p className="text-xs text-muted-foreground flex items-center gap-1">
-            <ExternalLink className="h-3 w-3" /> Funded — issuing your vet card now…
+            <ExternalLink className="h-3 w-3" /> Funded — Help A Pet is issuing the clinic's Visa card now.
           </p>
         )}
 
         {(ticket.status === "card_issued" || ticket.status === "settled") && (
-          <Button asChild size="sm">
-            <a href={`/vet-tickets/${ticket.id}/card`}>
-              View vet card
-            </a>
-          </Button>
+          <div className="space-y-1">
+            <Button asChild size="sm">
+              <a href={`/vet-tickets/${ticket.id}/card`}>
+                View vet card
+              </a>
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Share the card details with your clinic — they run it like any other Visa.
+            </p>
+          </div>
         )}
       </CardContent>
     </Card>

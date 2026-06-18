@@ -1,32 +1,49 @@
-## Problem
+## Background
 
-When a vet clicks the **Estimate** (or Attestation) button on an incoming ticket, Supabase Storage replies "Object not found". The signed-URL call fails because the storage policies on the `vet-tickets` bucket only allow:
+Good news: the **backend flow already matches the developer notes**. Today:
 
-- The uploader (path's first folder = `auth.uid()`), or
-- Admins, or
-- Ticket-message attachments (path starts with `messages/`)
+- `compute-ticket-coverage` calculates Direct Pay, BNPL, Reserve, and member remainder.
+- When an admin approves, `approve-vet-ticket` either marks the ticket `funded` (no remainder) or `approved` (remainder due).
+- If a remainder is due, the **member** clicks **Pay your portion**, which calls `collect-member-remainder` → opens a Stripe Checkout charging the member to **Help A Pet's** account (not to the vet).
+- When the Stripe webhook receives payment, ticket flips to `funded` and `issue-vet-card` is invoked to mint a **Stripe-issued virtual card** scoped to the approved amount. The vet runs that as a normal Visa transaction. A physical card can also be requested.
+- The vet never collects the remainder. There's no vet-side "charge member" UI anywhere in the code.
 
-The pet owner's estimate/attestation files are stored at `{owner_id}/...`, so an assigned vet can't read them and `createSignedUrl` returns "object not found" (RLS-denied rows are reported as not-found by Storage).
+So no business-logic, DB, or payments-plumbing change is needed. The gap is **UX/copy** — labels and microcopy on three surfaces still imply the vet might collect from the owner, or don't explain to the vet that they'll be paid via a Help A Pet card.
 
-## Fix
+## Changes (UI/copy only)
 
-Add a new `SELECT` RLS policy on `storage.objects` so any user who can access the ticket (vet or admin, via `public.can_access_vet_ticket`) can read the ticket's `estimate_url` / `attestation_url` objects.
+### 1. Vet dashboard (`src/components/vet/VetDashboardHome.tsx`)
 
-### Migration
+In the incoming-ticket coverage breakdown:
 
-```sql
-CREATE POLICY "Ticket participants read estimate and attestation"
-ON storage.objects FOR SELECT TO authenticated
-USING (
-  bucket_id = 'vet-tickets'
-  AND EXISTS (
-    SELECT 1 FROM public.vet_tickets t
-    WHERE (t.estimate_url = storage.objects.name OR t.attestation_url = storage.objects.name)
-      AND public.can_access_vet_ticket(t.id, auth.uid())
-  )
-);
-```
+- Rename **"Owner portion"** → **"Collected by Help A Pet"**.
+- Add a one-line note under the breakdown:
+  > "You don't collect any of this from the pet owner. Once funded, Help A Pet pays you via a Visa card issued to this ticket."
 
-This piggybacks on the existing `can_access_vet_ticket` security-definer function (owner, assigned vet, or admin) and matches by exact stored path. Owner and admin already had access via other policies — this just unlocks the assigned vet.
+### 2. Admin ticket review (`src/pages/AdminVetTicketsPage.tsx`)
 
-No client or edge function changes needed. After the migration applies, the vet's Estimate button will open the file.
+The editable coverage grid currently labels the field `member remainder`. Keep the field key, but render the label as **"Member remainder (charged by Help A Pet)"** so admins and any vet who later sees this know the source.
+
+### 3. Member ticket card (`src/pages/VetTicketsPage.tsx`)
+
+The member-facing TicketCard already routes the remainder to Help A Pet, but the wording is generic. Update:
+
+- Breakdown row: **"Your portion"** → **"Your portion (paid to Help A Pet)"**.
+- Button: **"Pay your portion"** → **"Pay your portion to Help A Pet"**.
+- Below the button, add a short helper line:
+  > "We charge your card on file. Once paid, Help A Pet issues a Visa card that the clinic runs as a normal card transaction."
+- On `status === "funded"` and `card_issued`, tighten the existing copy:
+  - `funded`: "Funded — Help A Pet is issuing the clinic's Visa card now."
+  - `card_issued`: keep the existing "View vet card" CTA, plus a single line: "Share the card details with your clinic — they run it like any other Visa."
+
+### 4. Vet card detail (`src/pages/VetCardPage.tsx`)
+
+Add a single helper line near the card details:
+> "Hand these card details to the clinic. They process it as a standard Visa transaction — no special software or onboarding required."
+
+## Out of scope
+
+- No changes to `compute-ticket-coverage`, `approve-vet-ticket`, `collect-member-remainder`, `issue-vet-card`, `stripe-webhook`, or any database table/policy. The flow is already correct.
+- No changes to BNPL allocation, reserve logic, or fee splits.
+
+Once approved I'll make these copy changes in one pass.
