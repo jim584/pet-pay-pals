@@ -155,7 +155,7 @@ export function WalletView() {
               not a personal balance. Access is discretionary and only kicks in <strong>after</strong> Direct
               Pay and BNPL on eligible tickets, while pool funds are available.
             </p>
-            )}
+
           </CardContent>
         </Card>
       )}
