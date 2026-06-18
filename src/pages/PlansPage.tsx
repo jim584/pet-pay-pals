@@ -190,6 +190,20 @@ export default function PlansPage() {
         </div>
       </div>
 
+      <Card className="bg-muted/40 border-dashed">
+        <CardContent className="p-5 text-sm space-y-1">
+          <h3 className="font-semibold font-display">How fees work</h3>
+          <ul className="text-muted-foreground space-y-0.5 list-disc list-inside">
+            <li><strong>Base membership fee</strong> — set per plan above.</li>
+            <li><strong>Platform fee:</strong> $10/month on monthly billing, $5/month on annual billing (saves you $60/year).</li>
+            <li><strong>Transaction fee:</strong> 5% applied to donations and member payments processed through Help A Pet.</li>
+            <li><strong>Allocation of your membership:</strong> 70% Direct Pay (your vet care), 20% Community Reserve Pool, 10% admin/operations.</li>
+          </ul>
+        </CardContent>
+      </Card>
+
+
+
       {loadingPlans ? (
         <div className="text-muted-foreground animate-pulse">Loading plans…</div>
       ) : (
