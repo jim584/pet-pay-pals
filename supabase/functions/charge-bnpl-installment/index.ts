@@ -34,10 +34,19 @@ Deno.serve(async (req) => {
     }
 
     const { data: ob } = await admin.from("bnpl_obligations")
-      .select("id, owner_id, status, auto_pay_enabled")
+      .select("id, owner_id, status, auto_pay_enabled, paused")
       .eq("id", inst.obligation_id).maybeSingle();
     if (!ob || !ob.auto_pay_enabled || !["pending", "active"].includes(ob.status)) {
       return new Response(JSON.stringify({ skipped: "obligation_not_chargeable" }), { status: 200, headers: corsHeaders });
+    }
+    if (ob.paused) {
+      return new Response(JSON.stringify({ skipped: "obligation_paused" }), { status: 200, headers: corsHeaders });
+    }
+    // Belt-and-suspenders: require an active/past_due membership to autopay.
+    const { data: activeMem } = await admin.from("memberships")
+      .select("id").eq("user_id", ob.owner_id).in("status", ["active", "past_due"]).limit(1).maybeSingle();
+    if (!activeMem) {
+      return new Response(JSON.stringify({ skipped: "membership_inactive" }), { status: 200, headers: corsHeaders });
     }
 
     const { data: profile } = await admin.from("profiles")
