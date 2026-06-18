@@ -168,13 +168,19 @@ Deno.serve(async (req) => {
     breakdown.reserve_validated_server_side = true;
 
     const finalApproved = +(dpUse + bnplUse + Number(breakdown.reserve_use ?? 0) + Number(breakdown.member_remainder ?? 0)).toFixed(2);
-    const newStatus = Number(breakdown.member_remainder ?? 0) > 0 ? "approved" : "funded";
+
+    // Secondary review trigger: reserve consumed AND member was denied by all BNPL providers.
+    // Admin-initiated approvals pass through; auto/internal callers are flagged for review.
+    const needsSecondaryReview = Number(breakdown.reserve_use ?? 0) > 0 && !!ticket.bnpl_denied_all_providers && isInternal;
+    const newStatus = needsSecondaryReview
+      ? "awaiting_secondary_review"
+      : (Number(breakdown.member_remainder ?? 0) > 0 ? "approved" : "funded");
 
     await admin.from("vet_tickets").update({
       status: newStatus,
       coverage_breakdown: breakdown,
       approved_amount: finalApproved,
-      admin_notes: admin_notes ?? (auto_approved ? "auto-approved (under threshold + attestation present)" : null),
+      admin_notes: admin_notes ?? (auto_approved ? "auto-approved (full checklist passed)" : null),
       reviewed_by: userId,
       reviewed_at: new Date().toISOString(),
     }).eq("id", ticket_id);
