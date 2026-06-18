@@ -15,9 +15,12 @@ export interface MyObligation {
   default_at: string | null;
   created_at: string;
   auto_pay_enabled?: boolean;
+  paused?: boolean;
+  paused_reason?: string | null;
   clinic_name?: string | null;
   estimate_amount?: number | null;
 }
+
 
 export interface MyInstallment {
   id: string;

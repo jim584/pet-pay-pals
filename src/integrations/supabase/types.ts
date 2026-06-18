@@ -337,6 +337,9 @@ export type Database = {
           original_amount: number
           outstanding_amount: number
           owner_id: string
+          paused: boolean
+          paused_at: string | null
+          paused_reason: string | null
           pet_id: string
           provider: string
           status: Database["public"]["Enums"]["bnpl_obligation_status"]
@@ -357,6 +360,9 @@ export type Database = {
           original_amount: number
           outstanding_amount: number
           owner_id: string
+          paused?: boolean
+          paused_at?: string | null
+          paused_reason?: string | null
           pet_id: string
           provider?: string
           status?: Database["public"]["Enums"]["bnpl_obligation_status"]
@@ -377,6 +383,9 @@ export type Database = {
           original_amount?: number
           outstanding_amount?: number
           owner_id?: string
+          paused?: boolean
+          paused_at?: string | null
+          paused_reason?: string | null
           pet_id?: string
           provider?: string
           status?: Database["public"]["Enums"]["bnpl_obligation_status"]
@@ -1418,6 +1427,7 @@ export type Database = {
       }
       referral_program_settings: {
         Row: {
+          auto_approve_ticket_threshold: number
           hold_days: number
           id: string
           intro_months: number
@@ -1426,6 +1436,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          auto_approve_ticket_threshold?: number
           hold_days?: number
           id?: string
           intro_months?: number
@@ -1434,6 +1445,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          auto_approve_ticket_threshold?: number
           hold_days?: number
           id?: string
           intro_months?: number
@@ -2437,6 +2449,10 @@ export type Database = {
       }
       set_status_context: {
         Args: { _changer: string; _source: string }
+        Returns: undefined
+      }
+      sync_bnpl_paused_for_user: {
+        Args: { _user_id: string }
         Returns: undefined
       }
       user_has_any_role: { Args: { _user_id: string }; Returns: boolean }

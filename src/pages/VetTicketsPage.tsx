@@ -69,7 +69,8 @@ function OwnerVetTicketsView() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Vet Tickets</h1>
-          <p className="text-sm text-muted-foreground">Submit a vet bill for coverage from your plan.</p>
+          <p className="text-sm text-muted-foreground">Submit a vet bill for coverage from your plan. Use any clinic you like — Fear Free certified, your local vet, or a national chain like Banfield.</p>
+          <p className="text-xs text-muted-foreground mt-1">Tickets <strong>under $500</strong> with the vet attestation attached are <strong>approved automatically</strong>. Larger tickets or those missing an attestation go to admin review.</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
@@ -229,7 +230,7 @@ function NewTicketDialog({ pets, clinics, onCreated }: {
       let attestationUrl: string | null = null;
       if (estimateFile) estimateUrl = await uploadTicketFile(user.id, estimateFile, "estimate");
       if (attestationFile) attestationUrl = await uploadTicketFile(user.id, attestationFile, "attestation");
-      await submitVetTicket({
+      const res = await submitVetTicket({
         pet_id: petId,
         clinic_name: effectiveClinicName,
         vet_profile_id: effectiveVetProfileId,
@@ -238,10 +239,12 @@ function NewTicketDialog({ pets, clinics, onCreated }: {
         notes: notes || null,
       });
       toast({
-        title: "Ticket submitted",
-        description: effectiveVetProfileId
-          ? "Sent to your clinic and our admin team for review."
-          : "Sent to our admin team for review (clinic isn't on Help A Pet yet).",
+        title: res.auto_approved ? "Ticket auto-approved" : "Ticket submitted",
+        description: res.auto_approved
+          ? "Your attestation met the small-ticket auto-approval rules. Check your ticket for next steps."
+          : effectiveVetProfileId
+            ? "Sent to your clinic and our admin team for review."
+            : "Sent to our admin team for review (clinic isn't on Help A Pet yet).",
       });
       onCreated();
     } catch (e: any) {
@@ -407,22 +410,23 @@ function TicketCard({ ticket, onChanged }: { ticket: VetTicket; onChanged: () =>
           <div className="rounded-md border p-3 bg-muted/30 grid grid-cols-2 gap-x-4 gap-y-1">
             <span className="text-muted-foreground">Direct Pay</span><span>{fmt(b.dp_use)}</span>
             <span className="text-muted-foreground">BNPL</span><span>{fmt(b.bnpl_use)}</span>
-            <span className="text-muted-foreground">Reserve</span><span>{fmt(b.reserve_use)}</span>
+            <span className="text-muted-foreground">Reserve pool</span><span>{fmt(b.reserve_use)}</span>
             <span className="text-muted-foreground">Your portion (paid to Help A Pet)</span><span className="font-medium">{fmt(b.member_remainder)}</span>
           </div>
         )}
 
-        {/* Reserve opt-in toggle (pending/under-review only) */}
+        {/* Reserve pool opt-in toggle (pending/under-review only) */}
         {["submitted", "under_review"].includes(ticket.status) && b && (
           <div className="rounded-md border p-3 space-y-2">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-start gap-2">
                 <ShieldCheck className="h-4 w-4 mt-0.5 text-primary shrink-0" />
                 <div>
-                  <p className="text-sm font-medium">Use my Reserve as a fallback</p>
+                  <p className="text-sm font-medium">Request the Community Reserve Pool as a fallback</p>
                   <p className="text-xs text-muted-foreground">
-                    Reserve is a limited safety net. It's only used <strong>after</strong> Direct Pay and BNPL
-                    can't cover the full amount.
+                    The Reserve is a shared community pool — not a personal balance. It's discretionary
+                    and only used <strong>after</strong> Direct Pay and BNPL can't cover the full amount,
+                    while pool funds are available.
                   </p>
                 </div>
               </div>
@@ -433,12 +437,14 @@ function TicketCard({ ticket, onChanged }: { ticket: VetTicket; onChanged: () =>
               />
             </div>
             <div className="flex flex-wrap gap-2 text-xs">
-              <Badge variant="outline">Available: {fmt(b.reserve_available ?? 0)}</Badge>
+              <Badge variant="outline" title="Shared community funds. May change as other members use the pool.">
+                Pool availability: {fmt(b.reserve_available ?? 0)}
+              </Badge>
               {b.reserve_eligible
                 ? <Badge variant="secondary">Eligible</Badge>
                 : <Badge variant="outline" className="text-muted-foreground">Not yet eligible</Badge>}
               {useReserve && Number(b.reserve_use) > 0 && (
-                <Badge>Will use {fmt(b.reserve_use)}</Badge>
+                <Badge>Will draw {fmt(b.reserve_use)}</Badge>
               )}
             </div>
             {b.reserve_blocked_reason && (
@@ -449,7 +455,7 @@ function TicketCard({ ticket, onChanged }: { ticket: VetTicket; onChanged: () =>
             {!b.reserve_eligible && !b.reserve_blocked_reason && (
               <p className="text-xs text-muted-foreground flex items-start gap-1">
                 <Info className="h-3 w-3 mt-0.5" />
-                Reserve unlocks after 12 consecutive months of paid membership.
+                Reserve pool access unlocks after 12 consecutive months of paid membership.
               </p>
             )}
           </div>

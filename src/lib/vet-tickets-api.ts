@@ -80,10 +80,10 @@ export async function submitVetTicket(args: {
   pet_id: string; clinic_name: string; estimate_amount: number;
   vet_profile_id?: string | null; estimate_url?: string | null;
   attestation_url?: string | null; notes?: string | null;
-}): Promise<VetTicket> {
+}): Promise<{ ticket: VetTicket; auto_approved: boolean }> {
   const { data, error } = await supabase.functions.invoke("submit-vet-ticket", { body: args });
   if (error) throw error;
-  return data.ticket as VetTicket;
+  return { ticket: data.ticket as VetTicket, auto_approved: !!data.auto_approved };
 }
 
 export async function listMyTickets(userId: string): Promise<VetTicket[]> {

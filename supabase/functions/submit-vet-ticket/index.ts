@@ -69,7 +69,48 @@ Deno.serve(async (req) => {
     }).select().single();
     if (error) throw error;
 
-    return new Response(JSON.stringify({ ticket }),
+    // Auto-approve gate: small tickets with an attestation, active membership, no reserve needed.
+    let autoApproved = false;
+    try {
+      const { data: settings } = await admin
+        .from("referral_program_settings")
+        .select("auto_approve_ticket_threshold")
+        .limit(1).maybeSingle();
+      const threshold = Number((settings as any)?.auto_approve_ticket_threshold ?? 500);
+      const hasAttestation = !!attestation_url;
+      const hasActiveMembership = !!membership?.id;
+      if (hasAttestation && hasActiveMembership && Number(estimate_amount) <= threshold) {
+        // Compute coverage server-side via the same admin client.
+        const coverageRes = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/compute-ticket-coverage`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": authHeader,
+          },
+          body: JSON.stringify({ ticket_id: ticket.id, use_reserve: false }),
+        });
+        const coverageJson = await coverageRes.json().catch(() => ({}));
+        const breakdown = coverageJson?.breakdown;
+        if (breakdown) {
+          const approveRes = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/approve-vet-ticket`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              ticket_id: ticket.id,
+              breakdown,
+              auto_approved: true,
+              internal_secret: Deno.env.get("INTERNAL_FUNCTION_SECRET"),
+            }),
+          });
+          const approveJson = await approveRes.json().catch(() => ({}));
+          autoApproved = !!approveJson?.ok;
+        }
+      }
+    } catch (e) {
+      console.error("auto-approve attempt failed (ticket stays in admin review):", e);
+    }
+
+    return new Response(JSON.stringify({ ticket, auto_approved: autoApproved }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     console.error("submit-vet-ticket error:", e);

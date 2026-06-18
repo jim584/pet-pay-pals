@@ -278,9 +278,9 @@ export default function AdminReservePage() {
       <Card>
         <CardHeader className="flex flex-row items-start justify-between gap-3 flex-wrap">
           <div>
-            <CardTitle className="text-lg font-display">Member Reserve Accruals</CardTitle>
+            <CardTitle className="text-lg font-display">Member Contributions to Reserve Pool</CardTitle>
             <p className="text-xs text-muted-foreground mt-1">
-              10% of each membership invoice is allocated to the member's personal Reserve. Latest 200.
+              10% of each membership invoice flows into the shared community reserve pool. This ledger tracks contributions for accounting only — members do not have individual reserve balances. Latest 200.
             </p>
           </div>
           <Input
@@ -294,7 +294,7 @@ export default function AdminReservePage() {
           {loading ? (
             <div className="space-y-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
           ) : memberAccruals.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6">No member reserve accruals yet.</p>
+            <p className="text-sm text-muted-foreground text-center py-6">No member contributions to the reserve pool yet.</p>
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -326,8 +326,8 @@ export default function AdminReservePage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg font-display">Member Reserve Consumptions</CardTitle>
-          <p className="text-xs text-muted-foreground">FIFO draws against member reserves when used as ticket fallback. Latest 200.</p>
+          <CardTitle className="text-lg font-display">Community Reserve Pool Draws</CardTitle>
+          <p className="text-xs text-muted-foreground">FIFO draws from the community pool when used as a ticket fallback. Latest 200.</p>
         </CardHeader>
         <CardContent>
           {loading ? (
