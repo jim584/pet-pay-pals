@@ -2462,7 +2462,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "pet_owner" | "vet" | "admin"
+      app_role: "pet_owner" | "vet" | "admin" | "content_editor"
       bnpl_obligation_status:
         | "pending"
         | "active"
@@ -2493,6 +2493,8 @@ export type Database = {
         | "settled"
         | "expired"
         | "cancelled"
+        | "awaiting_secondary_review"
+        | "auto_approved"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2620,7 +2622,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["pet_owner", "vet", "admin"],
+      app_role: ["pet_owner", "vet", "admin", "content_editor"],
       bnpl_obligation_status: [
         "pending",
         "active",
@@ -2648,6 +2650,8 @@ export const Constants = {
         "settled",
         "expired",
         "cancelled",
+        "awaiting_secondary_review",
+        "auto_approved",
       ],
     },
   },
