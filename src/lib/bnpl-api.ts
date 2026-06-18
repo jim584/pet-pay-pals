@@ -19,6 +19,8 @@ export interface MyObligation {
   paused_reason?: string | null;
   clinic_name?: string | null;
   estimate_amount?: number | null;
+}
+
 
 export interface MyInstallment {
   id: string;
