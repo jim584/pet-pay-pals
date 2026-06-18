@@ -131,8 +131,7 @@ export default function VetCardPage() {
               </div>
 
               <div className="text-sm text-muted-foreground">
-                Show this card to the clinic. They run it like any other card. The card automatically freezes after settlement
-                or when the window closes.
+                Hand these card details to the clinic. They process it as a standard Visa transaction — no special software or onboarding required. The card automatically freezes after settlement or when the window closes.
               </div>
             </>
           )}
