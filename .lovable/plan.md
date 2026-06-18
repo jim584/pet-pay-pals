@@ -1,52 +1,32 @@
 ## Problem
 
-Clicking "Add/Remove" role on an admin's Users page fails with an edge function error. The `admin-assign-role` function returns **401 Unauthorized** before doing anything.
+When a vet clicks the **Estimate** (or Attestation) button on an incoming ticket, Supabase Storage replies "Object not found". The signed-URL call fails because the storage policies on the `vet-tickets` bucket only allow:
 
-**Root cause:** The function pins `https://esm.sh/@supabase/supabase-js@2.49.1`, which bundles `@supabase/auth-js@2.68.0`. That version does **not** include the `auth.getClaims()` method (it was added in auth-js 2.71). So the call
+- The uploader (path's first folder = `auth.uid()`), or
+- Admins, or
+- Ticket-message attachments (path starts with `messages/`)
 
-```ts
-const { data: claims } = await supabase.auth.getClaims(token);
-if (!claims?.claims) return 401;
-```
-
-throws/returns undefined and the request is rejected before the admin check ever runs. (No logs appear because the runtime swallows the error and the response is the early 401.)
-
-The same bug exists in several other edge functions that use `getClaims` with the 2.49.1 SDK (`admin-update-membership`, `approve-vet-ticket`, `reject-vet-ticket`, `pay-bnpl-installment`, `collect-member-remainder`, `get-card-ephemeral-key`, `issue-vet-card`, `request-physical-vet-card`). Several of those are likely also failing silently for admins/users.
+The pet owner's estimate/attestation files are stored at `{owner_id}/...`, so an assigned vet can't read them and `createSignedUrl` returns "object not found" (RLS-denied rows are reported as not-found by Storage).
 
 ## Fix
 
-Replace `auth.getClaims(token)` with `auth.getUser(token)` (which exists in the bundled SDK and returns the authenticated user from the JWT). It does the same job here — verify the token and pull the caller's user id.
+Add a new `SELECT` RLS policy on `storage.objects` so any user who can access the ticket (vet or admin, via `public.can_access_vet_ticket`) can read the ticket's `estimate_url` / `attestation_url` objects.
 
-In every affected edge function, change:
+### Migration
 
-```ts
-const { data: claims } = await supabase.auth.getClaims(token);
-if (!claims?.claims) return 401;
-const callerId = claims.claims.sub as string;
+```sql
+CREATE POLICY "Ticket participants read estimate and attestation"
+ON storage.objects FOR SELECT TO authenticated
+USING (
+  bucket_id = 'vet-tickets'
+  AND EXISTS (
+    SELECT 1 FROM public.vet_tickets t
+    WHERE (t.estimate_url = storage.objects.name OR t.attestation_url = storage.objects.name)
+      AND public.can_access_vet_ticket(t.id, auth.uid())
+  )
+);
 ```
 
-to:
+This piggybacks on the existing `can_access_vet_ticket` security-definer function (owner, assigned vet, or admin) and matches by exact stored path. Owner and admin already had access via other policies — this just unlocks the assigned vet.
 
-```ts
-const { data: userData, error: userErr } = await supabase.auth.getUser(token);
-if (userErr || !userData?.user) return 401;
-const callerId = userData.user.id;
-```
-
-### Files to update
-
-1. `supabase/functions/admin-assign-role/index.ts` — primary fix for the reported bug.
-2. `supabase/functions/admin-update-membership/index.ts`
-3. `supabase/functions/approve-vet-ticket/index.ts`
-4. `supabase/functions/reject-vet-ticket/index.ts`
-5. `supabase/functions/pay-bnpl-installment/index.ts`
-6. `supabase/functions/collect-member-remainder/index.ts`
-7. `supabase/functions/get-card-ephemeral-key/index.ts`
-8. `supabase/functions/issue-vet-card/index.ts`
-9. `supabase/functions/request-physical-vet-card/index.ts`
-
-No client/UI or DB changes needed. Functions auto-deploy.
-
-## Verification
-
-After the change, re-test from the admin Users page (Add Vet → Remove Vet). Should succeed and the user's roles list updates.
+No client or edge function changes needed. After the migration applies, the vet's Estimate button will open the file.
