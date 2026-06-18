@@ -12,32 +12,38 @@ const DP_WINDOW_MONTHS: Record<string, number | null> = {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
-    }
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
-    );
-    const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: userErr } = await supabase.auth.getUser(token);
-    if (userErr || !userData?.user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
-    }
-    const userId = userData.user.id;
-
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const { data: roleRow } = await admin.from("user_roles").select("role").eq("user_id", userId);
-    const isAdmin = (roleRow ?? []).some((r: any) => r.role === "admin");
-    if (!isAdmin) {
-      return new Response(JSON.stringify({ error: "Admin only" }), { status: 403, headers: corsHeaders });
-    }
 
-    const { ticket_id, breakdown, admin_notes } = await req.json();
+    const bodyRaw = await req.json();
+    const { ticket_id, breakdown, admin_notes, internal_secret, auto_approved } = bodyRaw || {};
     if (!ticket_id || !breakdown) {
       return new Response(JSON.stringify({ error: "ticket_id and breakdown required" }), { status: 400, headers: corsHeaders });
+    }
+
+    // Two callers: (1) admin via JWT, (2) internal auto-approve via INTERNAL_FUNCTION_SECRET
+    let userId: string | null = null;
+    const isInternal = !!internal_secret && internal_secret === Deno.env.get("INTERNAL_FUNCTION_SECRET");
+    if (!isInternal) {
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader?.startsWith("Bearer ")) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
+      }
+      const supabase = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_ANON_KEY")!,
+        { global: { headers: { Authorization: authHeader } } }
+      );
+      const token = authHeader.replace("Bearer ", "");
+      const { data: userData, error: userErr } = await supabase.auth.getUser(token);
+      if (userErr || !userData?.user) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
+      }
+      userId = userData.user.id;
+      const { data: roleRow } = await admin.from("user_roles").select("role").eq("user_id", userId);
+      const isAdmin = (roleRow ?? []).some((r: any) => r.role === "admin");
+      if (!isAdmin) {
+        return new Response(JSON.stringify({ error: "Admin only" }), { status: 403, headers: corsHeaders });
+      }
     }
 
     const { data: ticket } = await admin.from("vet_tickets").select("*").eq("id", ticket_id).maybeSingle();
