@@ -26,6 +26,8 @@ const adminNav = [
   { title: "Payment Plans", url: "/admin/payment-plans", icon: CalendarClock },
   { title: "Wallet & Reserve", url: "/admin/reserve", icon: Wallet },
   { title: "Referrals", url: "/admin/referrals", icon: Megaphone },
+  { title: "Reconsiderations", url: "/admin/reconsiderations", icon: MessageSquareWarning },
+  { title: "Content", url: "/admin/content", icon: FileText },
 ];
 
 export function AdminSidebar() {
