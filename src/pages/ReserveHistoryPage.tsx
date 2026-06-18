@@ -46,15 +46,15 @@ export default function ReserveHistoryPage() {
             <Link to="/dashboard/wallet"><ArrowLeft className="h-4 w-4 mr-1" /> Back to Wallet</Link>
           </Button>
           <h1 className="text-3xl font-bold font-display flex items-center gap-2">
-            <ShieldCheck className="h-7 w-7 text-primary" /> Reserve History
+            <ShieldCheck className="h-7 w-7 text-primary" /> Community Reserve Pool — My Usage
           </h1>
           <p className="text-muted-foreground mt-1">
-            Every time your Reserve was used as a fallback on a vet ticket.
+            Times the shared community pool covered part of one of your vet tickets.
           </p>
         </div>
         <Card className="min-w-[180px]">
           <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Total Consumed</p>
+            <p className="text-xs text-muted-foreground">Total drawn for you</p>
             <p className="text-2xl font-bold font-display">{fmt(totalConsumed)}</p>
           </CardContent>
         </Card>
