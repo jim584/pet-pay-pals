@@ -81,6 +81,8 @@ function AppRoutes() {
           <Route path="payment-plans" element={<AdminPaymentPlansPage />} />
           <Route path="reserve" element={<AdminReservePage />} />
           <Route path="referrals" element={<AdminReferralsPage />} />
+          <Route path="content" element={<AdminContentPage />} />
+          <Route path="reconsiderations" element={<AdminReconsiderationsPage />} />
         </Route>
         <Route path="/vet-tickets/:id/card" element={<VetCardPage />} />
         {/* Compass menu placeholder routes */}
