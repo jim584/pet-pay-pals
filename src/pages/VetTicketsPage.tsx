@@ -407,22 +407,23 @@ function TicketCard({ ticket, onChanged }: { ticket: VetTicket; onChanged: () =>
           <div className="rounded-md border p-3 bg-muted/30 grid grid-cols-2 gap-x-4 gap-y-1">
             <span className="text-muted-foreground">Direct Pay</span><span>{fmt(b.dp_use)}</span>
             <span className="text-muted-foreground">BNPL</span><span>{fmt(b.bnpl_use)}</span>
-            <span className="text-muted-foreground">Reserve</span><span>{fmt(b.reserve_use)}</span>
+            <span className="text-muted-foreground">Reserve pool</span><span>{fmt(b.reserve_use)}</span>
             <span className="text-muted-foreground">Your portion (paid to Help A Pet)</span><span className="font-medium">{fmt(b.member_remainder)}</span>
           </div>
         )}
 
-        {/* Reserve opt-in toggle (pending/under-review only) */}
+        {/* Reserve pool opt-in toggle (pending/under-review only) */}
         {["submitted", "under_review"].includes(ticket.status) && b && (
           <div className="rounded-md border p-3 space-y-2">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-start gap-2">
                 <ShieldCheck className="h-4 w-4 mt-0.5 text-primary shrink-0" />
                 <div>
-                  <p className="text-sm font-medium">Use my Reserve as a fallback</p>
+                  <p className="text-sm font-medium">Request the Community Reserve Pool as a fallback</p>
                   <p className="text-xs text-muted-foreground">
-                    Reserve is a limited safety net. It's only used <strong>after</strong> Direct Pay and BNPL
-                    can't cover the full amount.
+                    The Reserve is a shared community pool — not a personal balance. It's discretionary
+                    and only used <strong>after</strong> Direct Pay and BNPL can't cover the full amount,
+                    while pool funds are available.
                   </p>
                 </div>
               </div>
@@ -433,12 +434,14 @@ function TicketCard({ ticket, onChanged }: { ticket: VetTicket; onChanged: () =>
               />
             </div>
             <div className="flex flex-wrap gap-2 text-xs">
-              <Badge variant="outline">Available: {fmt(b.reserve_available ?? 0)}</Badge>
+              <Badge variant="outline" title="Shared community funds. May change as other members use the pool.">
+                Pool availability: {fmt(b.reserve_available ?? 0)}
+              </Badge>
               {b.reserve_eligible
                 ? <Badge variant="secondary">Eligible</Badge>
                 : <Badge variant="outline" className="text-muted-foreground">Not yet eligible</Badge>}
               {useReserve && Number(b.reserve_use) > 0 && (
-                <Badge>Will use {fmt(b.reserve_use)}</Badge>
+                <Badge>Will draw {fmt(b.reserve_use)}</Badge>
               )}
             </div>
             {b.reserve_blocked_reason && (
@@ -449,7 +452,7 @@ function TicketCard({ ticket, onChanged }: { ticket: VetTicket; onChanged: () =>
             {!b.reserve_eligible && !b.reserve_blocked_reason && (
               <p className="text-xs text-muted-foreground flex items-start gap-1">
                 <Info className="h-3 w-3 mt-0.5" />
-                Reserve unlocks after 12 consecutive months of paid membership.
+                Reserve pool access unlocks after 12 consecutive months of paid membership.
               </p>
             )}
           </div>
