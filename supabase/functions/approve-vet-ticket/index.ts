@@ -174,7 +174,7 @@ Deno.serve(async (req) => {
       status: newStatus,
       coverage_breakdown: breakdown,
       approved_amount: finalApproved,
-      admin_notes: admin_notes ?? null,
+      admin_notes: admin_notes ?? (auto_approved ? "auto-approved (under threshold + attestation present)" : null),
       reviewed_by: userId,
       reviewed_at: new Date().toISOString(),
     }).eq("id", ticket_id);
