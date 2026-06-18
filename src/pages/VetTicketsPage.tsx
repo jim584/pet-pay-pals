@@ -230,7 +230,7 @@ function NewTicketDialog({ pets, clinics, onCreated }: {
       let attestationUrl: string | null = null;
       if (estimateFile) estimateUrl = await uploadTicketFile(user.id, estimateFile, "estimate");
       if (attestationFile) attestationUrl = await uploadTicketFile(user.id, attestationFile, "attestation");
-      await submitVetTicket({
+      const res = await submitVetTicket({
         pet_id: petId,
         clinic_name: effectiveClinicName,
         vet_profile_id: effectiveVetProfileId,
@@ -239,10 +239,12 @@ function NewTicketDialog({ pets, clinics, onCreated }: {
         notes: notes || null,
       });
       toast({
-        title: "Ticket submitted",
-        description: effectiveVetProfileId
-          ? "Sent to your clinic and our admin team for review."
-          : "Sent to our admin team for review (clinic isn't on Help A Pet yet).",
+        title: res.auto_approved ? "Ticket auto-approved" : "Ticket submitted",
+        description: res.auto_approved
+          ? "Your attestation met the small-ticket auto-approval rules. Check your ticket for next steps."
+          : effectiveVetProfileId
+            ? "Sent to your clinic and our admin team for review."
+            : "Sent to our admin team for review (clinic isn't on Help A Pet yet).",
       });
       onCreated();
     } catch (e: any) {
