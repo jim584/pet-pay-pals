@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const {
       pet_id, vet_profile_id, clinic_name, estimate_amount,
-      estimate_url, attestation_url, notes,
+      estimate_url, attestation_url, notes, procedure_description,
     } = body || {};
 
     if (!pet_id || !clinic_name || !estimate_amount || Number(estimate_amount) <= 0) {
@@ -37,7 +37,6 @@ Deno.serve(async (req) => {
 
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    // Defense in depth: only pet owners may submit tickets.
     const { data: roles } = await admin.from("user_roles").select("role").eq("user_id", userId);
     const roleSet = new Set((roles ?? []).map((r: any) => r.role));
     if (!roleSet.has("pet_owner") && (roleSet.has("vet") || roleSet.has("admin"))) {
@@ -45,13 +44,11 @@ Deno.serve(async (req) => {
         { status: 403, headers: corsHeaders });
     }
 
-    // Verify pet ownership
     const { data: pet } = await admin.from("pets").select("id, owner_id").eq("id", pet_id).maybeSingle();
     if (!pet || pet.owner_id !== userId) {
       return new Response(JSON.stringify({ error: "Pet not found or not yours" }), { status: 403, headers: corsHeaders });
     }
 
-    // Find active membership for this user
     const { data: membership } = await admin
       .from("memberships").select("id")
       .eq("user_id", userId).in("status", ["active","past_due"])
@@ -69,35 +66,71 @@ Deno.serve(async (req) => {
     }).select().single();
     if (error) throw error;
 
-    // Auto-approve gate: small tickets with an attestation, active membership, no reserve needed.
+    // ===== Full auto-approve checklist =====
+    const blockers: string[] = [];
     let autoApproved = false;
     try {
       const { data: settings } = await admin
         .from("referral_program_settings")
-        .select("auto_approve_ticket_threshold")
+        .select("auto_approve_ticket_threshold, excluded_procedures, risk_flag_thresholds")
         .limit(1).maybeSingle();
-      const threshold = Number((settings as any)?.auto_approve_ticket_threshold ?? 500);
-      const hasAttestation = !!attestation_url;
-      const hasActiveMembership = !!membership?.id;
-      if (hasAttestation && hasActiveMembership && Number(estimate_amount) <= threshold) {
-        // Compute coverage server-side via the same admin client.
+      const s: any = settings ?? {};
+      const threshold = Number(s.auto_approve_ticket_threshold ?? 500);
+      const excluded: string[] = s.excluded_procedures ?? [];
+      const risk = s.risk_flag_thresholds ?? { tickets_per_30d: 10, pets_added_per_7d: 5, tickets_per_24h: 3 };
+
+      // 1) attestation
+      if (!attestation_url) blockers.push("missing_attestation");
+      // 2) vet good standing
+      if (vet_profile_id) {
+        const { data: vp } = await admin.from("vet_profiles")
+          .select("is_approved, is_license_verified").eq("id", vet_profile_id).maybeSingle();
+        if (!vp?.is_approved || !vp?.is_license_verified) blockers.push("vet_not_in_good_standing");
+      } else {
+        // unknown vet → require admin review
+        blockers.push("vet_profile_missing");
+      }
+      // 3) excluded procedure keyword match
+      const haystack = `${procedure_description ?? ""} ${notes ?? ""}`.toLowerCase();
+      if (excluded.some((kw) => kw && haystack.includes(String(kw).toLowerCase()))) {
+        blockers.push("excluded_procedure");
+      }
+      // 4) threshold
+      if (Number(estimate_amount) > threshold) blockers.push("over_auto_approve_threshold");
+      // 5) membership
+      if (!membership?.id) blockers.push("no_active_membership");
+      // 7) risk flags
+      const now = new Date();
+      const d30 = new Date(now.getTime() - 30 * 86400000).toISOString();
+      const d7 = new Date(now.getTime() - 7 * 86400000).toISOString();
+      const d1 = new Date(now.getTime() - 86400000).toISOString();
+      const [{ count: t30 }, { count: t24 }, { count: p7 }] = await Promise.all([
+        admin.from("vet_tickets").select("id", { count: "exact", head: true }).eq("owner_id", userId).gte("created_at", d30),
+        admin.from("vet_tickets").select("id", { count: "exact", head: true }).eq("owner_id", userId).gte("created_at", d1),
+        admin.from("pets").select("id", { count: "exact", head: true }).eq("owner_id", userId).gte("created_at", d7),
+      ]);
+      if ((t30 ?? 0) > Number(risk.tickets_per_30d)) blockers.push("risk_tickets_per_30d");
+      if ((t24 ?? 0) > Number(risk.tickets_per_24h)) blockers.push("risk_tickets_per_24h");
+      if ((p7 ?? 0) > Number(risk.pets_added_per_7d)) blockers.push("risk_pets_added_per_7d");
+
+      // 6) coverage (only meaningful when no other blockers; skip if blocked)
+      if (blockers.length === 0) {
         const coverageRes = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/compute-ticket-coverage`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": authHeader,
-          },
+          headers: { "Content-Type": "application/json", "Authorization": authHeader },
           body: JSON.stringify({ ticket_id: ticket.id, use_reserve: false }),
         });
         const coverageJson = await coverageRes.json().catch(() => ({}));
         const breakdown = coverageJson?.breakdown;
-        if (breakdown) {
+        const remainder = Number(breakdown?.member_remainder ?? 999);
+        if (!breakdown || remainder > 0.01) {
+          blockers.push("coverage_shortfall");
+        } else {
           const approveRes = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/approve-vet-ticket`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              ticket_id: ticket.id,
-              breakdown,
+              ticket_id: ticket.id, breakdown,
               auto_approved: true,
               internal_secret: Deno.env.get("INTERNAL_FUNCTION_SECRET"),
             }),
@@ -106,11 +139,17 @@ Deno.serve(async (req) => {
           autoApproved = !!approveJson?.ok;
         }
       }
+
+      if (blockers.length > 0) {
+        await admin.from("vet_tickets")
+          .update({ auto_approval_blockers: blockers, status: "under_review" })
+          .eq("id", ticket.id);
+      }
     } catch (e) {
-      console.error("auto-approve attempt failed (ticket stays in admin review):", e);
+      console.error("auto-approve attempt failed:", e);
     }
 
-    return new Response(JSON.stringify({ ticket, auto_approved: autoApproved }),
+    return new Response(JSON.stringify({ ticket, auto_approved: autoApproved, blockers }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     console.error("submit-vet-ticket error:", e);
