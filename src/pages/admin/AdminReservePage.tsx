@@ -326,8 +326,8 @@ export default function AdminReservePage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg font-display">Member Reserve Consumptions</CardTitle>
-          <p className="text-xs text-muted-foreground">FIFO draws against member reserves when used as ticket fallback. Latest 200.</p>
+          <CardTitle className="text-lg font-display">Community Reserve Pool Draws</CardTitle>
+          <p className="text-xs text-muted-foreground">FIFO draws from the community pool when used as a ticket fallback. Latest 200.</p>
         </CardHeader>
         <CardContent>
           {loading ? (
