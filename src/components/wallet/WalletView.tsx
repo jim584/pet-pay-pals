@@ -109,29 +109,27 @@ export function WalletView() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-lg font-display flex items-center gap-2">
-              <ShieldCheck className="h-5 w-5 text-primary" /> My Reserve
+              <ShieldCheck className="h-5 w-5 text-primary" /> Community Reserve Pool
             </CardTitle>
             <div className="flex items-center gap-2">
               {reserve.eligible
                 ? <Badge>Eligible</Badge>
                 : <Badge variant="outline">Locked</Badge>}
               <Button asChild size="sm" variant="outline">
-                <Link to="/dashboard/wallet/reserve-history">History</Link>
+                <Link to="/dashboard/wallet/reserve-history">My usage</Link>
               </Button>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="rounded-lg border p-3">
-                <p className="text-xs text-muted-foreground">Reserve Balance</p>
-                <p className="text-2xl font-bold font-display">${reserve.balance.toFixed(2)}</p>
+                <p className="text-xs text-muted-foreground">Access status</p>
+                <p className="text-2xl font-bold font-display">
+                  {reserve.eligible ? "Eligible" : "Locked"}
+                </p>
               </div>
               <div className="rounded-lg border p-3">
-                <p className="text-xs text-muted-foreground">Lifetime Accrued</p>
-                <p className="text-2xl font-bold font-display">${reserve.lifetimeAccrued.toFixed(2)}</p>
-              </div>
-              <div className="rounded-lg border p-3">
-                <p className="text-xs text-muted-foreground">Used</p>
+                <p className="text-xs text-muted-foreground">Drawn for your tickets (lifetime)</p>
                 <p className="text-2xl font-bold font-display">${reserve.lifetimeConsumed.toFixed(2)}</p>
               </div>
             </div>
@@ -147,17 +145,16 @@ export function WalletView() {
                 </div>
                 <Progress value={(reserve.continuousPaidMonths / 12) * 100} />
                 <p className="text-xs text-muted-foreground">
-                  Reserve unlocks after 12 consecutive months of paid membership. Cancellations or
+                  Reserve access unlocks after 12 consecutive months of paid membership. Cancellations or
                   unpaid invoices reset the counter.
                 </p>
               </div>
             )}
-            {reserve.eligible && (
-              <p className="text-xs text-muted-foreground mt-3">
-                Eligible since {new Date(reserve.eligibleSince!).toLocaleDateString()}. Reserve is a
-                limited safety net — it's used <strong>after</strong> Direct Pay and BNPL when you opt in
-                on a vet ticket.
-              </p>
+            <p className="text-xs text-muted-foreground mt-3">
+              The Reserve is a <strong>shared community safety net</strong> funded by member contributions —
+              not a personal balance. Access is discretionary and only kicks in <strong>after</strong> Direct
+              Pay and BNPL on eligible tickets, while pool funds are available.
+            </p>
             )}
           </CardContent>
         </Card>
