@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+// Textarea no longer needed
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -19,9 +19,10 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import {
-  listAllTicketsForAdmin, computeTicketCoverage, approveVetTicket,
-  rejectVetTicket, getTicketFileSignedUrl, type VetTicket, type CoverageBreakdown,
+  listAllTicketsForAdmin,
+  rejectVetTicket, getTicketFileSignedUrl, type VetTicket,
 } from "@/lib/vet-tickets-api";
+
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, FileText, ShieldAlert, CalendarIcon, X, Filter } from "lucide-react";
 import { Navigate } from "react-router-dom";
@@ -142,9 +143,10 @@ export default function AdminVetTicketsPage() {
       <div>
         <h1 className="text-2xl font-bold">Vet ticket queue</h1>
         <p className="text-sm text-muted-foreground">
-          Review, filter, and bulk-manage submitted vet bills.
+          Vet tickets are auto-approved on submission. Use this page to review, filter, reassign, or reject for fraud.
         </p>
       </div>
+
 
       {/* Filters */}
       <Card>
@@ -241,9 +243,9 @@ export default function AdminVetTicketsPage() {
             : `${filtered.length} ticket${filtered.length === 1 ? "" : "s"} shown`}
         </span>
         <div className="ml-auto flex flex-wrap gap-2">
-          <BulkApproveButton tickets={selectedTickets} onDone={load} />
           <BulkReassignButton tickets={selectedTickets} clinics={clinics} onDone={load} />
         </div>
+
       </div>
 
       {/* Tickets list */}
@@ -273,43 +275,6 @@ export default function AdminVetTicketsPage() {
   );
 }
 
-function BulkApproveButton({ tickets, onDone }: { tickets: VetTicket[]; onDone: () => void }) {
-  const [busy, setBusy] = useState(false);
-  const eligible = tickets.filter((t) => ["submitted", "under_review"].includes(t.status));
-
-  const run = async () => {
-    if (eligible.length === 0) {
-      toast({ title: "Nothing to approve", description: "Selected tickets aren't pending.", variant: "destructive" });
-      return;
-    }
-    setBusy(true);
-    let ok = 0, fail = 0;
-    for (const t of eligible) {
-      try {
-        const breakdown = t.coverage_breakdown ?? await computeTicketCoverage(t.id);
-        await approveVetTicket(t.id, breakdown);
-        ok++;
-      } catch (e) {
-        console.error("bulk approve fail", t.id, e);
-        fail++;
-      }
-    }
-    setBusy(false);
-    toast({
-      title: "Bulk approve complete",
-      description: `${ok} approved${fail ? `, ${fail} failed` : ""}.`,
-      variant: fail ? "destructive" : "default",
-    });
-    onDone();
-  };
-
-  return (
-    <Button onClick={run} disabled={busy || tickets.length === 0}>
-      {busy && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
-      Bulk approve ({eligible.length})
-    </Button>
-  );
-}
 
 function BulkReassignButton({
   tickets, clinics, onDone,
@@ -390,33 +355,11 @@ function AdminTicketCard({
   onToggle: () => void;
   onChanged: () => void;
 }) {
-  const [breakdown, setBreakdown] = useState<CoverageBreakdown | null>(ticket.coverage_breakdown ?? null);
-  const [computing, setComputing] = useState(false);
-  const [adminNotes, setAdminNotes] = useState(ticket.admin_notes ?? "");
+  const breakdown = ticket.coverage_breakdown ?? null;
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
-  const isPending = ["submitted", "under_review"].includes(ticket.status);
+  const canReject = ["submitted", "under_review", "approved"].includes(ticket.status);
   const assignedClinic = clinicMap.find((c) => c.id === ticket.vet_profile_id);
-
-  const compute = async () => {
-    setComputing(true);
-    try {
-      const b = await computeTicketCoverage(ticket.id);
-      setBreakdown(b);
-    } catch (e: any) { toast({ title: "Compute failed", description: e.message, variant: "destructive" }); }
-    finally { setComputing(false); }
-  };
-
-  const approve = async () => {
-    if (!breakdown) { toast({ title: "Compute coverage first", variant: "destructive" }); return; }
-    setBusy(true);
-    try {
-      await approveVetTicket(ticket.id, breakdown, adminNotes);
-      toast({ title: "Approved" });
-      onChanged();
-    } catch (e: any) { toast({ title: "Approve failed", description: e.message, variant: "destructive" }); }
-    finally { setBusy(false); }
-  };
 
   const reject = async () => {
     if (!reason.trim()) { toast({ title: "Reason required", variant: "destructive" }); return; }
@@ -432,11 +375,6 @@ function AdminTicketCard({
   const openFile = async (path: string) => {
     try { window.open(await getTicketFileSignedUrl(path), "_blank"); }
     catch (e: any) { toast({ title: "Couldn't open", description: e.message, variant: "destructive" }); }
-  };
-
-  const setField = (k: keyof CoverageBreakdown, v: number) => {
-    if (!breakdown) return;
-    setBreakdown({ ...breakdown, [k]: v } as CoverageBreakdown);
   };
 
   return (
@@ -472,62 +410,37 @@ function AdminTicketCard({
           <TicketMessagesDialog ticketId={ticket.id} viewerRole="admin" />
         </div>
 
-        {isPending && (
-          <>
-            <div className="flex items-center gap-2">
-              <Button variant="secondary" size="sm" onClick={compute} disabled={computing}>
-                {computing && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
-                Compute coverage
-              </Button>
-              {breakdown && (
-                <span className="text-xs text-muted-foreground">
-                  Plan: {breakdown.plan_tier ?? "—"} · Year cap remaining:{" "}
-                  {breakdown.plan_year_cap_remaining === null ? "∞" : fmt(breakdown.plan_year_cap_remaining)} ·
-                  DP avail: {fmt(breakdown.dp_available)}
-                </span>
-              )}
-            </div>
+        <p className="text-xs text-muted-foreground">
+          {ticket.status === "rejected"
+            ? `Rejected · Updated ${new Date(ticket.updated_at).toLocaleString()}`
+            : `Approved ${fmt(ticket.approved_amount ?? ticket.estimate_amount)} · Updated ${new Date(ticket.updated_at).toLocaleString()}`}
+        </p>
 
-            {breakdown && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 rounded-md border p-3 bg-muted/30">
-                {(["dp_use", "bnpl_use", "reserve_use", "member_remainder"] as const).map((k) => (
-                  <div key={k}>
-                    <Label className="text-xs capitalize">
-                      {k === "member_remainder" ? "Member remainder (charged by Help A Pet)" : k.replace("_", " ")}
-                    </Label>
-                    <Input type="number" step="0.01" value={Number((breakdown as any)[k] ?? 0)}
-                      onChange={(e) => setField(k, Number(e.target.value))} />
-                  </div>
-                ))}
+        {breakdown && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 rounded-md border p-3 bg-muted/30 text-xs">
+            {(["dp_use", "bnpl_use", "reserve_use", "member_remainder"] as const).map((k) => (
+              <div key={k}>
+                <div className="text-muted-foreground capitalize">
+                  {k === "member_remainder" ? "Member remainder" : k.replace("_", " ")}
+                </div>
+                <div className="font-medium">{fmt((breakdown as any)[k] ?? 0)}</div>
               </div>
-            )}
-
-            <div>
-              <Label className="text-xs">Admin notes</Label>
-              <Textarea rows={2} value={adminNotes} onChange={(e) => setAdminNotes(e.target.value)} />
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <Button onClick={approve} disabled={busy || !breakdown}>
-                {busy && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
-                Approve
-              </Button>
-            </div>
-
-            <div className="border-t pt-3 space-y-2">
-              <Label className="text-xs">Rejection reason</Label>
-              <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. attestation missing" />
-              <Button variant="destructive" onClick={reject} disabled={busy || !reason.trim()}>Reject</Button>
-            </div>
-          </>
+            ))}
+          </div>
         )}
 
-        {!isPending && (
-          <p className="text-xs text-muted-foreground">
-            Approved {fmt(ticket.approved_amount)} · Updated {new Date(ticket.updated_at).toLocaleString()}
-          </p>
+        {canReject && (
+          <div className="border-t pt-3 space-y-2">
+            <Label className="text-xs">Rejection reason (fraud / abuse only)</Label>
+            <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. suspected fraud" />
+            <Button variant="destructive" size="sm" onClick={reject} disabled={busy || !reason.trim()}>
+              {busy && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+              Reject
+            </Button>
+          </div>
         )}
       </CardContent>
     </Card>
   );
 }
+
