@@ -289,7 +289,7 @@ export default function AdminVerificationCoveragePage() {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </Fragment>
                   );
                 })}
               </tbody>
