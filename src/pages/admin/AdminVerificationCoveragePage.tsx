@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { CheckCircle2, ExternalLink, Clock, AlertCircle, AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { CheckCircle2, ChevronDown, ChevronRight, ExternalLink, Clock, AlertCircle, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface StateRow {
