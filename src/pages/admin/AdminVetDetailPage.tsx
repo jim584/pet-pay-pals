@@ -52,6 +52,7 @@ export default function AdminVetDetailPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [deleteService, setDeleteService] = useState<AdminVetService | null>(null);
   const [deleteAppt, setDeleteAppt] = useState<AdminVetAppointment | null>(null);
+  const [attempts, setAttempts] = useState<VetVerificationAttempt[]>([]);
 
   const loadAll = async () => {
     if (!vetProfileId) return;
