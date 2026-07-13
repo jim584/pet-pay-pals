@@ -127,8 +127,8 @@ Deno.serve(async (req) => {
   // Fallback (this temporary diagnostic only): server-to-server call with the
   // project's INTERNAL_FUNCTION_SECRET. Used only because the preview session
   // may not be logged in as an admin; secret is never logged or echoed.
-  const internalSecret = Deno.env.get("INTERNAL_FUNCTION_SECRET") ?? "";
-  const providedSecret = req.headers.get("x-internal-secret") ?? "";
+  const internalSecret = Deno.env.get("PROBE_ADMIN_TOKEN") ?? "";
+  const providedSecret = req.headers.get("x-probe-token") ?? "";
   const usingInternalSecret = internalSecret && providedSecret && providedSecret === internalSecret;
 
   const admin = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
