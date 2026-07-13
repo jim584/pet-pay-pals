@@ -57,21 +57,42 @@ Deno.serve(async (req) => {
   }
 
   const state = vp.license_state.toUpperCase();
+
+  // Feature flag: allow admins to disable an individual state adapter without
+  // touching code. Disabled → pending_review with the admin's reason (never
+  // unverified), so the "source unavailable → don't reject" invariant holds.
+  const { data: flag } = await admin
+    .from("verification_state_flags")
+    .select("enabled, disabled_reason")
+    .eq("state_code", state)
+    .maybeSingle();
+
   let result;
-  try {
-    result = await lookupByState(state, {
-      licenseNumber: vp.license_number,
-      fullLegalName: vp.license_full_legal_name,
-    });
-  } catch (e) {
+  if (flag && flag.enabled === false) {
     result = {
-      status: "source_unavailable" as const,
+      status: "not_supported" as const,
       source: `state:${state}`,
       source_url: null,
-      reason: `Source error: ${String((e as Error).message ?? e).slice(0, 200)}`,
+      reason: flag.disabled_reason ?? `Automated verification for ${state} is temporarily disabled by an admin.`,
       http_status: null,
-      raw: null,
+      raw: { decision: { reason_code: "adapter_disabled_by_flag", state } },
     };
+  } else {
+    try {
+      result = await lookupByState(state, {
+        licenseNumber: vp.license_number,
+        fullLegalName: vp.license_full_legal_name,
+      });
+    } catch (e) {
+      result = {
+        status: "source_unavailable" as const,
+        source: `state:${state}`,
+        source_url: null,
+        reason: `Source error: ${String((e as Error).message ?? e).slice(0, 200)}`,
+        http_status: null,
+        raw: { decision: { reason_code: "adapter_threw", error: String((e as Error).message ?? e).slice(0, 200) } },
+      };
+    }
   }
 
   // Map lookup result → profile status
