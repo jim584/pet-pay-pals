@@ -25,9 +25,12 @@ import {
   fetchAdminVetAppointments,
   updateAdminAppointment,
   deleteAdminAppointment,
+  fetchVetVerificationAttempts,
+  retryVetVerification,
   type AdminVetRow,
   type AdminVetService,
   type AdminVetAppointment,
+  type VetVerificationAttempt,
 } from "@/lib/admin-api";
 
 const APPT_STATUSES = ["pending", "confirmed", "completed", "cancelled"];
