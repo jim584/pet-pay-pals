@@ -7,9 +7,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/sonner";
-import { fetchVetProfile, createVetProfile, updateVetProfile, VetProfile } from "@/lib/vet-api";
+import { fetchVetProfile, createVetProfile, updateVetProfile, triggerVetVerification, VetProfile } from "@/lib/vet-api";
 import { supabase } from "@/integrations/supabase/client";
-import { Stethoscope, MapPin, Phone, Globe, CheckCircle, Clock, X, FileText, ShieldCheck, Upload } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Stethoscope, MapPin, Phone, Globe, CheckCircle, Clock, X, FileText, ShieldCheck, Upload, AlertCircle } from "lucide-react";
+
+const US_STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","DC","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
 
 export function VetProfileSetup() {
   const { user } = useAuth();
