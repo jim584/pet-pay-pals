@@ -222,16 +222,38 @@ export function VetProfileSetup() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground flex gap-2">
+            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+            <span>
+              We automatically check your license against the state veterinary board.
+              If the source is temporarily unavailable, we'll retry and an admin will review — you won't be marked unverified for a source outage.
+            </span>
+          </div>
+          <div className="space-y-2">
+            <Label>Full legal name (as printed on your license)</Label>
+            <Input value={form.license_full_legal_name} onChange={(e) => setForm({ ...form, license_full_legal_name: e.target.value })} placeholder="Jane A. Smith, DVM" />
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>License number</Label>
               <Input value={form.license_number} onChange={(e) => setForm({ ...form, license_number: e.target.value })} placeholder="VET-12345" />
             </div>
             <div className="space-y-2">
-              <Label>State / region</Label>
-              <Input value={form.license_state} onChange={(e) => setForm({ ...form, license_state: e.target.value })} placeholder="CA" />
+              <Label>State of issue</Label>
+              <Select value={form.license_state} onValueChange={(v) => setForm({ ...form, license_state: v })}>
+                <SelectTrigger><SelectValue placeholder="Select state" /></SelectTrigger>
+                <SelectContent className="max-h-64">
+                  {US_STATES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
           </div>
+          {profile?.verification_reason && (
+            <div className="text-xs text-muted-foreground bg-muted/40 rounded p-2">
+              <strong>Last check:</strong> {profile.verification_reason}
+              {profile.verification_checked_at && ` · ${new Date(profile.verification_checked_at).toLocaleString()}`}
+            </div>
+          )}
           <div className="flex items-center gap-3">
             <input
               ref={licenseInputRef}
