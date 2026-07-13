@@ -1,121 +1,137 @@
-## Phase 1 Hardening — Pre-work Review
+## Phase 1 Rollout & Testing Plan
 
-This plan answers your Browserless and license-testing questions before any code changes. No files will be modified until you approve.
-
----
-
-### 1. Boards likely to require Browserless (Phase 1 only)
-
-Based on how each board's public lookup page is served today. "Likely" = current `fetch`-based adapter is expected to fail; only a real test with a valid license number confirms it.
-
-| State | Board | Why plain `fetch` is likely insufficient | Robots / ToS posture |
-|---|---|---|---|
-| **NY** | NYSED Office of the Professions | Search page is a React SPA; results render client-side after XHR to an internal endpoint that requires an anti-CSRF header set by the SPA bootstrap. | `robots.txt` allows `/verification-search`; no ToS clause forbidding automated public-record lookups. State law (Education §6704) explicitly makes the roster public. |
-| **NC** | NC Veterinary Medical Board (Thentia portal) | Thentia SPA hydrates the directory client-side; the JSON API requires a session token minted by the SPA. | `portal.ncvmb.org/robots.txt` currently returns 404 (no policy). Board's public disclaimer says the directory "may be used to verify licensure" — no automation ban. |
-| **MI** | LARA Accela | ASP.NET WebForms with dynamic `__VIEWSTATE`, `__EVENTVALIDATION`, and Accela's client-side session cookie chain. Doable via HTTP but fragile; headless is more reliable. | `aca-prod.accela.com/robots.txt` disallows crawlers on `/GeneralProperty/*` search paths — **automated access likely NOT permitted**. See note below. |
-| **PA** | PALS | SPA + Cloudflare bot-management (JS challenge on some IPs). API responds directly with correct headers, but Cloudflare intermittently 403s server-to-server calls. | `pals.pa.gov/robots.txt` allows the API path; Cloudflare block is a technical, not policy, barrier. |
-| **IL** | IDFPR eLicense | ASP.NET WebForms + dynamic viewstate; similar to MI but no explicit robots disallow. | `ilesonline.idfpr.illinois.gov/robots.txt` — no relevant disallow. Public roster. |
-
-**Boards that should NOT need Browserless:** CA (DCA JSON works from `fetch`), TX (TBVME JSON API), FL (MQA POST form parses cleanly), OH (eLicense3 has a direct query URL), GA (SOS verify.aspx returns full HTML).
-
-**Michigan robots.txt concern:** LARA's `robots.txt` disallows the search path. Even though the data is public record under Michigan FOIA, using a headless browser to bypass that signal is disrespectful and could get our IP banned. Recommendation for MI: **do NOT scrape at all — leave as manual review** with a deep-link to the LARA site. Same policy check will apply to any Phase 2/3 board that disallows in robots.
+Consolidated brief covering the four items you asked for, plus the acceptance checklist that maps 1:1 to your nine requirements. No code changes proposed here — this is the plan we execute once test-license data arrives.
 
 ---
 
-### 2. Browserless usage, cost, and data handling
+### 1. Exact Phase 1 state list (9 states)
 
-**Estimated usage (Phase 1, assuming all 5 states above use Browserless):**
-- Signup verification: 1 request per new vet in one of those 5 states.
-- Cron retry: up to 3 additional requests over 72h for any `source_unavailable` result.
-- Rough ceiling: **~4 requests × 5 states × new-vets-per-month**. At 100 new vets/mo evenly distributed → ~40 Browserless requests/month.
-- Each request ~2-5s of headless-Chrome time.
+MI was dropped per the earlier robots.txt review. Final Phase 1 adapters currently registered:
 
-**Cost (Browserless Cloud pricing, current):**
-- Free tier: 6 hours/mo of session time.
-- Starter: $50/mo → 15 hours + 5 concurrent sessions.
-- At the volume above we'd stay in the free tier for months.
+| # | Code | State | Board | Endpoint technique | Browserless likely? |
+|---|---|---|---|---|---|
+| 1 | CA | California | DCA / Veterinary Medical Board | JSON via `search.dca.ca.gov` | No |
+| 2 | TX | Texas | TBVME | JSON via `vetlicensesearch.tbvme.texas.gov` | No |
+| 3 | FL | Florida | DOH MQA | HTML POST form | No |
+| 4 | NY | New York | NYSED Office of the Professions | SPA + XHR | **Yes (likely)** |
+| 5 | PA | Pennsylvania | PALS | JSON via `pals.pa.gov` + Cloudflare | **Maybe** (Cloudflare-dependent) |
+| 6 | IL | Illinois | IDFPR eLicense | ASP.NET WebForms w/ viewstate | Possibly |
+| 7 | OH | Ohio | eLicense Ohio | GET w/ query param | No |
+| 8 | GA | Georgia | SOS verification portal | GET w/ query param | No |
+| 9 | NC | North Carolina | NC Vet Medical Board (Thentia SPA) | SPA + session-token JSON | **Yes (likely)** |
 
-**What we would send to Browserless (per request):**
-- The board's public lookup URL (contains the license number as a query parameter, e.g. `?licnum=12345`).
-- The license number and (for NY-style adapters) the last name — both required to filter results.
-- Nothing else. No email, no `auth.uid()`, no full legal name, no ticket data.
-
-**What Browserless retains (per their DPA):**
-- Standard request logs (IP, timestamp, URL) for 30 days.
-- No screenshot/artifact storage unless we explicitly write to `/api/screenshot`.
-- Data-Processing Agreement available; they are SOC 2 Type II.
-- License numbers are public records, but their appearance in a third-party log is worth flagging. Options: (a) accept, or (b) use their EU region + request 7-day log retention, or (c) self-host.
-
-**Self-hosted alternative (recommended if you're log-sensitive):**
-- Deno Deploy / Supabase Edge does **not** run headless Chrome — no `puppeteer`/`playwright` in Deno's edge runtime.
-- Realistic self-host paths: (1) a small Fly.io / Railway container running `playwright` (~$5-10/mo idle), (2) a Cloudflare Browser Rendering worker (paid Workers plan, ~$5/mo + usage), (3) a Render.com Docker service.
-- Trade-off: we own the code and logs, but we also own patching, scaling, and IP-reputation issues. For 5 states + ~40 req/mo, a $5 Fly.io micro-VM is probably the cleanest choice.
+Coverage: ~48% of US practicing vets. All others (41 + DC) remain `manual review` with a deep-link to the correct board.
 
 ---
 
-### 3. Test-license fixture request (for the client)
+### 2. Browserless-required state list (from Phase 1)
 
-For each state below we need **one** verified example. Prefer a Fear Free directory or state-board-website public listing so you're not exposing private practitioner data.
+**Confirmed candidates:** NY, NC. Their public search pages don't return usable HTML to a plain `fetch` — the licensee list is hydrated by JS after the SPA loads.
 
-Required fields per state:
+**Conditional candidates:** PA (Cloudflare may 403 server-to-server calls intermittently), IL (ASP.NET viewstate can be reproduced with `fetch` but is brittle).
 
-| Field | Notes |
+**Confirmed NOT needed:** CA, TX, FL, OH, GA. All expose stable HTTP endpoints.
+
+**We won't wire Browserless until:**
+1. You've reviewed the Section-2 write-up from the previous turn (usage / cost / data / retention / self-host).
+2. A real Phase 1 test proves plain `fetch` truly fails for NY / NC (not just a wrong selector on my part).
+
+---
+
+### 3. License-test fields required per state
+
+Send publicly-available examples only (Fear Free directory, board's own public roster, or with the practitioner's explicit consent). Sanitize before pasting anything into chat.
+
+Universal fields per test case:
+
+| Field | Required |
 |---|---|
-| State code | e.g. `CA` |
-| Veterinarian's full legal name | As it appears on the license (First Middle Last). |
-| License number | Exactly as issued (leading zeros matter in some states). |
-| License type | Only where the board issues multiple (see per-state notes). |
-| Expected license status | `Active` / `Expired` / `Inactive` / etc. |
-| Expiration date | If shown publicly. Optional; used to catch date-parse regressions. |
+| `state_code` | yes |
+| `full_legal_name` | yes — as printed on the license |
+| `license_number` | yes — verbatim, including leading zeros |
+| `license_type` | see per-state notes |
+| `expected_status` | yes — `active` / `expired` / `inactive` / `suspended` |
+| `expiration_date` | optional but preferred |
+| `source_url` | optional — direct link to the board's listing if you have one |
 
-Phase 1 states we need one test license for:
+Per-state notes:
 
-1. **CA** — license type field is not required (all vets are one code).
-2. **TX** — license type: `Veterinarian` (not `LVT`, not `Equine Dental Provider`).
-3. **FL** — license type: `Veterinarian` (`VM` prefix; not `Veterinary Faculty Certificate` etc.).
-4. **NY** — profession code 63 (Veterinary Medicine); license type not needed.
-5. **PA** — license type: `Veterinarian` (not `Veterinary Technician`).
-6. **IL** — license type: `Veterinarian` (090); not `Vet Tech` (095).
-7. **OH** — license type: `Veterinarian`.
-8. **GA** — board 045; license type not needed.
-9. **NC** — license type: `Veterinarian` (not `Veterinary Technician` / `Faculty License`).
-10. **MI** — license type: `Veterinarian`. **Note we may drop MI from automation** per the robots.txt concern above; test license still helps confirm the manual-review deep-link works.
+- **CA** — no license-type field needed. VMB issues one code.
+- **TX** — license type `Veterinarian`. Skip `LVT` / `Equine Dental Provider`.
+- **FL** — license type `Veterinarian` (`VM` prefix). Skip `Faculty Certificate`.
+- **NY** — profession code `63`. No type field.
+- **PA** — license type `Veterinarian`. Skip `Veterinary Technician`.
+- **IL** — license type `Veterinarian` (090). Skip `Vet Tech` (095).
+- **OH** — license type `Veterinarian`.
+- **GA** — board code `045`. No type field.
+- **NC** — license type `Veterinarian`. Skip `Vet Technician` / `Faculty License`.
 
-Bonus (recommended): one **expired** or **inactive** license per state so we validate that adapters correctly return `expired` / `inactive` and don't silently mark a lapsed license as `verified`.
+**Per state, ideally three cases:**
+1. Active/current license → adapter must return `match`.
+2. Expired or inactive license → adapter must return `expired` or `inactive` (never `match`).
+3. Nonexistent license number (e.g. `99999999`) → adapter must return `no_match` or `source_unavailable`, never `match`.
 
----
-
-### 4. Fixture-test policy
-
-After each state is validated against a real board response:
-
-- Save one sanitized HTML/JSON response under `supabase/functions/verify-vet-license/states/__fixtures__/<state>-<case>.txt`.
-- Sanitize by replacing the tested vet's full name with `TESTVET LASTNAME`, address with `123 TEST ST`, phone/email fields with `REDACTED`. Keep the license number (it's public record) and status text intact — those are what we're testing.
-- Add `states/<xx>_test.ts` using `Deno.test` + `Deno.readTextFile`. Each test stubs `fetch` to return the fixture and asserts the adapter classifies it correctly.
-- CI runs fixtures only — no live board hits from tests.
+Suspended/revoked cases are best-effort — many boards don't publicly list them.
 
 ---
 
-### 5. What I will do once you approve
+### 4. Phase 1 testing checklist (maps 1:1 to your 9 requirements)
 
-**Immediately (no dependencies):**
-1. Add a fixture-test harness (`_fixtures.ts` helper + one green example test) so we have the plumbing ready.
-2. Update `AdminVerificationCoveragePage` to also show "last successful attempt" per state, pulled from `vet_verification_attempts`.
-3. Drop MI from the automated registry back to `manual` in `boards.ts`, with a note referencing the robots.txt policy.
+Per state, we don't mark the adapter "green" until every box below is checked.
 
-**Once you send test licenses (per state, in any order):**
-4. Live-test the adapter against the real board, adjust selectors/regex until it correctly returns `match` for active + `expired`/`inactive` for lapsed.
-5. Save the sanitized fixture + write the Deno test.
-6. Mark that state green in the coverage page.
-
-**After all Phase 1 states are validated:**
-7. Report which of NY / NC / PA / IL actually needed a headless browser vs. worked with plain `fetch`.
-8. Come back to you with a concrete Browserless (or Fly.io self-host) proposal scoped to only the states that need it.
+| # | Your requirement | How we validate |
+|---|---|---|
+| 1 | Verify each adapter against a known-valid license | Live call to the real board using your test license → adapter returns `status: "match"` with the correct name-on-record. Response captured as fixture. |
+| 2 | Test invalid and nonexistent license numbers | Fixture test with a bogus number → adapter returns `no_match`. Live smoke-test once with an obviously invalid number. |
+| 3 | Test expired / suspended / inactive licenses where available | Fixture test per case using your example → adapter returns `expired` / `inactive` (not `match`). Case is skipped only if the board doesn't publicly list any such record. |
+| 4 | Confirm name matching behavior | Unit tests in `states/common_test.ts` (new file) covering: exact match, "Last, First" swap, diacritic strip, nickname (Bob→Robert), Levenshtein ≤ 2, and a deliberate mismatch that returns `no_match`. |
+| 5 | Confirm rate-limit and timeout handling | Add per-state in-memory throttle (1 req/sec/board) to `_generic.ts`. Test: simulate 5 rapid calls, verify they serialize. Timeout test: mock 20s fetch → adapter returns `source_unavailable`. |
+| 6 | Confirm unavailable sources return `pending_review`, not `unverified` | Existing behavior in `verify-vet-license/index.ts` already maps `source_unavailable` → `pending_review`. Add explicit test that exercises the full function with a stubbed 503 response. |
+| 7 | Audit logs showing which source was checked and why | Every attempt already writes to `vet_verification_attempts` (source, status, http_status, error, payload). We'll extend the payload with a `decision` field: `{ reason_code, matched_by, name_on_record, snippet }` so admins can see exactly why. |
+| 8 | Feature flags to disable individual state adapters | New table `verification_state_flags(state_code PK, enabled bool, disabled_reason text, updated_at)`. `verify-vet-license` checks the flag before dispatching; disabled → immediate `pending_review` with reason. Toggle from the coverage page. |
+| 9 | No vet rejected solely because a licensing website is unavailable | Already enforced by the `source_unavailable` → `pending_review` mapping + hourly cron retry (max 72h). Adding two guardrails: (a) admin dashboard alert if a state has ≥3 consecutive failures, (b) new profile status is only set to `unverified` when the board explicitly returns "no such license" or "expired/revoked" — never on network / parse errors. |
 
 ---
 
-### Open questions
+### 5. Rollout order (Phase 1 only)
 
-1. **MI decision** — Confirm you want MI removed from automated adapters given the robots.txt disallow, keeping only the manual-review deep-link.
-2. **Log-sensitivity threshold** — If we do end up needing headless: Browserless Cloud (fast, 30-day logs), Browserless EU region (7-day logs), or self-hosted Fly.io ($5/mo, our own logs)?
-3. **Fear Free** — Still out of scope for this round?
+Work state-by-state in this order so early wins land first and Browserless-dependent states come last:
+
+1. **CA** (stable JSON) — validate + fixture + tests.
+2. **TX** (stable JSON) — same.
+3. **OH** (simple GET) — same.
+4. **GA** (simple GET) — same.
+5. **FL** (POST form) — same.
+6. **PA** — try plain `fetch` first; if Cloudflare blocks, note it and defer to Browserless decision.
+7. **IL** — attempt viewstate reproduction with `fetch`; if brittle, defer to Browserless.
+8. **NY** — validate that plain `fetch` truly fails, then defer to Browserless decision.
+9. **NC** — same as NY.
+
+After steps 1–5 are green we have ~5 states shipping in production and the remainder waiting on the Browserless review.
+
+---
+
+### 6. What I will do once you approve
+
+**Immediately (no new dependencies):**
+1. Create `verification_state_flags` table + admin toggle UI on the coverage page (fulfills requirement #8).
+2. Add per-state throttle (1 req/s) and 15s timeout guard in `_generic.ts` (fulfills #5).
+3. Extend `vet_verification_attempts.payload` with the structured `decision` object (fulfills #7).
+4. Add `states/common_test.ts` name-matching unit tests (fulfills #4).
+5. Add `verify-vet-license/index_test.ts` covering the 503 → `pending_review` path (fulfills #6, #9).
+6. Add a "≥3 consecutive failures" alert card to the coverage page (fulfills #9 guardrail).
+
+**Per state, once you send test licenses (in the order above):**
+7. Live-call the board, tune selectors/regex, capture sanitized fixture, write fixture-driven test (fulfills #1, #2, #3).
+8. Mark the state green in the coverage page.
+
+**After all 9 states validated:**
+9. Return with a concrete Browserless-or-self-host recommendation scoped only to states that provably need it.
+
+---
+
+### Open questions before I start building
+
+1. **Verification state flags table** — okay to create it now (small, admin-only), or do you want to review the schema first? Proposed columns: `state_code text PK`, `enabled boolean default true`, `disabled_reason text`, `updated_at timestamptz`, `updated_by uuid`.
+2. **"Consecutive failures" threshold** — 3 is my proposal. Higher (say, 10) reduces false alarms on low-volume states. Preference?
+3. **Test-license transmission** — happy to receive them here in chat, or would you rather I set up a dedicated `docs/verification-fixtures/` folder in the repo (gitignored) so client can drop CSVs directly?

@@ -2051,6 +2051,30 @@ export type Database = {
         }
         Relationships: []
       }
+      verification_state_flags: {
+        Row: {
+          disabled_reason: string | null
+          enabled: boolean
+          state_code: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          disabled_reason?: string | null
+          enabled?: boolean
+          state_code: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          disabled_reason?: string | null
+          enabled?: boolean
+          state_code?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       vet_payouts: {
         Row: {
           amount: number
