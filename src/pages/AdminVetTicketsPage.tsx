@@ -242,9 +242,9 @@ export default function AdminVetTicketsPage() {
             : `${filtered.length} ticket${filtered.length === 1 ? "" : "s"} shown`}
         </span>
         <div className="ml-auto flex flex-wrap gap-2">
-          <BulkApproveButton tickets={selectedTickets} onDone={load} />
           <BulkReassignButton tickets={selectedTickets} clinics={clinics} onDone={load} />
         </div>
+
       </div>
 
       {/* Tickets list */}
