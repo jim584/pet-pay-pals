@@ -4,7 +4,7 @@
 // with a reason, never `unverified`, so an admin can adjudicate.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
-import { lookupByState, SUPPORTED_STATES } from "./states/index.ts";
+import { BOARDS, lookupByState, STATE_CODES, SUPPORTED_STATES } from "./states/index.ts";
 
 interface Body { vet_profile_id: string; triggered_by?: string }
 
@@ -20,6 +20,14 @@ function json(body: unknown, status = 200) {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method === "GET") {
+    // Coverage introspection for the admin dashboard.
+    return json({
+      states: STATE_CODES.map((c) => ({ ...BOARDS[c], supported: SUPPORTED_STATES.includes(c) })),
+      supported: SUPPORTED_STATES,
+      total: STATE_CODES.length,
+    });
+  }
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
 
   let body: Body;
