@@ -46,7 +46,7 @@ export interface LookupResult {
 // Registered adapters. Any state not present here falls back to
 // `not_supported` → `pending_review` (admins verify manually).
 const REGISTRY: Record<string, (input: LookupInput) => Promise<LookupResult>> = {
-  CA: ca, TX: tx, FL: fl, NY: ny, PA: pa,
+  TX: tx, FL: fl, NY: ny, PA: pa,
   IL: il, OH: oh, GA: ga, NC: nc,
 };
 
