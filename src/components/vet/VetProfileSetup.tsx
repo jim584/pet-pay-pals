@@ -111,16 +111,24 @@ export function VetProfileSetup() {
         specializations: form.specializations,
         license_number: form.license_number || null,
         license_state: form.license_state || null,
+        license_full_legal_name: form.license_full_legal_name || null,
         fear_free_cert_number: form.fear_free_cert_number || null,
       };
+      let saved: VetProfile;
       if (profile) {
-        const updated = await updateVetProfile(profile.id, payload as any);
-        setProfile(updated);
+        saved = await updateVetProfile(profile.id, payload as any);
         toast.success("Profile updated!");
       } else {
-        const created = await createVetProfile({ ...payload, user_id: user.id } as any);
-        setProfile(created);
+        saved = await createVetProfile({ ...payload, user_id: user.id } as any);
         toast.success("Vet profile created! Awaiting admin approval.");
+      }
+      setProfile(saved);
+      // Fire-and-forget: kick off automated verification when the vet has
+      // supplied the minimum lookup fields. Result appears on next reload.
+      if (saved.license_number && saved.license_state && saved.license_full_legal_name) {
+        triggerVetVerification(saved.id).then(() => {
+          fetchVetProfile(user.id).then((fresh) => fresh && setProfile(fresh));
+        }).catch(() => {});
       }
     } catch (err: any) {
       toast.error(err.message);
