@@ -274,43 +274,6 @@ export default function AdminVetTicketsPage() {
   );
 }
 
-function BulkApproveButton({ tickets, onDone }: { tickets: VetTicket[]; onDone: () => void }) {
-  const [busy, setBusy] = useState(false);
-  const eligible = tickets.filter((t) => ["submitted", "under_review"].includes(t.status));
-
-  const run = async () => {
-    if (eligible.length === 0) {
-      toast({ title: "Nothing to approve", description: "Selected tickets aren't pending.", variant: "destructive" });
-      return;
-    }
-    setBusy(true);
-    let ok = 0, fail = 0;
-    for (const t of eligible) {
-      try {
-        const breakdown = t.coverage_breakdown ?? await computeTicketCoverage(t.id);
-        await approveVetTicket(t.id, breakdown);
-        ok++;
-      } catch (e) {
-        console.error("bulk approve fail", t.id, e);
-        fail++;
-      }
-    }
-    setBusy(false);
-    toast({
-      title: "Bulk approve complete",
-      description: `${ok} approved${fail ? `, ${fail} failed` : ""}.`,
-      variant: fail ? "destructive" : "default",
-    });
-    onDone();
-  };
-
-  return (
-    <Button onClick={run} disabled={busy || tickets.length === 0}>
-      {busy && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
-      Bulk approve ({eligible.length})
-    </Button>
-  );
-}
 
 function BulkReassignButton({
   tickets, clinics, onDone,
