@@ -1,108 +1,99 @@
+## Build State-by-State Veterinary License Scrapers (All 50 States + DC)
 
-## Reality check on the data sources
+Extend the existing `verify-vet-license` edge function with real per-state lookup adapters, rolled out in phases so vets get actual verification instead of `pending_review` fallbacks.
 
-**There is no official public API from AAVSB or Fear Free.**
-- AAVSB's "Look Up A License" is a state-by-state HTML portal (~50 different sites, many with CAPTCHAs, session tokens, or ASP.NET postbacks). AAVSB's VetLifeLearn / VAULT APIs exist but are paid, credentialed B2B integrations, not open to end users.
-- Fear Free has a public "Find a Fear Free Professional" directory but no documented API.
+### Architecture
 
-So the automated verification must be a **best-effort scraper with a graceful "pending review" fallback plus admin override** — it can't be a guaranteed real-time API check for every state. That matches what you already asked for in the last bullet.
+Keep the modular pattern already in place at `supabase/functions/verify-vet-license/states/`. Each state gets its own file exporting a common interface:
 
-## Solution when a source is unavailable
+```ts
+export interface StateAdapter {
+  code: string;                  // "CA"
+  name: string;                  // "California"
+  boardName: string;             // "California Veterinary Medical Board"
+  sourceUrl: string;             // public lookup URL shown to admins
+  lookup(input: {
+    licenseNumber: string;
+    lastName: string;
+    firstName?: string;
+  }): Promise<LookupResult>;
+}
 
-Never auto-flag as *Unverified* on source failure. Instead:
+type LookupResult =
+  | { status: "verified"; license_status: string; name_on_record: string; raw: unknown }
+  | { status: "unverified"; reason: string; raw: unknown }
+  | { status: "source_unavailable"; reason: string; http_status?: number };
+```
 
-1. Retry the source up to 3 times with backoff.
-2. If still unreachable → status = `pending_review`, `unverified_reason = "source_unavailable"`, and a scheduled retry is queued (cron-style, every 6 hours for up to 72 hours).
-3. Admin dashboard shows a "Retry now" button and the last N attempts with timestamps + HTTP status.
-4. Only after retries exhaust *and* an admin has looked at it does the record stay in `pending_review` — it is never silently marked `unverified`.
+`states/index.ts` maps `state_code → adapter` and falls back to `pending_review` for any state not yet wired in.
 
-## Schema changes (migration)
+### Per-state technique matrix
 
-Add to `public.vet_profiles`:
+State boards fall into 4 categories. Each adapter picks the cheapest working technique:
 
-- `license_state` text (2-char state code)
-- `license_full_legal_name` text
-- `verification_status` enum: `pending` | `verified` | `unverified` | `pending_review` | `manual_override`
-- `verification_checked_at` timestamptz
-- `verification_source` text (e.g. `"CA-BVM"`, `"TX-BVME"`, `"aavsb-directory"`, `"admin_override"`)
-- `verification_source_url` text
-- `verification_reason` text (human-readable failure reason)
-- `verification_raw` jsonb (last scraped payload for audit)
-- `fear_free_verification_status` same enum
-- `fear_free_checked_at`, `fear_free_source`, `fear_free_reason`, `fear_free_raw`
-- Reuse existing `license_verified_at`, `license_verified_by`, `fear_free_verified_at`, `fear_free_verified_by` for admin overrides (already guarded by `guard_vet_profile_verification_fields`).
+1. **Direct JSON/AJAX endpoint** (best): board exposes an internal XHR the search page calls. We hit it with `fetch` + JSON parse. Examples: CA (DCA License Search JSON), TX (TDLR search), CO (DORA), OR, WA.
+2. **HTML form POST + parse** (common): scrape the results table with a small HTML parser (`deno-dom`). Examples: NY, FL, NC, VA, MA, IL, PA, OH, GA, MI, AZ, TN, IN, MO, WI, MN, MD, NJ, SC, KY, OK, LA, AR, MS, AL, IA, KS, NV, UT, NM, WV, NE, ID, ND, SD, MT, WY, VT, NH, ME, RI, DE, HI, AK, DC.
+3. **Session/CSRF-token flow**: pre-fetch the page, extract hidden fields, then POST. Examples: NY (ASP.NET viewstate), a few others.
+4. **JS-only / Cloudflare-gated**: needs a headless browser. Route through **Browserless.io** (or Firecrawl scrape as fallback). Reserved for states that resist steps 1–3.
 
-New table `public.vet_verification_attempts`:
-- `id`, `vet_profile_id`, `kind` (`license` | `fear_free`), `attempted_at`, `status`, `http_status`, `source`, `error`, `payload jsonb`.
+Name matching helper (shared): last-name exact (case + diacritics normalized), first-name fuzzy via Levenshtein ≤ 2 OR common-nickname map.
 
-Add GRANTs + RLS: vet can read own attempts, admin reads all.
+### Phased rollout
 
-## Backend — new edge functions
+**Phase 1 — Top-10 by vet population (ship first):**
+CA, TX, FL, NY, PA, IL, OH, GA, NC, MI. Covers ~55% of US vets.
 
-1. **`verify-vet-license`** (`verify_jwt = false`, called by trigger + cron + admin)
-   - Input: `vet_profile_id`.
-   - Loads profile, dispatches to a per-state scraper module keyed by `license_state`.
-   - Each state module returns `{ status: "match" | "no_match" | "expired" | "inactive" | "source_unavailable" | "ambiguous", licensee_name, license_status_text, expiration, source_url, raw }`.
-   - Name matching: normalized (lowercase, strip punctuation/middle initials); require last name exact + first name fuzzy (Levenshtein ≤ 2 or matches nickname list).
-   - Writes result into `vet_profiles` + inserts a `vet_verification_attempts` row.
-   - `source_unavailable` → schedule retry (see below).
+**Phase 2 — Next 15:**
+WA, VA, MA, AZ, TN, IN, MO, WI, MN, MD, NJ, CO, SC, OR, KY.
 
-2. **`verify-vet-fear-free`** — same shape; scrapes the Fear Free directory searching by cert number + last name.
+**Phase 3 — Remaining 25 + DC:**
+OK, LA, AL, AR, MS, IA, KS, NV, UT, NM, WV, NE, ID, ND, SD, MT, WY, VT, NH, ME, RI, DE, HI, AK, CT, DC.
 
-3. **`vet-verification-cron`** — invoked by a `pg_cron` job every hour. Retries all `pending_review` rows whose last attempt was `source_unavailable` and is > 6h old and < 72h old.
+Each phase is one deploy. States not yet implemented continue returning `pending_review` (existing behavior — no regression).
 
-4. **State scraper library** (`supabase/functions/verify-vet-license/states/`)
-   - Ship with the top ~10 states first (CA, TX, FL, NY, PA, OH, IL, GA, NC, WA), each as its own module with a `lookup(name, licenseNumber)` function.
-   - Any state without a module returns `source_unavailable` → automatic `pending_review`. Roadmap covers the rest.
-   - Use `fetch` directly; if a state needs JS rendering, fall back to a hosted headless-browser API (e.g. Browserless) — flagged with a secret we'd add later, not required for v1.
+### Reliability & policy
 
-Robots/ToS: license lookup portals are public records. We still add a `User-Agent: HelpAPetVerifier/1.0` and rate-limit to 1 req/sec per state to be respectful.
+- Cache each state's result in `vet_verification_attempts` (already exists) with `raw` payload + HTTP status.
+- Timeout each fetch at **15s**; on timeout or HTTP 5xx → `source_unavailable` (not `unverified`) — the existing hourly `vet-verification-retry` cron picks it up.
+- Rate-limit per state: max 1 outbound request/sec per state board (some boards block bursts). Implement with a simple in-memory queue inside the function invocation.
+- User-Agent: identify as `HelpAPet-VerificationBot/1.0 (+contact-url)` — most boards allow public-record lookups but block anonymous scrapers.
+- Respect robots.txt where boards publish one; skip and mark `not_supported` if disallowed (rare for public license lookups).
 
-## Backend — trigger
+### Fallback for JS-heavy states
 
-DB trigger on `vet_profiles` insert/update: when `license_number`, `license_state`, or `license_full_legal_name` changes → set `verification_status = 'pending'`, then a client-side/edge invocation fires `verify-vet-license`. (Triggers can't call HTTP; we invoke the function from the same code path that saved the profile, plus the cron catches any that slipped through and are still `pending` > 15 min.)
+Add a new secret **`BROWSERLESS_TOKEN`** (I'll request it when we hit the first state that needs it — likely NY, MA, or NJ). Browserless is a hosted headless-Chrome REST API (~$50/mo starter). Adapter code:
 
-## Frontend — vet signup / profile form (`VetProfilePage`)
+```ts
+const html = await fetch(`https://chrome.browserless.io/content?token=${token}`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ url, waitFor: "table.results" }),
+}).then(r => r.text());
+```
 
-Add the required fields:
-- Full legal name (defaults from user profile, editable)
-- License state (dropdown of 50 states + DC)
-- Veterinary license number
-- Fear Free certificate number (optional)
-- Fear Free credential upload stays (already supported)
+If the user prefers not to add Browserless, those specific states stay on `pending_review` + manual admin override.
 
-Live status badge under the form: "Verifying…", "Verified ✓", "Pending review — we're double-checking with the state board", "Couldn't verify — please contact support". Clear language so users aren't blocked.
+### Admin dashboard changes
 
-## Frontend — Admin Dashboard (`AdminVetProfilesPage` — extend existing admin vets view)
+Small additions to `AdminVetDetailPage`:
+- Show **"Verification source"** badge: `direct_api` | `html_scrape` | `headless_browser` | `not_supported`.
+- Show **per-state coverage** on a new admin page `AdminVerificationCoveragePage` — a table of all 50 states with implementation status + last successful check timestamp.
 
-New table columns / detail card for each vet:
-- Name, state, license number, license status text
-- Fear Free status
-- Verification date/time (per source)
-- Last failure reason
-- Source used + link (e.g. "CA Board of Veterinary Medicine — open lookup")
-- Last 5 attempts (timestamp, status, http code)
-- Actions: **Retry now**, **Mark verified (override)**, **Mark unverified (override)** — override sets `verification_status = 'manual_override'` and stamps `license_verified_by = auth.uid()`, matching the existing guard trigger.
+### What's NOT in scope
 
-## Secrets
+- **AAVSB VAULT paid API** — requires B2B contract + fees; skip unless user signs up separately.
+- **Fear Free scraper** — separate task; current directory-ping is fine until Fear Free publishes a real API. (Ask them via their partnership form.)
+- **Automatic disciplinary-action polling** — future work.
 
-None required for v1 (portals are public). If we later add Browserless for JS-heavy states we'll request `BROWSERLESS_TOKEN` via `add_secret`.
+### Deliverables per phase
 
-## Rollout / scope for this task
+1. New file `supabase/functions/verify-vet-license/states/<xx>.ts` per state.
+2. Register in `states/index.ts`.
+3. Unit test file `states/<xx>_test.ts` with a recorded fixture response (so we can re-run without hitting the live board).
+4. Update `AdminVerificationCoveragePage` counts.
 
-Because scraping 50 state boards is a big surface, this plan ships:
+### Open questions before I start
 
-1. Schema + attempts table + RLS + trigger.
-2. `verify-vet-license` framework with modules for **CA, TX, FL, NY, WA** (5 states covering ~35% of US vets). Others return `source_unavailable` → `pending_review`.
-3. `verify-vet-fear-free` directory lookup.
-4. Retry cron.
-5. Vet-side form + status badge.
-6. Admin dashboard verification panel + override.
-
-Adding more states later is a copy-paste of a state module — no schema or UI changes needed.
-
-## Open questions before I build
-
-1. Do you want the vet to be **blocked from receiving tickets** until `verified` / `manual_override`, or just visibly flagged? (Current codebase already gates on `is_approved` + `is_license_verified`.)
-2. Ship the 5-state MVP now and expand, or wait until we have all 50? (I recommend ship-and-iterate.)
-3. Fear Free: do you already have an official partnership? If yes, they may give us a real API/CSV — please share the contact and I'll wire it in instead of scraping.
+1. **Green-light Browserless?** Needed for ~5–8 JS-only state boards. Alternative: leave those on `pending_review`.
+2. **Ship phase-by-phase (approve after each)** or **build all 50 in one pass**? Phased is safer — each state's HTML can break independently and we'll want to catch regressions early.
+3. **Should unverified results block ticket receipt** now, or keep the current "flag but allow" behavior until coverage is high?
