@@ -469,12 +469,22 @@ export async function fetchAdminVetDetail(vetProfileId: string): Promise<AdminVe
     owner_avatar_url: prof?.avatar_url ?? null,
     license_number: v.license_number ?? null,
     license_state: v.license_state ?? null,
+    license_full_legal_name: v.license_full_legal_name ?? null,
     license_document_url: v.license_document_url ?? null,
     is_license_verified: !!v.is_license_verified,
     fear_free_certified: !!v.fear_free_certified,
     fear_free_cert_number: v.fear_free_cert_number ?? null,
     fear_free_cert_url: v.fear_free_cert_url ?? null,
     fear_free_verified_at: v.fear_free_verified_at ?? null,
+    verification_status: v.verification_status ?? "pending",
+    verification_checked_at: v.verification_checked_at ?? null,
+    verification_source: v.verification_source ?? null,
+    verification_source_url: v.verification_source_url ?? null,
+    verification_reason: v.verification_reason ?? null,
+    fear_free_verification_status: v.fear_free_verification_status ?? "pending",
+    fear_free_checked_at: v.fear_free_checked_at ?? null,
+    fear_free_source: v.fear_free_source ?? null,
+    fear_free_reason: v.fear_free_reason ?? null,
   };
 }
 
@@ -489,7 +499,12 @@ export async function setVetApproval(vetProfileId: string, approved: boolean) {
 export async function setVetLicenseVerified(vetProfileId: string, verified: boolean) {
   const { error } = await supabase
     .from("vet_profiles")
-    .update({ is_license_verified: verified })
+    .update({
+      is_license_verified: verified,
+      verification_status: verified ? "manual_override" : "unverified",
+      verification_source: "admin_override",
+      verification_checked_at: new Date().toISOString(),
+    })
     .eq("id", vetProfileId);
   if (error) throw error;
 }
@@ -497,9 +512,45 @@ export async function setVetLicenseVerified(vetProfileId: string, verified: bool
 export async function setVetFearFreeVerified(vetProfileId: string, verified: boolean) {
   const { error } = await supabase
     .from("vet_profiles")
-    .update({ fear_free_certified: verified })
+    .update({
+      fear_free_certified: verified,
+      fear_free_verification_status: verified ? "manual_override" : "unverified",
+      fear_free_source: "admin_override",
+      fear_free_checked_at: new Date().toISOString(),
+    })
     .eq("id", vetProfileId);
   if (error) throw error;
+}
+
+export interface VetVerificationAttempt {
+  id: string;
+  vet_profile_id: string;
+  kind: "license" | "fear_free";
+  attempted_at: string;
+  status: string;
+  http_status: number | null;
+  source: string | null;
+  error: string | null;
+  payload: unknown;
+}
+
+export async function fetchVetVerificationAttempts(vetProfileId: string, limit = 10): Promise<VetVerificationAttempt[]> {
+  const { data, error } = await supabase
+    .from("vet_verification_attempts")
+    .select("*")
+    .eq("vet_profile_id", vetProfileId)
+    .order("attempted_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as VetVerificationAttempt[];
+}
+
+export async function retryVetVerification(vetProfileId: string) {
+  const [lic, ff] = await Promise.allSettled([
+    supabase.functions.invoke("verify-vet-license", { body: { vet_profile_id: vetProfileId } }),
+    supabase.functions.invoke("verify-vet-fear-free", { body: { vet_profile_id: vetProfileId } }),
+  ]);
+  return { lic, ff };
 }
 
 export async function getVetCredentialSignedUrl(path: string): Promise<string | null> {
