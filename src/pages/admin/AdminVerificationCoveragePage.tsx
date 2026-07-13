@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -205,8 +205,8 @@ export default function AdminVerificationCoveragePage() {
                   const rows = attemptsByState[s.code] ?? [];
                   const isOpen = !!expanded[s.code];
                   return (
-                    <>
-                      <tr key={s.code} className="border-b hover:bg-muted/40">
+                    <Fragment key={s.code}>
+                      <tr className="border-b hover:bg-muted/40">
                         <td className="py-2 pr-2">
                           {rows.length > 0 && (
                             <Button
