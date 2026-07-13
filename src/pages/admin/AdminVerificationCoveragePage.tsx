@@ -39,6 +39,7 @@ export default function AdminVerificationCoveragePage() {
   const [attempts, setAttempts] = useState<Attempt[]>([]);
   const [flags, setFlags] = useState<Record<string, FlagRow>>({});
   const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   async function load() {
     const { data: { session } } = await supabase.auth.getSession();
