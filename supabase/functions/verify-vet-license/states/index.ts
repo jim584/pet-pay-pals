@@ -2,6 +2,18 @@
 // and returns a normalized LookupResult. Add a new state by creating a module
 // and registering it here — no schema or UI changes required.
 
+import { BOARDS, STATE_CODES } from "./boards.ts";
+import { lookup as ca } from "./ca.ts";
+import { lookup as tx } from "./tx.ts";
+import { lookup as fl } from "./fl.ts";
+import { lookup as ny } from "./ny.ts";
+import { lookup as pa } from "./pa.ts";
+import { lookup as il } from "./il.ts";
+import { lookup as oh } from "./oh.ts";
+import { lookup as ga } from "./ga.ts";
+import { lookup as nc } from "./nc.ts";
+import { lookup as mi } from "./mi.ts";
+
 export type LookupStatus =
   | "match"
   | "no_match"
@@ -18,7 +30,7 @@ export interface LookupInput {
 
 export interface LookupResult {
   status: LookupStatus;
-  source: string;             // e.g. "CA-BVM"
+  source: string;             // e.g. "state:CA"
   source_url: string | null;  // human-visitable URL
   reason?: string;
   http_status?: number | null;
@@ -28,22 +40,28 @@ export interface LookupResult {
   raw?: unknown;
 }
 
-// Registered state modules. Empty for now — no state offers a stable public API,
-// so every state falls back to `not_supported` → `pending_review` and admins
-// verify manually with an override. Plug new modules in here as they are built.
-const REGISTRY: Record<string, (input: LookupInput) => Promise<LookupResult>> = {};
+// Registered adapters. Any state not present here falls back to
+// `not_supported` → `pending_review` (admins verify manually).
+const REGISTRY: Record<string, (input: LookupInput) => Promise<LookupResult>> = {
+  CA: ca, TX: tx, FL: fl, NY: ny, PA: pa,
+  IL: il, OH: oh, GA: ga, NC: nc, MI: mi,
+};
 
-export const SUPPORTED_STATES = Object.keys(REGISTRY);
+export const SUPPORTED_STATES = Object.keys(REGISTRY).sort();
+export { BOARDS, STATE_CODES };
 
 export async function lookupByState(state: string, input: LookupInput): Promise<LookupResult> {
-  const key = state.toUpperCase();
+  const key = (state ?? "").toUpperCase();
   const fn = REGISTRY[key];
+  const board = BOARDS[key];
   if (!fn) {
     return {
       status: "not_supported",
       source: `state:${key}`,
-      source_url: aavsbBoardUrl(key),
-      reason: "Automated verification for this state is not yet available — an admin will review manually.",
+      source_url: board?.lookup_url ?? "https://www.aavsb.org/public-resources/look-up-a-license/",
+      reason: board
+        ? `Automated verification for ${board.name} is not yet available — an admin will review manually via ${board.board}.`
+        : "Automated verification for this state is not yet available — an admin will review manually.",
       http_status: null,
       raw: null,
     };
@@ -51,26 +69,16 @@ export async function lookupByState(state: string, input: LookupInput): Promise<
   return await fn(input);
 }
 
-// AAVSB maintains a directory of state veterinary boards; link admins to it
-// so they can jump straight to the correct board lookup for manual review.
-function aavsbBoardUrl(_state: string) {
-  return "https://www.aavsb.org/public-resources/look-up-a-license/";
-}
-
-// Utility available to future state modules.
+// Legacy exports (kept for callers importing from this module directly).
 export function normalizeName(s: string): string {
   return s.toLowerCase().replace(/[^a-z\s-]/g, "").replace(/\s+/g, " ").trim();
 }
-
-// Fuzzy last-name-exact + first-name-close matcher for future scrapers.
 export function namesMatch(a: string, b: string): boolean {
   const an = normalizeName(a).split(" ");
   const bn = normalizeName(b).split(" ");
   if (an.length === 0 || bn.length === 0) return false;
-  const lastA = an[an.length - 1];
-  const lastB = bn[bn.length - 1];
+  const lastA = an[an.length - 1], lastB = bn[bn.length - 1];
   if (lastA !== lastB) return false;
-  const firstA = an[0];
-  const firstB = bn[0];
+  const firstA = an[0], firstB = bn[0];
   return firstA === firstB || firstA.startsWith(firstB) || firstB.startsWith(firstA);
 }
