@@ -58,18 +58,39 @@ export default function AdminVetDetailPage() {
     if (!vetProfileId) return;
     setLoading(true);
     try {
-      const [v, s, a] = await Promise.all([
+      const [v, s, a, at] = await Promise.all([
         fetchAdminVetDetail(vetProfileId),
         fetchAdminVetServices(vetProfileId),
         fetchAdminVetAppointments(vetProfileId, statusFilter),
+        fetchVetVerificationAttempts(vetProfileId, 10),
       ]);
       setVet(v);
       setServices(s);
       setAppointments(a);
+      setAttempts(at);
     } catch (e: any) {
       toast({ title: "Failed to load vet", description: e.message, variant: "destructive" });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRetryVerification = async () => {
+    if (!vet) return;
+    setBusy("retry");
+    try {
+      await retryVetVerification(vet.id);
+      toast({ title: "Re-checked", description: "Verification refreshed." });
+      const [fresh, freshAttempts] = await Promise.all([
+        fetchAdminVetDetail(vet.id),
+        fetchVetVerificationAttempts(vet.id, 10),
+      ]);
+      setVet(fresh);
+      setAttempts(freshAttempts);
+    } catch (e: any) {
+      toast({ title: "Retry failed", description: e.message, variant: "destructive" });
+    } finally {
+      setBusy(null);
     }
   };
 
