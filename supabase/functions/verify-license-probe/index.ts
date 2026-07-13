@@ -181,43 +181,42 @@ Deno.serve(async (req) => {
   connectivity.push(...connResults);
 
   if (includeFormFlow) {
-    for (const [state, cfg] of Object.entries(FORM_FLOW)) {
-      if (Date.now() - started > HANDLER_CEILING_MS) {
-        formFlow.push({ state, error: "handler_ceiling_reached", timestamp: new Date().toISOString() });
-        continue;
-      }
-      try {
-        const r = await fetchWithLimits(cfg.url, {
-          method: cfg.method,
-          body: cfg.method === "POST" ? cfg.body : undefined,
-          headers: cfg.method === "POST"
-            ? { "Content-Type": cfg.contentType ?? "application/x-www-form-urlencoded" }
-            : undefined,
-        }, FORM_TIMEOUT_MS);
-        formFlow.push({
-          state,
-          method: cfg.method,
-          http_status: r.http_status,
-          content_type: r.content_type,
-          response_size_bytes: r.response_size_bytes,
-          elapsed_ms: r.elapsed_ms,
-          no_results_seen: /no\s+(records|results|matches)|not\s+found|0\s+results/i.test(r.snippet),
-          captcha_seen: /captcha/i.test(r.snippet),
-          js_required_seen: /javascript\s+(is\s+)?required|enable\s+javascript/i.test(r.snippet),
-          session_cookie_required: r.session_cookie_required,
-          challenge_markers: detectMarkers(r.snippet),
-          timestamp: new Date().toISOString(),
-        });
-      } catch (e) {
-        formFlow.push({
-          state,
-          method: cfg.method,
-          error: String((e as Error).message ?? e).slice(0, 200),
-          timestamp: new Date().toISOString(),
-        });
-      }
-      await new Promise((r) => setTimeout(r, 1000));
-    }
+    const formResults = await Promise.all(
+      Object.entries(FORM_FLOW).map(async ([state, cfg]) => {
+        try {
+          const r = await fetchWithLimits(cfg.url, {
+            method: cfg.method,
+            body: cfg.method === "POST" ? cfg.body : undefined,
+            headers: cfg.method === "POST"
+              ? { "Content-Type": cfg.contentType ?? "application/x-www-form-urlencoded" }
+              : undefined,
+          }, FORM_TIMEOUT_MS);
+          return {
+            state,
+            method: cfg.method,
+            http_status: r.http_status,
+            content_type: r.content_type,
+            response_size_bytes: r.response_size_bytes,
+            elapsed_ms: r.elapsed_ms,
+            no_results_seen: /no\s+(records|results|matches)|not\s+found|0\s+results/i.test(r.snippet),
+            captcha_seen: /captcha/i.test(r.snippet),
+            js_required_seen: /javascript\s+(is\s+)?required|enable\s+javascript/i.test(r.snippet),
+            session_cookie_required: r.session_cookie_required,
+            challenge_markers: detectMarkers(r.snippet),
+            timestamp: new Date().toISOString(),
+          };
+        } catch (e) {
+          return {
+            state,
+            method: cfg.method,
+            error: String((e as Error).message ?? e).slice(0, 200),
+            timestamp: new Date().toISOString(),
+          };
+        }
+      }),
+    );
+    formFlow.push(...formResults);
+  }
   }
 
   // Bucket the results.
