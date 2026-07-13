@@ -58,7 +58,12 @@ export const BOARDS: Record<string, BoardInfo> = {
   SC: { code: "SC", name: "South Carolina", board: "South Carolina State Board of Veterinary Medical Examiners", lookup_url: "https://verify.llronline.com/LicLookup/", technique: "manual" },
   SD: { code: "SD", name: "South Dakota", board: "South Dakota Board of Veterinary Medical Examiners", lookup_url: "https://sdlicensing.custhelp.com/", technique: "manual" },
   TN: { code: "TN", name: "Tennessee", board: "Tennessee Board of Veterinary Medical Examiners", lookup_url: "https://apps.health.tn.gov/Licensure/", technique: "manual" },
-  TX: { code: "TX", name: "Texas", board: "Texas Board of Veterinary Medical Examiners", lookup_url: "https://vetlicensesearch.tbvme.texas.gov/", technique: "adapter" },
+  // TX: TBVME still exists as the licensing authority; SB 2155 (89R, 2025) placed the board under
+  // temporary administration by TDLR but the board name is unchanged. The prior host
+  // vetlicensesearch.tbvme.texas.gov no longer resolves (NXDOMAIN, probed 2026-07-13). The
+  // current public licensee lookup is a Salesforce-hosted portal at apps.veterinary.texas.gov.
+  // Kept as manual_review — adapter not built or activated pending research approval.
+  TX: { code: "TX", name: "Texas", board: "Texas Board of Veterinary Medical Examiners", lookup_url: "https://apps.veterinary.texas.gov/s/licenseelookup", technique: "manual", disabled_reason: "Salesforce SPA portal — needs individual research + adapter design before activation" },
   UT: { code: "UT", name: "Utah", board: "Utah Division of Occupational and Professional Licensing", lookup_url: "https://secure.utah.gov/llv/search/index.html", technique: "manual" },
   VT: { code: "VT", name: "Vermont", board: "Vermont Board of Veterinary Medicine", lookup_url: "https://sos.vermont.gov/opr/find-a-professional/", technique: "manual" },
   VA: { code: "VA", name: "Virginia", board: "Virginia Board of Veterinary Medicine", lookup_url: "https://dhp.virginiainteractive.org/lookup/index", technique: "manual" },
