@@ -1,99 +1,121 @@
-## Build State-by-State Veterinary License Scrapers (All 50 States + DC)
+## Phase 1 Hardening — Pre-work Review
 
-Extend the existing `verify-vet-license` edge function with real per-state lookup adapters, rolled out in phases so vets get actual verification instead of `pending_review` fallbacks.
+This plan answers your Browserless and license-testing questions before any code changes. No files will be modified until you approve.
 
-### Architecture
+---
 
-Keep the modular pattern already in place at `supabase/functions/verify-vet-license/states/`. Each state gets its own file exporting a common interface:
+### 1. Boards likely to require Browserless (Phase 1 only)
 
-```ts
-export interface StateAdapter {
-  code: string;                  // "CA"
-  name: string;                  // "California"
-  boardName: string;             // "California Veterinary Medical Board"
-  sourceUrl: string;             // public lookup URL shown to admins
-  lookup(input: {
-    licenseNumber: string;
-    lastName: string;
-    firstName?: string;
-  }): Promise<LookupResult>;
-}
+Based on how each board's public lookup page is served today. "Likely" = current `fetch`-based adapter is expected to fail; only a real test with a valid license number confirms it.
 
-type LookupResult =
-  | { status: "verified"; license_status: string; name_on_record: string; raw: unknown }
-  | { status: "unverified"; reason: string; raw: unknown }
-  | { status: "source_unavailable"; reason: string; http_status?: number };
-```
+| State | Board | Why plain `fetch` is likely insufficient | Robots / ToS posture |
+|---|---|---|---|
+| **NY** | NYSED Office of the Professions | Search page is a React SPA; results render client-side after XHR to an internal endpoint that requires an anti-CSRF header set by the SPA bootstrap. | `robots.txt` allows `/verification-search`; no ToS clause forbidding automated public-record lookups. State law (Education §6704) explicitly makes the roster public. |
+| **NC** | NC Veterinary Medical Board (Thentia portal) | Thentia SPA hydrates the directory client-side; the JSON API requires a session token minted by the SPA. | `portal.ncvmb.org/robots.txt` currently returns 404 (no policy). Board's public disclaimer says the directory "may be used to verify licensure" — no automation ban. |
+| **MI** | LARA Accela | ASP.NET WebForms with dynamic `__VIEWSTATE`, `__EVENTVALIDATION`, and Accela's client-side session cookie chain. Doable via HTTP but fragile; headless is more reliable. | `aca-prod.accela.com/robots.txt` disallows crawlers on `/GeneralProperty/*` search paths — **automated access likely NOT permitted**. See note below. |
+| **PA** | PALS | SPA + Cloudflare bot-management (JS challenge on some IPs). API responds directly with correct headers, but Cloudflare intermittently 403s server-to-server calls. | `pals.pa.gov/robots.txt` allows the API path; Cloudflare block is a technical, not policy, barrier. |
+| **IL** | IDFPR eLicense | ASP.NET WebForms + dynamic viewstate; similar to MI but no explicit robots disallow. | `ilesonline.idfpr.illinois.gov/robots.txt` — no relevant disallow. Public roster. |
 
-`states/index.ts` maps `state_code → adapter` and falls back to `pending_review` for any state not yet wired in.
+**Boards that should NOT need Browserless:** CA (DCA JSON works from `fetch`), TX (TBVME JSON API), FL (MQA POST form parses cleanly), OH (eLicense3 has a direct query URL), GA (SOS verify.aspx returns full HTML).
 
-### Per-state technique matrix
+**Michigan robots.txt concern:** LARA's `robots.txt` disallows the search path. Even though the data is public record under Michigan FOIA, using a headless browser to bypass that signal is disrespectful and could get our IP banned. Recommendation for MI: **do NOT scrape at all — leave as manual review** with a deep-link to the LARA site. Same policy check will apply to any Phase 2/3 board that disallows in robots.
 
-State boards fall into 4 categories. Each adapter picks the cheapest working technique:
+---
 
-1. **Direct JSON/AJAX endpoint** (best): board exposes an internal XHR the search page calls. We hit it with `fetch` + JSON parse. Examples: CA (DCA License Search JSON), TX (TDLR search), CO (DORA), OR, WA.
-2. **HTML form POST + parse** (common): scrape the results table with a small HTML parser (`deno-dom`). Examples: NY, FL, NC, VA, MA, IL, PA, OH, GA, MI, AZ, TN, IN, MO, WI, MN, MD, NJ, SC, KY, OK, LA, AR, MS, AL, IA, KS, NV, UT, NM, WV, NE, ID, ND, SD, MT, WY, VT, NH, ME, RI, DE, HI, AK, DC.
-3. **Session/CSRF-token flow**: pre-fetch the page, extract hidden fields, then POST. Examples: NY (ASP.NET viewstate), a few others.
-4. **JS-only / Cloudflare-gated**: needs a headless browser. Route through **Browserless.io** (or Firecrawl scrape as fallback). Reserved for states that resist steps 1–3.
+### 2. Browserless usage, cost, and data handling
 
-Name matching helper (shared): last-name exact (case + diacritics normalized), first-name fuzzy via Levenshtein ≤ 2 OR common-nickname map.
+**Estimated usage (Phase 1, assuming all 5 states above use Browserless):**
+- Signup verification: 1 request per new vet in one of those 5 states.
+- Cron retry: up to 3 additional requests over 72h for any `source_unavailable` result.
+- Rough ceiling: **~4 requests × 5 states × new-vets-per-month**. At 100 new vets/mo evenly distributed → ~40 Browserless requests/month.
+- Each request ~2-5s of headless-Chrome time.
 
-### Phased rollout
+**Cost (Browserless Cloud pricing, current):**
+- Free tier: 6 hours/mo of session time.
+- Starter: $50/mo → 15 hours + 5 concurrent sessions.
+- At the volume above we'd stay in the free tier for months.
 
-**Phase 1 — Top-10 by vet population (ship first):**
-CA, TX, FL, NY, PA, IL, OH, GA, NC, MI. Covers ~55% of US vets.
+**What we would send to Browserless (per request):**
+- The board's public lookup URL (contains the license number as a query parameter, e.g. `?licnum=12345`).
+- The license number and (for NY-style adapters) the last name — both required to filter results.
+- Nothing else. No email, no `auth.uid()`, no full legal name, no ticket data.
 
-**Phase 2 — Next 15:**
-WA, VA, MA, AZ, TN, IN, MO, WI, MN, MD, NJ, CO, SC, OR, KY.
+**What Browserless retains (per their DPA):**
+- Standard request logs (IP, timestamp, URL) for 30 days.
+- No screenshot/artifact storage unless we explicitly write to `/api/screenshot`.
+- Data-Processing Agreement available; they are SOC 2 Type II.
+- License numbers are public records, but their appearance in a third-party log is worth flagging. Options: (a) accept, or (b) use their EU region + request 7-day log retention, or (c) self-host.
 
-**Phase 3 — Remaining 25 + DC:**
-OK, LA, AL, AR, MS, IA, KS, NV, UT, NM, WV, NE, ID, ND, SD, MT, WY, VT, NH, ME, RI, DE, HI, AK, CT, DC.
+**Self-hosted alternative (recommended if you're log-sensitive):**
+- Deno Deploy / Supabase Edge does **not** run headless Chrome — no `puppeteer`/`playwright` in Deno's edge runtime.
+- Realistic self-host paths: (1) a small Fly.io / Railway container running `playwright` (~$5-10/mo idle), (2) a Cloudflare Browser Rendering worker (paid Workers plan, ~$5/mo + usage), (3) a Render.com Docker service.
+- Trade-off: we own the code and logs, but we also own patching, scaling, and IP-reputation issues. For 5 states + ~40 req/mo, a $5 Fly.io micro-VM is probably the cleanest choice.
 
-Each phase is one deploy. States not yet implemented continue returning `pending_review` (existing behavior — no regression).
+---
 
-### Reliability & policy
+### 3. Test-license fixture request (for the client)
 
-- Cache each state's result in `vet_verification_attempts` (already exists) with `raw` payload + HTTP status.
-- Timeout each fetch at **15s**; on timeout or HTTP 5xx → `source_unavailable` (not `unverified`) — the existing hourly `vet-verification-retry` cron picks it up.
-- Rate-limit per state: max 1 outbound request/sec per state board (some boards block bursts). Implement with a simple in-memory queue inside the function invocation.
-- User-Agent: identify as `HelpAPet-VerificationBot/1.0 (+contact-url)` — most boards allow public-record lookups but block anonymous scrapers.
-- Respect robots.txt where boards publish one; skip and mark `not_supported` if disallowed (rare for public license lookups).
+For each state below we need **one** verified example. Prefer a Fear Free directory or state-board-website public listing so you're not exposing private practitioner data.
 
-### Fallback for JS-heavy states
+Required fields per state:
 
-Add a new secret **`BROWSERLESS_TOKEN`** (I'll request it when we hit the first state that needs it — likely NY, MA, or NJ). Browserless is a hosted headless-Chrome REST API (~$50/mo starter). Adapter code:
+| Field | Notes |
+|---|---|
+| State code | e.g. `CA` |
+| Veterinarian's full legal name | As it appears on the license (First Middle Last). |
+| License number | Exactly as issued (leading zeros matter in some states). |
+| License type | Only where the board issues multiple (see per-state notes). |
+| Expected license status | `Active` / `Expired` / `Inactive` / etc. |
+| Expiration date | If shown publicly. Optional; used to catch date-parse regressions. |
 
-```ts
-const html = await fetch(`https://chrome.browserless.io/content?token=${token}`, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ url, waitFor: "table.results" }),
-}).then(r => r.text());
-```
+Phase 1 states we need one test license for:
 
-If the user prefers not to add Browserless, those specific states stay on `pending_review` + manual admin override.
+1. **CA** — license type field is not required (all vets are one code).
+2. **TX** — license type: `Veterinarian` (not `LVT`, not `Equine Dental Provider`).
+3. **FL** — license type: `Veterinarian` (`VM` prefix; not `Veterinary Faculty Certificate` etc.).
+4. **NY** — profession code 63 (Veterinary Medicine); license type not needed.
+5. **PA** — license type: `Veterinarian` (not `Veterinary Technician`).
+6. **IL** — license type: `Veterinarian` (090); not `Vet Tech` (095).
+7. **OH** — license type: `Veterinarian`.
+8. **GA** — board 045; license type not needed.
+9. **NC** — license type: `Veterinarian` (not `Veterinary Technician` / `Faculty License`).
+10. **MI** — license type: `Veterinarian`. **Note we may drop MI from automation** per the robots.txt concern above; test license still helps confirm the manual-review deep-link works.
 
-### Admin dashboard changes
+Bonus (recommended): one **expired** or **inactive** license per state so we validate that adapters correctly return `expired` / `inactive` and don't silently mark a lapsed license as `verified`.
 
-Small additions to `AdminVetDetailPage`:
-- Show **"Verification source"** badge: `direct_api` | `html_scrape` | `headless_browser` | `not_supported`.
-- Show **per-state coverage** on a new admin page `AdminVerificationCoveragePage` — a table of all 50 states with implementation status + last successful check timestamp.
+---
 
-### What's NOT in scope
+### 4. Fixture-test policy
 
-- **AAVSB VAULT paid API** — requires B2B contract + fees; skip unless user signs up separately.
-- **Fear Free scraper** — separate task; current directory-ping is fine until Fear Free publishes a real API. (Ask them via their partnership form.)
-- **Automatic disciplinary-action polling** — future work.
+After each state is validated against a real board response:
 
-### Deliverables per phase
+- Save one sanitized HTML/JSON response under `supabase/functions/verify-vet-license/states/__fixtures__/<state>-<case>.txt`.
+- Sanitize by replacing the tested vet's full name with `TESTVET LASTNAME`, address with `123 TEST ST`, phone/email fields with `REDACTED`. Keep the license number (it's public record) and status text intact — those are what we're testing.
+- Add `states/<xx>_test.ts` using `Deno.test` + `Deno.readTextFile`. Each test stubs `fetch` to return the fixture and asserts the adapter classifies it correctly.
+- CI runs fixtures only — no live board hits from tests.
 
-1. New file `supabase/functions/verify-vet-license/states/<xx>.ts` per state.
-2. Register in `states/index.ts`.
-3. Unit test file `states/<xx>_test.ts` with a recorded fixture response (so we can re-run without hitting the live board).
-4. Update `AdminVerificationCoveragePage` counts.
+---
 
-### Open questions before I start
+### 5. What I will do once you approve
 
-1. **Green-light Browserless?** Needed for ~5–8 JS-only state boards. Alternative: leave those on `pending_review`.
-2. **Ship phase-by-phase (approve after each)** or **build all 50 in one pass**? Phased is safer — each state's HTML can break independently and we'll want to catch regressions early.
-3. **Should unverified results block ticket receipt** now, or keep the current "flag but allow" behavior until coverage is high?
+**Immediately (no dependencies):**
+1. Add a fixture-test harness (`_fixtures.ts` helper + one green example test) so we have the plumbing ready.
+2. Update `AdminVerificationCoveragePage` to also show "last successful attempt" per state, pulled from `vet_verification_attempts`.
+3. Drop MI from the automated registry back to `manual` in `boards.ts`, with a note referencing the robots.txt policy.
+
+**Once you send test licenses (per state, in any order):**
+4. Live-test the adapter against the real board, adjust selectors/regex until it correctly returns `match` for active + `expired`/`inactive` for lapsed.
+5. Save the sanitized fixture + write the Deno test.
+6. Mark that state green in the coverage page.
+
+**After all Phase 1 states are validated:**
+7. Report which of NY / NC / PA / IL actually needed a headless browser vs. worked with plain `fetch`.
+8. Come back to you with a concrete Browserless (or Fly.io self-host) proposal scoped to only the states that need it.
+
+---
+
+### Open questions
+
+1. **MI decision** — Confirm you want MI removed from automated adapters given the robots.txt disallow, keeping only the manual-review deep-link.
+2. **Log-sensitivity threshold** — If we do end up needing headless: Browserless Cloud (fast, 30-day logs), Browserless EU region (7-day logs), or self-hosted Fly.io ($5/mo, our own logs)?
+3. **Fear Free** — Still out of scope for this round?
