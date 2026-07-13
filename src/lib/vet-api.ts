@@ -1,5 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
 
+export type VetVerificationStatus =
+  | "pending"
+  | "verified"
+  | "unverified"
+  | "pending_review"
+  | "manual_override";
+
 export interface VetProfile {
   id: string;
   user_id: string;
@@ -13,15 +20,33 @@ export interface VetProfile {
   // Verification (read-only for vets; admin-managed)
   license_number: string | null;
   license_state: string | null;
+  license_full_legal_name: string | null;
   license_document_url: string | null;
   is_license_verified: boolean;
   license_verified_at: string | null;
+  verification_status: VetVerificationStatus;
+  verification_checked_at: string | null;
+  verification_source: string | null;
+  verification_source_url: string | null;
+  verification_reason: string | null;
   fear_free_certified: boolean;
   fear_free_cert_number: string | null;
   fear_free_cert_url: string | null;
   fear_free_verified_at: string | null;
+  fear_free_verification_status: VetVerificationStatus;
+  fear_free_checked_at: string | null;
+  fear_free_source: string | null;
+  fear_free_reason: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export async function triggerVetVerification(vetProfileId: string) {
+  const [lic, ff] = await Promise.allSettled([
+    supabase.functions.invoke("verify-vet-license", { body: { vet_profile_id: vetProfileId } }),
+    supabase.functions.invoke("verify-vet-fear-free", { body: { vet_profile_id: vetProfileId } }),
+  ]);
+  return { license: lic, fear_free: ff };
 }
 
 export interface VetService {
