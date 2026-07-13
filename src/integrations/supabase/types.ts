@@ -2095,12 +2095,18 @@ export type Database = {
           fear_free_cert_number: string | null
           fear_free_cert_url: string | null
           fear_free_certified: boolean
+          fear_free_checked_at: string | null
+          fear_free_raw: Json | null
+          fear_free_reason: string | null
+          fear_free_source: string | null
+          fear_free_verification_status: Database["public"]["Enums"]["vet_verification_status"]
           fear_free_verified_at: string | null
           fear_free_verified_by: string | null
           id: string
           is_approved: boolean
           is_license_verified: boolean
           license_document_url: string | null
+          license_full_legal_name: string | null
           license_number: string | null
           license_state: string | null
           license_verified_at: string | null
@@ -2110,6 +2116,12 @@ export type Database = {
           specializations: string[] | null
           updated_at: string
           user_id: string
+          verification_checked_at: string | null
+          verification_raw: Json | null
+          verification_reason: string | null
+          verification_source: string | null
+          verification_source_url: string | null
+          verification_status: Database["public"]["Enums"]["vet_verification_status"]
           website: string | null
         }
         Insert: {
@@ -2119,12 +2131,18 @@ export type Database = {
           fear_free_cert_number?: string | null
           fear_free_cert_url?: string | null
           fear_free_certified?: boolean
+          fear_free_checked_at?: string | null
+          fear_free_raw?: Json | null
+          fear_free_reason?: string | null
+          fear_free_source?: string | null
+          fear_free_verification_status?: Database["public"]["Enums"]["vet_verification_status"]
           fear_free_verified_at?: string | null
           fear_free_verified_by?: string | null
           id?: string
           is_approved?: boolean
           is_license_verified?: boolean
           license_document_url?: string | null
+          license_full_legal_name?: string | null
           license_number?: string | null
           license_state?: string | null
           license_verified_at?: string | null
@@ -2134,6 +2152,12 @@ export type Database = {
           specializations?: string[] | null
           updated_at?: string
           user_id: string
+          verification_checked_at?: string | null
+          verification_raw?: Json | null
+          verification_reason?: string | null
+          verification_source?: string | null
+          verification_source_url?: string | null
+          verification_status?: Database["public"]["Enums"]["vet_verification_status"]
           website?: string | null
         }
         Update: {
@@ -2143,12 +2167,18 @@ export type Database = {
           fear_free_cert_number?: string | null
           fear_free_cert_url?: string | null
           fear_free_certified?: boolean
+          fear_free_checked_at?: string | null
+          fear_free_raw?: Json | null
+          fear_free_reason?: string | null
+          fear_free_source?: string | null
+          fear_free_verification_status?: Database["public"]["Enums"]["vet_verification_status"]
           fear_free_verified_at?: string | null
           fear_free_verified_by?: string | null
           id?: string
           is_approved?: boolean
           is_license_verified?: boolean
           license_document_url?: string | null
+          license_full_legal_name?: string | null
           license_number?: string | null
           license_state?: string | null
           license_verified_at?: string | null
@@ -2158,6 +2188,12 @@ export type Database = {
           specializations?: string[] | null
           updated_at?: string
           user_id?: string
+          verification_checked_at?: string | null
+          verification_raw?: Json | null
+          verification_reason?: string | null
+          verification_source?: string | null
+          verification_source_url?: string | null
+          verification_status?: Database["public"]["Enums"]["vet_verification_status"]
           website?: string | null
         }
         Relationships: []
@@ -2301,6 +2337,53 @@ export type Database = {
             columns: ["issued_card_id"]
             isOneToOne: false
             referencedRelation: "issued_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vet_verification_attempts: {
+        Row: {
+          attempted_at: string
+          created_at: string
+          error: string | null
+          http_status: number | null
+          id: string
+          kind: string
+          payload: Json | null
+          source: string | null
+          status: string
+          vet_profile_id: string
+        }
+        Insert: {
+          attempted_at?: string
+          created_at?: string
+          error?: string | null
+          http_status?: number | null
+          id?: string
+          kind: string
+          payload?: Json | null
+          source?: string | null
+          status: string
+          vet_profile_id: string
+        }
+        Update: {
+          attempted_at?: string
+          created_at?: string
+          error?: string | null
+          http_status?: number | null
+          id?: string
+          kind?: string
+          payload?: Json | null
+          source?: string | null
+          status?: string
+          vet_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vet_verification_attempts_vet_profile_id_fkey"
+            columns: ["vet_profile_id"]
+            isOneToOne: false
+            referencedRelation: "vet_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2605,6 +2688,12 @@ export type Database = {
         | "cancelled"
         | "awaiting_secondary_review"
         | "auto_approved"
+      vet_verification_status:
+        | "pending"
+        | "verified"
+        | "unverified"
+        | "pending_review"
+        | "manual_override"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2762,6 +2851,13 @@ export const Constants = {
         "cancelled",
         "awaiting_secondary_review",
         "auto_approved",
+      ],
+      vet_verification_status: [
+        "pending",
+        "verified",
+        "unverified",
+        "pending_review",
+        "manual_override",
       ],
     },
   },
