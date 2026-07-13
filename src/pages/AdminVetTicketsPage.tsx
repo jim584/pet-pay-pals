@@ -19,9 +19,10 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import {
-  listAllTicketsForAdmin, computeTicketCoverage, approveVetTicket,
-  rejectVetTicket, getTicketFileSignedUrl, type VetTicket, type CoverageBreakdown,
+  listAllTicketsForAdmin,
+  rejectVetTicket, getTicketFileSignedUrl, type VetTicket,
 } from "@/lib/vet-tickets-api";
+
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, FileText, ShieldAlert, CalendarIcon, X, Filter } from "lucide-react";
 import { Navigate } from "react-router-dom";
