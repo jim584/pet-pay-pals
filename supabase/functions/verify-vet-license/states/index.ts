@@ -12,7 +12,7 @@ import { lookup as il } from "./il.ts";
 import { lookup as oh } from "./oh.ts";
 import { lookup as ga } from "./ga.ts";
 import { lookup as nc } from "./nc.ts";
-import { lookup as mi } from "./mi.ts";
+// MI intentionally NOT registered: LARA Accela robots.txt disallows automated crawling.
 
 export type LookupStatus =
   | "match"
@@ -44,7 +44,7 @@ export interface LookupResult {
 // `not_supported` → `pending_review` (admins verify manually).
 const REGISTRY: Record<string, (input: LookupInput) => Promise<LookupResult>> = {
   CA: ca, TX: tx, FL: fl, NY: ny, PA: pa,
-  IL: il, OH: oh, GA: ga, NC: nc, MI: mi,
+  IL: il, OH: oh, GA: ga, NC: nc,
 };
 
 export const SUPPORTED_STATES = Object.keys(REGISTRY).sort();

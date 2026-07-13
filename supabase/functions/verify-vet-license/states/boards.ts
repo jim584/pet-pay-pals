@@ -34,7 +34,8 @@ export const BOARDS: Record<string, BoardInfo> = {
   ME: { code: "ME", name: "Maine", board: "Maine Board of Veterinary Medicine", lookup_url: "https://www.pfr.maine.gov/almsonline/almsquery/", technique: "manual" },
   MD: { code: "MD", name: "Maryland", board: "Maryland State Board of Veterinary Medical Examiners", lookup_url: "https://mda.maryland.gov/vetboard/Pages/Search-License-Information.aspx", technique: "manual" },
   MA: { code: "MA", name: "Massachusetts", board: "Massachusetts Board of Registration in Veterinary Medicine", lookup_url: "https://checkalicense.hhs.state.ma.us/", technique: "manual" },
-  MI: { code: "MI", name: "Michigan", board: "Michigan Board of Veterinary Medicine", lookup_url: "https://aca-prod.accela.com/MILARA/GeneralProperty/LicenseeSearch.aspx", technique: "adapter" },
+  // MI: LARA Accela robots.txt disallows /GeneralProperty/* crawling. Left as manual review.
+  MI: { code: "MI", name: "Michigan", board: "Michigan Board of Veterinary Medicine", lookup_url: "https://aca-prod.accela.com/MILARA/GeneralProperty/LicenseeSearch.aspx", technique: "manual" },
   MN: { code: "MN", name: "Minnesota", board: "Minnesota Board of Veterinary Medicine", lookup_url: "https://mn.gov/boards/veterinary-medicine/public/licensee-lookup/", technique: "manual" },
   MS: { code: "MS", name: "Mississippi", board: "Mississippi Board of Veterinary Medicine", lookup_url: "https://www.mbvm.ms.gov/verify-license", technique: "manual" },
   MO: { code: "MO", name: "Missouri", board: "Missouri Veterinary Medical Board", lookup_url: "https://pr.mo.gov/licensee-search.asp", technique: "manual" },
