@@ -50,6 +50,7 @@ export function VetProfileSetup() {
           specializations: p.specializations || [],
           license_number: p.license_number || "",
           license_state: p.license_state || "",
+          license_full_legal_name: p.license_full_legal_name || "",
           fear_free_cert_number: p.fear_free_cert_number || "",
         });
       }
