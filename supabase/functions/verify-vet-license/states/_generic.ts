@@ -165,14 +165,14 @@ export function makeGenericAdapter(stateCode: string, attempts: Attempt[]) {
             };
           }
           return {
-            status: "no_match",
+            status: "ambiguous",
             source, source_url,
-            reason: `License found but name on record (“${onRecord}”) does not match “${input.fullLegalName}”.`,
+            reason: `License is active for “${onRecord}” but applicant entered “${input.fullLegalName}” — needs admin review.`,
             licensee_name: onRecord,
             http_status: res.status,
             raw: {
               decision: {
-                reason_code: "name_mismatch",
+                reason_code: "name_mismatch_pending_review",
                 matched_by: "license_only",
                 name_on_record: onRecord,
                 expected_name: input.fullLegalName,
