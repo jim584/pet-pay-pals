@@ -309,12 +309,22 @@ export interface AdminVetRow {
   // Verification
   license_number: string | null;
   license_state: string | null;
+  license_full_legal_name: string | null;
   license_document_url: string | null;
   is_license_verified: boolean;
   fear_free_certified: boolean;
   fear_free_cert_number: string | null;
   fear_free_cert_url: string | null;
   fear_free_verified_at: string | null;
+  verification_status: string;
+  verification_checked_at: string | null;
+  verification_source: string | null;
+  verification_source_url: string | null;
+  verification_reason: string | null;
+  fear_free_verification_status: string;
+  fear_free_checked_at: string | null;
+  fear_free_source: string | null;
+  fear_free_reason: string | null;
 }
 
 export interface AdminVetService {
