@@ -32,6 +32,7 @@ export function VetProfileSetup() {
     specializations: [] as string[],
     license_number: "",
     license_state: "",
+    license_full_legal_name: "",
     fear_free_cert_number: "",
   });
 
