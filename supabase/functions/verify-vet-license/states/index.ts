@@ -42,11 +42,11 @@ export interface LookupResult {
   raw?: unknown;
 }
 
-// Registered adapters. Any state not present here falls back to
-// `not_supported` → `pending_review` (admins verify manually).
+// Registered adapters. Currently EMPTY per user directive — every state
+// resolves to `not_supported` → `pending_review` until its source is approved
+// and its adapter individually validated. See the note at the top of this file.
 const REGISTRY: Record<string, (input: LookupInput) => Promise<LookupResult>> = {
-  TX: tx, FL: fl, NY: ny, PA: pa,
-  IL: il, OH: oh, GA: ga, NC: nc,
+  // Intentionally empty. Add a state here only after its adapter is validated.
 };
 
 export const SUPPORTED_STATES = Object.keys(REGISTRY).sort();
