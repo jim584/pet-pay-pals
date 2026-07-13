@@ -3,7 +3,10 @@
 // and registering it here — no schema or UI changes required.
 
 import { BOARDS, STATE_CODES } from "./boards.ts";
-import { lookup as ca } from "./ca.ts";
+// CA intentionally NOT registered: DCA portal is behind an F5 WAF that
+// rejects server-side requests. Kept as manual review until Browserless is
+// approved. `ca.ts` and the fixture placeholder remain in the tree for future
+// use behind the `verification_state_flags.CA.enabled=false` guard.
 import { lookup as tx } from "./tx.ts";
 import { lookup as fl } from "./fl.ts";
 import { lookup as ny } from "./ny.ts";
@@ -43,7 +46,7 @@ export interface LookupResult {
 // Registered adapters. Any state not present here falls back to
 // `not_supported` → `pending_review` (admins verify manually).
 const REGISTRY: Record<string, (input: LookupInput) => Promise<LookupResult>> = {
-  CA: ca, TX: tx, FL: fl, NY: ny, PA: pa,
+  TX: tx, FL: fl, NY: ny, PA: pa,
   IL: il, OH: oh, GA: ga, NC: nc,
 };
 
