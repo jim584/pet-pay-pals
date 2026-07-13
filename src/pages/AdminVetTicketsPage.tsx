@@ -142,9 +142,10 @@ export default function AdminVetTicketsPage() {
       <div>
         <h1 className="text-2xl font-bold">Vet ticket queue</h1>
         <p className="text-sm text-muted-foreground">
-          Review, filter, and bulk-manage submitted vet bills.
+          Vet tickets are auto-approved on submission. Use this page to review, filter, reassign, or reject for fraud.
         </p>
       </div>
+
 
       {/* Filters */}
       <Card>
