@@ -217,7 +217,6 @@ Deno.serve(async (req) => {
     );
     formFlow.push(...formResults);
   }
-  }
 
   // Bucket the results.
   const bucket = (c: Record<string, unknown>): string => {
