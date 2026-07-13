@@ -3,19 +3,18 @@
 // and registering it here — no schema or UI changes required.
 
 import { BOARDS, STATE_CODES } from "./boards.ts";
-// CA intentionally NOT registered: DCA portal is behind an F5 WAF that
-// rejects server-side requests. Kept as manual review until Browserless is
-// approved. `ca.ts` and the fixture placeholder remain in the tree for future
-// use behind the `verification_state_flags.CA.enabled=false` guard.
-import { lookup as tx } from "./tx.ts";
-import { lookup as fl } from "./fl.ts";
-import { lookup as ny } from "./ny.ts";
-import { lookup as pa } from "./pa.ts";
-import { lookup as il } from "./il.ts";
-import { lookup as oh } from "./oh.ts";
-import { lookup as ga } from "./ga.ts";
-import { lookup as nc } from "./nc.ts";
-// MI intentionally NOT registered: LARA Accela robots.txt disallows automated crawling.
+// NOTE (2026-07-13): Per user directive, ALL state adapters are held out of the
+// live REGISTRY until each state's source has been individually researched,
+// approved, and validated against a sanitized fixture with a known public
+// example. The adapter modules (tx.ts, fl.ts, ny.ts, pa.ts, il.ts, oh.ts,
+// ga.ts, nc.ts, ca.ts) remain in the tree as scaffolding for future work but
+// none is wired up here. Every state currently falls through to
+// `not_supported` → `pending_review`, which is the correct behavior:
+//   - CA: F5 WAF blocks server-side lookups
+//   - MI: LARA Accela robots.txt disallows automated crawling
+//   - OH, GA, NC, PA, IL, NY: probed and blocked/timed out/captcha (2026-07-13)
+//   - TX: portal URL corrected in boards.ts; adapter not yet researched
+//   - FL: bulk-file vs live-lookup decision pending user approval
 
 export type LookupStatus =
   | "match"
@@ -43,11 +42,11 @@ export interface LookupResult {
   raw?: unknown;
 }
 
-// Registered adapters. Any state not present here falls back to
-// `not_supported` → `pending_review` (admins verify manually).
+// Registered adapters. Currently EMPTY per user directive — every state
+// resolves to `not_supported` → `pending_review` until its source is approved
+// and its adapter individually validated. See the note at the top of this file.
 const REGISTRY: Record<string, (input: LookupInput) => Promise<LookupResult>> = {
-  TX: tx, FL: fl, NY: ny, PA: pa,
-  IL: il, OH: oh, GA: ga, NC: nc,
+  // Intentionally empty. Add a state here only after its adapter is validated.
 };
 
 export const SUPPORTED_STATES = Object.keys(REGISTRY).sort();
