@@ -16,7 +16,9 @@ export const BOARDS: Record<string, BoardInfo> = {
   AK: { code: "AK", name: "Alaska", board: "Alaska Board of Veterinary Examiners", lookup_url: "https://www.commerce.alaska.gov/cbp/main/search/professional", technique: "manual" },
   AZ: { code: "AZ", name: "Arizona", board: "Arizona State Veterinary Medical Examining Board", lookup_url: "https://azvetlicense.az.gov/apex/f?p=verify", technique: "manual" },
   AR: { code: "AR", name: "Arkansas", board: "Arkansas Veterinary Medical Examining Board", lookup_url: "https://www.arkansas.gov/avmeb/verification.php", technique: "manual" },
-  CA: { code: "CA", name: "California", board: "California Veterinary Medical Board", lookup_url: "https://search.dca.ca.gov/", technique: "adapter" },
+  // CA: DCA search portal is fronted by an F5 WAF that rejects server-side
+  // requests (HTTP 403). Kept as manual review until Browserless is approved.
+  CA: { code: "CA", name: "California", board: "California Veterinary Medical Board", lookup_url: "https://search.dca.ca.gov/", technique: "manual" },
   CO: { code: "CO", name: "Colorado", board: "Colorado State Board of Veterinary Medicine (DORA)", lookup_url: "https://apps.colorado.gov/dre/licensing/Lookup/LicenseLookup.aspx", technique: "manual" },
   CT: { code: "CT", name: "Connecticut", board: "Connecticut Department of Public Health", lookup_url: "https://www.elicense.ct.gov/Lookup/LicenseLookup.aspx", technique: "manual" },
   DE: { code: "DE", name: "Delaware", board: "Delaware Board of Veterinary Medicine", lookup_url: "https://delpros.delaware.gov/OH_VerifyLicense", technique: "manual" },
