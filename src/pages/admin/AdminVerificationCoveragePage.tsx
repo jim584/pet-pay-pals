@@ -92,16 +92,22 @@ export default function AdminVerificationCoveragePage() {
     return map;
   }, [attempts]);
 
-  /** Consecutive non-match / non-no_match failures per state, newest-first. */
-  const consecutiveFailuresByState = useMemo(() => {
+  /** All attempts grouped by state, newest first, capped at 20 for drill-down. */
+  const attemptsByState = useMemo(() => {
     const buckets: Record<string, Attempt[]> = {};
     for (const a of attempts) {
       const code = a.source?.startsWith("state:") ? a.source.slice(6) : null;
       if (!code) continue;
       (buckets[code] ??= []).push(a);
     }
+    for (const k of Object.keys(buckets)) buckets[k] = buckets[k].slice(0, 20);
+    return buckets;
+  }, [attempts]);
+
+  /** Consecutive non-match / non-no_match failures per state, newest-first. */
+  const consecutiveFailuresByState = useMemo(() => {
     const out: Record<string, number> = {};
-    for (const [code, list] of Object.entries(buckets)) {
+    for (const [code, list] of Object.entries(attemptsByState)) {
       let n = 0;
       for (const a of list) {
         if (a.status === "match" || a.status === "no_match" || a.status === "expired" || a.status === "inactive") break;
@@ -110,7 +116,7 @@ export default function AdminVerificationCoveragePage() {
       out[code] = n;
     }
     return out;
-  }, [attempts]);
+  }, [attemptsByState]);
 
   const alertStates = useMemo(
     () => Object.entries(consecutiveFailuresByState)
