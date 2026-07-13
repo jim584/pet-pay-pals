@@ -25,9 +25,12 @@ import {
   fetchAdminVetAppointments,
   updateAdminAppointment,
   deleteAdminAppointment,
+  fetchVetVerificationAttempts,
+  retryVetVerification,
   type AdminVetRow,
   type AdminVetService,
   type AdminVetAppointment,
+  type VetVerificationAttempt,
 } from "@/lib/admin-api";
 
 const APPT_STATUSES = ["pending", "confirmed", "completed", "cancelled"];
@@ -49,23 +52,45 @@ export default function AdminVetDetailPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [deleteService, setDeleteService] = useState<AdminVetService | null>(null);
   const [deleteAppt, setDeleteAppt] = useState<AdminVetAppointment | null>(null);
+  const [attempts, setAttempts] = useState<VetVerificationAttempt[]>([]);
 
   const loadAll = async () => {
     if (!vetProfileId) return;
     setLoading(true);
     try {
-      const [v, s, a] = await Promise.all([
+      const [v, s, a, at] = await Promise.all([
         fetchAdminVetDetail(vetProfileId),
         fetchAdminVetServices(vetProfileId),
         fetchAdminVetAppointments(vetProfileId, statusFilter),
+        fetchVetVerificationAttempts(vetProfileId, 10),
       ]);
       setVet(v);
       setServices(s);
       setAppointments(a);
+      setAttempts(at);
     } catch (e: any) {
       toast({ title: "Failed to load vet", description: e.message, variant: "destructive" });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRetryVerification = async () => {
+    if (!vet) return;
+    setBusy("retry");
+    try {
+      await retryVetVerification(vet.id);
+      toast({ title: "Re-checked", description: "Verification refreshed." });
+      const [fresh, freshAttempts] = await Promise.all([
+        fetchAdminVetDetail(vet.id),
+        fetchVetVerificationAttempts(vet.id, 10),
+      ]);
+      setVet(fresh);
+      setAttempts(freshAttempts);
+    } catch (e: any) {
+      toast({ title: "Retry failed", description: e.message, variant: "destructive" });
+    } finally {
+      setBusy(null);
     }
   };
 
@@ -317,6 +342,61 @@ export default function AdminVetDetailPage() {
           <p className="text-xs text-muted-foreground">
             Members whose pet's Vet of Record has Fear Free verified automatically qualify for the 5% Fear Free membership discount on checkout.
           </p>
+
+          <div className="rounded-lg border p-3 space-y-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <p className="font-medium text-sm">Automated verification</p>
+                <p className="text-xs text-muted-foreground">
+                  Status: <Badge variant="outline" className="ml-1">{vet.verification_status}</Badge>
+                  {vet.verification_checked_at && ` · last checked ${new Date(vet.verification_checked_at).toLocaleString()}`}
+                </p>
+              </div>
+              <Button size="sm" variant="outline" onClick={handleRetryVerification} disabled={busy === "retry"}>
+                {busy === "retry" ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
+                Retry now
+              </Button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+              <div>
+                <p className="font-medium mb-1">License</p>
+                <p className="text-muted-foreground">
+                  Legal name: {vet.license_full_legal_name ?? "—"}<br />
+                  Reason: {vet.verification_reason ?? "—"}<br />
+                  Source: {vet.verification_source ?? "—"}
+                  {vet.verification_source_url && (
+                    <> · <a className="underline" href={vet.verification_source_url} target="_blank" rel="noreferrer">open</a></>
+                  )}
+                </p>
+              </div>
+              <div>
+                <p className="font-medium mb-1">Fear Free</p>
+                <p className="text-muted-foreground">
+                  Status: {vet.fear_free_verification_status}<br />
+                  Reason: {vet.fear_free_reason ?? "—"}<br />
+                  Source: {vet.fear_free_source ?? "—"}
+                </p>
+              </div>
+            </div>
+            {attempts.length > 0 && (
+              <div>
+                <p className="text-xs font-medium mb-1">Recent attempts</p>
+                <div className="space-y-1 max-h-40 overflow-y-auto text-xs">
+                  {attempts.map((a) => (
+                    <div key={a.id} className="flex items-center gap-2 py-1 border-b last:border-0">
+                      <Badge variant="outline" className="text-[10px]">{a.kind}</Badge>
+                      <span className="text-muted-foreground">{new Date(a.attempted_at).toLocaleString()}</span>
+                      <span className="ml-auto">{a.status}</span>
+                      {a.http_status && <span className="text-muted-foreground">HTTP {a.http_status}</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            <p className="text-[11px] text-muted-foreground">
+              Never auto-flags unverified on source outage — retries continue up to 72h and admin can override anytime using the toggles above.
+            </p>
+          </div>
         </CardContent>
       </Card>
 

@@ -7,9 +7,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/sonner";
-import { fetchVetProfile, createVetProfile, updateVetProfile, VetProfile } from "@/lib/vet-api";
+import { fetchVetProfile, createVetProfile, updateVetProfile, triggerVetVerification, VetProfile } from "@/lib/vet-api";
 import { supabase } from "@/integrations/supabase/client";
-import { Stethoscope, MapPin, Phone, Globe, CheckCircle, Clock, X, FileText, ShieldCheck, Upload } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Stethoscope, MapPin, Phone, Globe, CheckCircle, Clock, X, FileText, ShieldCheck, Upload, AlertCircle } from "lucide-react";
+
+const US_STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","DC","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
 
 export function VetProfileSetup() {
   const { user } = useAuth();
@@ -29,6 +32,7 @@ export function VetProfileSetup() {
     specializations: [] as string[],
     license_number: "",
     license_state: "",
+    license_full_legal_name: "",
     fear_free_cert_number: "",
   });
 
@@ -46,6 +50,7 @@ export function VetProfileSetup() {
           specializations: p.specializations || [],
           license_number: p.license_number || "",
           license_state: p.license_state || "",
+          license_full_legal_name: p.license_full_legal_name || "",
           fear_free_cert_number: p.fear_free_cert_number || "",
         });
       }
@@ -106,16 +111,24 @@ export function VetProfileSetup() {
         specializations: form.specializations,
         license_number: form.license_number || null,
         license_state: form.license_state || null,
+        license_full_legal_name: form.license_full_legal_name || null,
         fear_free_cert_number: form.fear_free_cert_number || null,
       };
+      let saved: VetProfile;
       if (profile) {
-        const updated = await updateVetProfile(profile.id, payload as any);
-        setProfile(updated);
+        saved = await updateVetProfile(profile.id, payload as any);
         toast.success("Profile updated!");
       } else {
-        const created = await createVetProfile({ ...payload, user_id: user.id } as any);
-        setProfile(created);
+        saved = await createVetProfile({ ...payload, user_id: user.id } as any);
         toast.success("Vet profile created! Awaiting admin approval.");
+      }
+      setProfile(saved);
+      // Fire-and-forget: kick off automated verification when the vet has
+      // supplied the minimum lookup fields. Result appears on next reload.
+      if (saved.license_number && saved.license_state && saved.license_full_legal_name) {
+        triggerVetVerification(saved.id).then(() => {
+          fetchVetProfile(user.id).then((fresh) => fresh && setProfile(fresh));
+        }).catch(() => {});
       }
     } catch (err: any) {
       toast.error(err.message);
@@ -139,9 +152,15 @@ export function VetProfileSetup() {
               {profile.is_approved ? <CheckCircle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
               Clinic: {profile.is_approved ? "Approved" : "Pending"}
             </Badge>
-            <Badge variant={profile.is_license_verified ? "default" : "outline"} className="gap-1">
+            <Badge variant={profile.verification_status === "verified" || profile.verification_status === "manual_override" ? "default" : profile.verification_status === "unverified" ? "destructive" : "outline"} className="gap-1">
               <FileText className="h-3 w-3" />
-              License: {profile.is_license_verified ? "Verified" : "Unverified"}
+              License: {
+                profile.verification_status === "verified" ? "Verified"
+                : profile.verification_status === "manual_override" ? "Verified (admin)"
+                : profile.verification_status === "unverified" ? "Unverified"
+                : profile.verification_status === "pending_review" ? "Pending review"
+                : "Verifying…"
+              }
             </Badge>
             <Badge variant={profile.fear_free_certified ? "default" : "outline"} className="gap-1">
               <ShieldCheck className="h-3 w-3" />
@@ -203,16 +222,38 @@ export function VetProfileSetup() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground flex gap-2">
+            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+            <span>
+              We automatically check your license against the state veterinary board.
+              If the source is temporarily unavailable, we'll retry and an admin will review — you won't be marked unverified for a source outage.
+            </span>
+          </div>
+          <div className="space-y-2">
+            <Label>Full legal name (as printed on your license)</Label>
+            <Input value={form.license_full_legal_name} onChange={(e) => setForm({ ...form, license_full_legal_name: e.target.value })} placeholder="Jane A. Smith, DVM" />
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>License number</Label>
               <Input value={form.license_number} onChange={(e) => setForm({ ...form, license_number: e.target.value })} placeholder="VET-12345" />
             </div>
             <div className="space-y-2">
-              <Label>State / region</Label>
-              <Input value={form.license_state} onChange={(e) => setForm({ ...form, license_state: e.target.value })} placeholder="CA" />
+              <Label>State of issue</Label>
+              <Select value={form.license_state} onValueChange={(v) => setForm({ ...form, license_state: v })}>
+                <SelectTrigger><SelectValue placeholder="Select state" /></SelectTrigger>
+                <SelectContent className="max-h-64">
+                  {US_STATES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
           </div>
+          {profile?.verification_reason && (
+            <div className="text-xs text-muted-foreground bg-muted/40 rounded p-2">
+              <strong>Last check:</strong> {profile.verification_reason}
+              {profile.verification_checked_at && ` · ${new Date(profile.verification_checked_at).toLocaleString()}`}
+            </div>
+          )}
           <div className="flex items-center gap-3">
             <input
               ref={licenseInputRef}
