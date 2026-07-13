@@ -152,35 +152,33 @@ Deno.serve(async (req) => {
   const connectivity: Array<Record<string, unknown>> = [];
   const formFlow: Array<Record<string, unknown>> = [];
 
-  for (const [state, url] of Object.entries(ALLOWLIST)) {
-    if (Date.now() - started > HANDLER_CEILING_MS) {
-      connectivity.push({ state, error: "handler_ceiling_reached", timestamp: new Date().toISOString() });
-      continue;
-    }
-    try {
-      const r = await fetchWithLimits(url, { method: "GET" }, CONNECT_TIMEOUT_MS);
-      const markers = detectMarkers(r.snippet);
-      const has_form = /<form|<input/i.test(r.snippet);
-      connectivity.push({
-        state,
-        final_url: r.final_url,
-        http_status: r.http_status,
-        content_type: r.content_type,
-        response_size_bytes: r.response_size_bytes,
-        elapsed_ms: r.elapsed_ms,
-        challenge_markers: markers,
-        has_form,
-        timestamp: new Date().toISOString(),
-      });
-    } catch (e) {
-      connectivity.push({
-        state,
-        error: String((e as Error).message ?? e).slice(0, 200),
-        timestamp: new Date().toISOString(),
-      });
-    }
-    await new Promise((r) => setTimeout(r, 1000));
-  }
+  // Run connectivity probes in parallel to stay under the client timeout.
+  // Each request is independently bounded by CONNECT_TIMEOUT_MS.
+  const connResults = await Promise.all(
+    Object.entries(ALLOWLIST).map(async ([state, url]) => {
+      try {
+        const r = await fetchWithLimits(url, { method: "GET" }, CONNECT_TIMEOUT_MS);
+        return {
+          state,
+          final_url: r.final_url,
+          http_status: r.http_status,
+          content_type: r.content_type,
+          response_size_bytes: r.response_size_bytes,
+          elapsed_ms: r.elapsed_ms,
+          challenge_markers: detectMarkers(r.snippet),
+          has_form: /<form|<input/i.test(r.snippet),
+          timestamp: new Date().toISOString(),
+        };
+      } catch (e) {
+        return {
+          state,
+          error: String((e as Error).message ?? e).slice(0, 200),
+          timestamp: new Date().toISOString(),
+        };
+      }
+    }),
+  );
+  connectivity.push(...connResults);
 
   if (includeFormFlow) {
     for (const [state, cfg] of Object.entries(FORM_FLOW)) {
