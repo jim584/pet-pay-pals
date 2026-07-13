@@ -152,9 +152,15 @@ export function VetProfileSetup() {
               {profile.is_approved ? <CheckCircle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
               Clinic: {profile.is_approved ? "Approved" : "Pending"}
             </Badge>
-            <Badge variant={profile.is_license_verified ? "default" : "outline"} className="gap-1">
+            <Badge variant={profile.verification_status === "verified" || profile.verification_status === "manual_override" ? "default" : profile.verification_status === "unverified" ? "destructive" : "outline"} className="gap-1">
               <FileText className="h-3 w-3" />
-              License: {profile.is_license_verified ? "Verified" : "Unverified"}
+              License: {
+                profile.verification_status === "verified" ? "Verified"
+                : profile.verification_status === "manual_override" ? "Verified (admin)"
+                : profile.verification_status === "unverified" ? "Unverified"
+                : profile.verification_status === "pending_review" ? "Pending review"
+                : "Verifying…"
+              }
             </Badge>
             <Badge variant={profile.fear_free_certified ? "default" : "outline"} className="gap-1">
               <ShieldCheck className="h-3 w-3" />
