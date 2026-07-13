@@ -102,6 +102,13 @@ Deno.serve(async (req) => {
     vp_status = "unverified";
   else vp_status = "pending_review"; // source_unavailable, ambiguous, not_supported
 
+  // Raw board HTML is never persisted. `sanitizedRaw` keeps only the
+  // structured decision + short evidence string produced by the adapter.
+  const rawObj = (result.raw ?? {}) as Record<string, unknown>;
+  const sanitizedRaw = rawObj && typeof rawObj === "object" && "decision" in rawObj
+    ? { decision: (rawObj as { decision: unknown }).decision }
+    : null;
+
   await admin.from("vet_verification_attempts").insert({
     vet_profile_id: vp.id,
     kind: "license",
@@ -109,7 +116,7 @@ Deno.serve(async (req) => {
     http_status: result.http_status ?? null,
     source: result.source,
     error: result.status !== "match" ? result.reason ?? null : null,
-    payload: result.raw ?? null,
+    payload: sanitizedRaw,
   });
 
   await admin.from("vet_profiles").update({
@@ -118,7 +125,7 @@ Deno.serve(async (req) => {
     verification_source: result.source,
     verification_source_url: result.source_url,
     verification_reason: result.reason ?? null,
-    verification_raw: result.raw ?? null,
+    verification_raw: sanitizedRaw,
     // Mirror legacy boolean for existing UI/gating code
     is_license_verified: vp_status === "verified" ? true : false,
     license_verified_at: vp_status === "verified" ? new Date().toISOString() : null,

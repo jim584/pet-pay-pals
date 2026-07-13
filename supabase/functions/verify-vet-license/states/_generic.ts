@@ -3,6 +3,18 @@
 // Each state can override URL/method/params via `attempts`. If nothing parses
 // cleanly, we return `source_unavailable` (→ pending_review), never a false
 // `no_match`, so admins retain the last word.
+//
+// Reliability layer:
+//   • Per-state throttle (1 req/sec) so we're a polite neighbor.
+//   • 15s timeout per request (see common.fetchWithTimeout).
+//   • One retry on network error / 5xx with 2s backoff. No retry on 4xx.
+//   • In-memory circuit breaker: 3 consecutive `source_unavailable` results
+//     per state trip the breaker for 60s — during that window we short-circuit
+//     to `source_unavailable` immediately (still `pending_review`, never
+//     `unverified`), sparing the board and speeding up the caller.
+//
+// Storage layer: raw board HTML is intentionally NOT returned. `raw` contains
+// only a structured `decision` + `evidence` object safe to keep in the DB.
 import type { LookupInput, LookupResult } from "./index.ts";
 import { classifyStatus, fetchWithTimeout, namesMatch, stripTags, unavailable } from "./common.ts";
 import { BOARDS } from "./boards.ts";
@@ -14,11 +26,35 @@ export interface Attempt {
   contentType?: string;
 }
 
-// Per-state throttle: at most 1 outbound request/sec per board, so we're a
-// polite neighbor and don't trigger board-side rate limiters. In-memory only;
-// each edge-function invocation starts fresh, which is fine given our volume.
 const STATE_QUEUES: Record<string, Promise<void>> = {};
 const MIN_INTERVAL_MS = 1000;
+const RETRY_BACKOFF_MS = 2000;
+
+// Circuit breaker: consecutive failures per state and the time until which the
+// breaker stays tripped.
+interface Breaker { fails: number; trippedUntil: number }
+const BREAKERS: Record<string, Breaker> = {};
+const BREAKER_THRESHOLD = 3;
+const BREAKER_COOLDOWN_MS = 60_000;
+
+export function _resetBreakerForTests(stateCode?: string) {
+  if (stateCode) delete BREAKERS[stateCode];
+  else for (const k of Object.keys(BREAKERS)) delete BREAKERS[k];
+}
+
+function noteSuccess(stateCode: string) {
+  const b = BREAKERS[stateCode];
+  if (b) { b.fails = 0; b.trippedUntil = 0; }
+}
+function noteFailure(stateCode: string) {
+  const b = (BREAKERS[stateCode] ??= { fails: 0, trippedUntil: 0 });
+  b.fails += 1;
+  if (b.fails >= BREAKER_THRESHOLD) b.trippedUntil = Date.now() + BREAKER_COOLDOWN_MS;
+}
+function isTripped(stateCode: string) {
+  const b = BREAKERS[stateCode];
+  return !!b && b.trippedUntil > Date.now();
+}
 
 async function throttled<T>(stateCode: string, fn: () => Promise<T>): Promise<T> {
   const prev = STATE_QUEUES[stateCode] ?? Promise.resolve();
@@ -30,6 +66,22 @@ async function throttled<T>(stateCode: string, fn: () => Promise<T>): Promise<T>
     return await fn();
   } finally {
     setTimeout(release, MIN_INTERVAL_MS);
+  }
+}
+
+// One retry on network error / 5xx. Never retry 4xx (client error is
+// deterministic and not the board's fault).
+async function fetchWithRetry(stateCode: string, url: string, init: RequestInit): Promise<Response> {
+  try {
+    const res = await throttled(stateCode, () => fetchWithTimeout(url, init));
+    if (res.status >= 500 && res.status < 600) {
+      await new Promise((r) => setTimeout(r, RETRY_BACKOFF_MS));
+      return await throttled(stateCode, () => fetchWithTimeout(url, init));
+    }
+    return res;
+  } catch (e) {
+    await new Promise((r) => setTimeout(r, RETRY_BACKOFF_MS));
+    return await throttled(stateCode, () => fetchWithTimeout(url, init));
   }
 }
 
@@ -47,6 +99,13 @@ export function makeGenericAdapter(stateCode: string, attempts: Attempt[]) {
       };
     }
 
+    if (isTripped(stateCode)) {
+      return {
+        ...unavailable(source, source_url, `Circuit breaker open for ${stateCode} — recent consecutive failures.`),
+        raw: { decision: { reason_code: "circuit_breaker_open", state: stateCode } },
+      };
+    }
+
     let lastStatus: number | null = null;
     let lastError = "No adapter attempt produced a parseable response";
     let lastAttemptedUrl: string | null = null;
@@ -55,13 +114,13 @@ export function makeGenericAdapter(stateCode: string, attempts: Attempt[]) {
       const url = a.url.replace(/%LIC%/g, encodeURIComponent(lic));
       lastAttemptedUrl = url;
       try {
-        const res = await throttled(stateCode, () => fetchWithTimeout(url, {
+        const res = await fetchWithRetry(stateCode, url, {
           method: a.method ?? "GET",
           body: a.method === "POST" ? a.body?.(lic) : undefined,
           headers: a.method === "POST"
             ? { "Content-Type": a.contentType ?? "application/x-www-form-urlencoded" }
             : undefined,
-        }));
+        });
         lastStatus = res.status;
         if (!res.ok) { lastError = `HTTP ${res.status}`; continue; }
 
@@ -80,23 +139,27 @@ export function makeGenericAdapter(stateCode: string, attempts: Attempt[]) {
         const status = classifyStatus(window);
         const nameMatchWindow = window.match(/([A-Z][a-z]+(?:,\s*[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?|\s+[A-Z]\.?\s*[A-Z][a-z]+))/);
         const onRecord = nameMatchWindow?.[1] ?? "";
+        // Short evidence string — status keywords + expiration hints only, no
+        // free-form page text. Safe to persist.
+        const evidence = (window.match(/(active|inactive|expired|lapsed|revoked|suspended|current|clear|delinquent|good\s*standing)[^.]{0,80}/i)?.[0] ?? "").slice(0, 200);
 
         if (status === "match") {
           const nameOk = !onRecord || namesMatch(input.fullLegalName, onRecord);
+          noteSuccess(stateCode);
           if (nameOk) {
             return {
               status: "match",
               source, source_url,
               licensee_name: onRecord || null,
-              license_status_text: window.slice(0, 240),
+              license_status_text: evidence || null,
               http_status: res.status,
               raw: {
-                snippet: window.slice(0, 800),
                 decision: {
                   reason_code: "license_found_status_active",
                   matched_by: onRecord ? "license_and_name" : "license_only",
                   name_on_record: onRecord || null,
                   attempted_url: url,
+                  evidence,
                 },
               },
             };
@@ -108,32 +171,33 @@ export function makeGenericAdapter(stateCode: string, attempts: Attempt[]) {
             licensee_name: onRecord,
             http_status: res.status,
             raw: {
-              snippet: window.slice(0, 800),
               decision: {
                 reason_code: "name_mismatch",
                 matched_by: "license_only",
                 name_on_record: onRecord,
                 expected_name: input.fullLegalName,
                 attempted_url: url,
+                evidence,
               },
             },
           };
         }
         if (status === "expired" || status === "inactive") {
+          noteSuccess(stateCode);
           return {
             status,
             source, source_url,
             reason: `Board reports license as ${status}.`,
             licensee_name: onRecord || null,
-            license_status_text: window.slice(0, 240),
+            license_status_text: evidence || null,
             http_status: res.status,
             raw: {
-              snippet: window.slice(0, 800),
               decision: {
                 reason_code: `license_${status}`,
                 matched_by: "license_only",
                 name_on_record: onRecord || null,
                 attempted_url: url,
+                evidence,
               },
             },
           };
@@ -144,6 +208,7 @@ export function makeGenericAdapter(stateCode: string, attempts: Attempt[]) {
       }
     }
 
+    noteFailure(stateCode);
     return {
       ...unavailable(source, source_url, lastError, lastStatus),
       raw: {
@@ -152,6 +217,7 @@ export function makeGenericAdapter(stateCode: string, attempts: Attempt[]) {
           last_error: lastError,
           last_http_status: lastStatus,
           attempted_url: lastAttemptedUrl,
+          consecutive_failures: BREAKERS[stateCode]?.fails ?? 1,
         },
       },
     };
