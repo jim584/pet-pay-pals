@@ -1,97 +1,101 @@
-# Stripe Live-Mode Configuration Plan
+# Client Instructions: Complete Stripe Live-Mode Setup
 
-You'll complete these four items in the client's Stripe Dashboard (admin access). Live keys are already saved in the backend, so once these are done the app is fully live.
+Send this to the client verbatim. It walks them through all 4 remaining Dashboard items. They'll need ~30–45 minutes and their business bank info, EIN/SSN, and legal address.
 
-**Order matters** — do them top to bottom. Each depends on the previous.
+**Before starting:** log in at https://dashboard.stripe.com and confirm the toggle in the top-left says **Live mode** (not "Test mode").
 
 ---
 
-## 1. Set up Payments (cards + Apple Pay/Link)
+## Part A — Enable Payment Methods (5 min)
 
-**Where:** Dashboard → Settings → Payments → Payment methods (make sure toggle at top says **Live mode**)
-
-**Steps:**
-1. **Cards** — confirm Visa/Mastercard/Amex/Discover are all **On** for live mode.
-2. **Link** — toggle **On** (one-click checkout, no extra setup).
-3. **Apple Pay** — click **Configure** → **Add a new domain** → enter the production domain(s):
+1. Go to **Settings** (gear icon, top-right) → under *Payments*, click **Payment methods**.
+2. **Cards** — confirm the following are green/On: Visa, Mastercard, American Express, Discover. (They should be on by default.)
+3. **Link by Stripe** — click **Turn on**. No configuration needed.
+4. **Apple Pay** — click **Configure** → **Add a new domain**, and add these two domains one at a time:
    - `prowebbuilders.com`
    - `pet-pay-pals.lovable.app`
-   Stripe will give a verification file URL. That file is auto-served by Stripe when the domain uses Stripe.js/Checkout (which this app does), so verification should pass immediately. If it doesn't, we'll add a hosted verification file.
-4. **Google Pay** — toggle **On** (no domain setup needed when using Stripe Checkout).
-
-**Skip:** ACH, wallets like Alipay/WeChat, BNPL providers (Affirm/Klarna/Afterpay) — not used by the app.
-
----
-
-## 2. Create the Recurring Product (memberships)
-
-**Where:** Dashboard → Product catalog → **+ Add product** (live mode)
-
-Membership plans are stored in our DB (`membership_plans` table) with `membership_fee`, `platform_fee_monthly`, `platform_fee_annual`, per-species/per-tier. Stripe needs matching **Products + Prices** so `create-checkout` can reference them.
-
-**Approach:** I'll query `membership_plans` first and generate the exact list of Products/Prices you need to create, with names, amounts, and intervals. Then in build mode I'll wire the resulting `stripe_price_id_monthly` / `stripe_price_id_annual` columns back into the DB.
-
-**Rough shape** (8 plans × 2 intervals = 16 prices, e.g.):
-- Product: *Together Membership — Dog Bronze* → Prices: `$X/month`, `$Y/year`
-- Product: *Together Membership — Cat Gold* → Prices: `$X/month`, `$Y/year`
-- …etc.
-
-Tax code for each: `txcd_10000000` (General - Services) unless you want SaaS treatment.
+   Stripe will verify automatically (both domains already load Stripe.js).
+5. **Google Pay** — click **Turn on**. No configuration needed.
+6. Leave everything else off (ACH, Klarna, Affirm, Afterpay, Alipay, WeChat Pay).
 
 ---
 
-## 3. Set up Issuing (vet cards)
+## Part B — Set Up Issuing for Vet Cards (10 min)
 
-**Where:** Dashboard → Issuing → **Get started**
-
-**Steps:**
-1. Accept the **Celtic Bank Commercial Card Agreement** (must be signed by the client's authorized rep — if you're the admin but not the principal, ping the client to click Accept; you can prep everything else).
-2. **Program details** — Business use case: "Veterinary care financing for pet owners." Card type: **Virtual + Physical**.
-3. **Funding** — link the same bank account used for payouts. Fund an initial Issuing balance (recommend $500–$2,000 to start; the app authorizes per-ticket approved amounts).
-4. **Card program design** — upload the Help A Pet logo (100x140 navy/gold per brand memory) for physical cards. Physical card name line: cardholder's full name.
-5. **Spend controls (defaults)** — MCC 0742 (Veterinary Services). Our code already sets per-card `allowed_merchants` or `allowed_categories: ["veterinary_services"]`, so Dashboard defaults just need to permit that MCC.
-6. Confirm `ISSUING_ENABLED=true` in backend secrets (already set per prior audit).
-
----
-
-## 4. Build Connect Integration (referrer payouts)
-
-**Where:** Dashboard → Connect → **Get started** (live mode)
-
-**Steps:**
-1. **Platform profile:**
-   - Platform name: *Help A Pet*
-   - Public business URL: `https://prowebbuilders.com`
-   - Support email: (client's)
-   - Product description: "Referrers earn bounties for onboarding pet owners to Help A Pet memberships. Payouts sent via Stripe Connect Express."
-2. **Accept the Connect platform agreement** (again, client must click if you're not the principal).
-3. **Account type:** **Express** (matches `referrer-connect-onboard/index.ts`).
-4. **Branding** — logo + brand color (`#1B2A4A`) shown during referrer onboarding.
-5. **Payout schedule for connected accounts:** **Manual** (our `referrer-payout` function triggers transfers via admin action; connected accounts then payout on Stripe's default daily rolling).
-6. **Negative balance liability:** **Platform** (standard — we already reconcile bounties before transferring).
-7. **Statement descriptor** for connected accounts: `HELPAPET REF`.
-
-**No webhook changes needed** — `stripe-webhook` already handles `account.updated` and `transfer.*` events.
+1. Left sidebar → **More** → **Issuing**. Click **Get started**.
+2. **Program details:**
+   - Business use case: *"Veterinary care financing for pet owners enrolled in Help A Pet memberships."*
+   - Card types to issue: check **Virtual** and **Physical**.
+3. **Card program agreement** — read and accept the **Celtic Bank Commercial Card Agreement**. (Must be signed by the business's authorized officer.)
+4. **Funding source** — click **Add funding source** → link the business bank account. Add an initial balance of **$500–$2,000** (used to authorize vet card charges; can be topped up any time).
+5. **Card design (physical cards):**
+   - Upload logo: Help A Pet logo (navy + gold, 100×140 px, transparent PNG). *We'll email you the file.*
+   - Card color: Navy Blue (`#1B2A4A`).
+   - Front text: leave default (cardholder name).
+6. **Spend controls (defaults):** allow MCC **0742** (Veterinary Services). Leave other categories blocked.
+7. Click **Submit for review**. Approval usually takes 1–3 business days.
 
 ---
 
-## Verification I'll do afterwards (build mode)
+## Part C — Set Up Connect for Referrer Payouts (10 min)
 
-1. Query `membership_plans` and generate the exact Products/Prices list before you create them.
-2. After you create them, add `stripe_price_id_monthly` / `stripe_price_id_annual` columns to `membership_plans` (if not present) and I'll populate them.
-3. Run `stripe.accounts.retrieve()` against a test Connect onboarding to confirm capabilities enabled.
-4. Confirm `ISSUING_ENABLED`, `ISSUING_BUSINESS_ADDRESS_*` secrets are set; add any missing ones.
-5. Check `stripe-webhook` endpoint in Dashboard is subscribed to: `checkout.session.completed`, `invoice.paid`, `invoice.payment_failed`, `customer.subscription.updated/deleted`, `account.updated`, `transfer.created`, `issuing_authorization.request`, `issuing_transaction.created`.
+1. Left sidebar → **Connect** → **Get started**.
+2. Choose account type: **Platform or marketplace**.
+3. **Platform profile:**
+   - Platform name: **Help A Pet**
+   - Business URL: `https://prowebbuilders.com`
+   - Support email: *your support email*
+   - Product description: *"Veterinarians, shelters, and community referrers earn bounties for onboarding pet owners to Help A Pet memberships. Payouts are sent via Stripe Connect Express accounts."*
+4. **Account type your connected users will get:** **Express** (very important — our code expects Express).
+5. **Branding:**
+   - Logo: Help A Pet logo (same file as above).
+   - Brand color: `#1B2A4A`.
+   - Accent color: `#D4A843` (gold).
+6. **Payout settings for connected accounts:**
+   - Payout schedule: **Daily rolling** (Stripe default).
+   - Statement descriptor: `HELPAPET REF`
+   - Negative balance liability: **Platform**.
+7. **Accept the Connect Platform Agreement.**
+8. Click **Submit**. Live immediately.
 
 ---
 
-## What I need from the client (not you)
+## Part D — Recurring Product Setup (skip for now)
 
-Only the two agreement clicks (Issuing Celtic Bank, Connect platform agreement) if you're not the account principal. Everything else you can do with admin access.
+**No action needed today.** Our checkout code creates membership prices dynamically per transaction, so memberships will work as soon as Part A is complete. Products will auto-appear in your Product Catalog after the first live subscription.
 
-## Deliverable at end
+If later you want customers to be able to upgrade/downgrade plans from their billing portal, tell us and we'll pre-create the catalog entries at that time.
 
-- All 4 Dashboard items green
-- Membership Price IDs stored in DB
-- Webhook subscriptions verified against code
-- One end-to-end live smoke test: $1 test membership checkout → webhook → DB row → customer portal loads
+---
+
+## Part E — What to send back to us
+
+After completing Parts A–C, send:
+
+1. **Business address** (street, city, state, ZIP, country) — this is embedded on vet cards.
+2. Screenshot of the Stripe **Setup Guide** page showing completion %.
+3. Confirmation that Issuing was submitted (we'll wait for Stripe's approval email before enabling live vet card issuance).
+
+Once we have those, we'll:
+- Save the business address into the backend (secrets).
+- Run a $1 live smoke test on membership checkout.
+- Confirm the webhook is firing correctly end-to-end.
+- Flip vet card issuance from stub mode to live once Stripe approves Issuing.
+
+---
+
+## Common gotchas to warn the client about
+
+- **Live mode toggle:** if the top-left says "Test mode," none of the settings above apply to real payments. Always confirm Live mode before saving.
+- **Bank account verification:** micro-deposits can take 1–2 days. Payouts won't work until verified.
+- **Issuing approval delay:** the Issuing agreement goes to Stripe's underwriting team. Vet cards won't work in live mode until they email approval (typically 1–3 business days).
+- **Tax setup:** Stripe will nag about Stripe Tax and 1099s. Both are optional for launch and can be added later.
+
+---
+
+## What I'll do after client confirms Parts A–C are done
+
+1. Ask you for the business address, then save the 5 `ISSUING_BUSINESS_ADDRESS_*` secrets.
+2. Run a live-mode connectivity check against the Stripe API from the backend.
+3. Verify the webhook endpoint in the Stripe Dashboard is subscribed to all events our code handles (list is in the plan file).
+4. Report back the go-live status.
