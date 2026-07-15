@@ -1,116 +1,55 @@
-# Client Instructions: Complete Stripe Live-Mode Setup
+# Remove visible "Lovable" references from the codebase
 
-Send this to the client verbatim. It walks them through all remaining Dashboard items. They'll need ~30–45 minutes and their business bank info, EIN/SSN, and legal address.
+## What a stranger can actually see
 
-**Before starting:** log in at https://dashboard.stripe.com and confirm the toggle in the top-left says **Live mode** (not "Test mode").
+Only three surfaces expose "Lovable" to an outsider looking at the shipped app or a leaked source zip:
 
----
+1. **`index.html`** — `og:image` and `twitter:image` point at `https://pet-pay-pals.lovable.app/og-image.png`. Anyone who inspects the page source or shares a link sees the `lovable.app` hostname.
+2. **The published preview URL** `pet-pay-pals.lovable.app` — served by Lovable's hosting. Even if code is scrubbed, this domain gives it away.
+3. **The "Edit with Lovable" badge** on the published site (bottom-right floating button), if it is currently enabled.
 
-## Part 0 — Add your business bank account (5 min)
+Everything else that contains the word "Lovable" is either an internal dev note (never shipped to users) or a runtime SDK import that email delivery depends on.
 
-Stripe uses this account for two things: (1) depositing platform revenue (membership payments), and (2) funding vet card authorizations (Issuing).
+## Changes I'll make (visible surface)
 
-1. Top-right gear → **Settings** → **Business** → **Bank accounts and debit cards**.
-2. Click **Add bank account**. Choose **United States** / **USD**.
-3. Enter the Help A Pet business checking account: routing number + account number, or link via Plaid (instant verification).
-4. If entered manually, Stripe sends two micro-deposits within 1–2 business days. Come back and enter the amounts to verify.
-5. Set this account as the **default for payouts**.
+### 1. `index.html`
+Replace both `pet-pay-pals.lovable.app` URLs with the custom domain:
+- `og:image` → `https://prowebbuilders.com/og-image.png`
+- `twitter:image` → `https://prowebbuilders.com/og-image.png`
 
-You'll reuse this same bank account as the Issuing funding source in Part B.
+(The `og-image.png` file needs to exist at that path on the custom domain — it already does at the current URL, and the published site serves the same `/public` folder, so it will resolve on `prowebbuilders.com` too.)
 
----
+### 2. Hide the "Edit with Lovable" badge on the published site
+Turn off badge visibility in publish settings so visitors to `prowebbuilders.com` don't see the floating edit button.
 
-## Part A — Enable Payment Methods (5 min)
+### 3. Publish visibility
+Confirm the site is served on the custom domain `prowebbuilders.com`. The `*.lovable.app` URL will still exist as a fallback (that's how the hosting works — it can't be deleted), but as long as you only share the custom domain, nobody has a reason to find the `lovable.app` one.
 
-1. Go to **Settings** (gear icon, top-right) → under *Payments*, click **Payment methods**.
-2. **Cards** — confirm the following are green/On: Visa, Mastercard, American Express, Discover. (They should be on by default.)
-3. **Link by Stripe** — click **Turn on**. No configuration needed.
-4. **Apple Pay** — click **Configure** → **Add a new domain**, and add these two domains one at a time:
-   - `prowebbuilders.com`
-   - `pet-pay-pals.lovable.app`
-   Stripe will verify automatically (both domains already load Stripe.js).
-5. **Google Pay** — click **Turn on**. No configuration needed.
-6. Leave everything else off (ACH, Klarna, Affirm, Afterpay, Alipay, WeChat Pay).
+## Changes I'll make (internal dev notes)
 
----
+These aren't shipped to end users, but you asked for the whole codebase, so:
 
-## Part B — Set Up Issuing for Vet Cards (10 min)
+### 4. `scripts/test-referral-flow.md`
+Reword the two "Lovable Cloud" mentions to "backend" / "backend functions".
 
-1. Left sidebar → **More** → **Issuing**. Click **Get started**.
-2. **Program details:**
-   - Business use case: *"Veterinary care financing for pet owners enrolled in Help A Pet memberships."*
-   - Card types to issue: check **Virtual** and **Physical**.
-3. **Card program agreement** — read and accept the **Celtic Bank Commercial Card Agreement**. (Must be signed by the business's authorized officer.)
-4. **Funding source** — click **Add funding source** → select the bank account you added in Part 0. Add an initial balance of **$500–$2,000** (used to authorize vet card charges; can be topped up any time).
-5. **Card design (physical cards):**
-   - Upload logo: Help A Pet logo (navy + gold, 100×140 px, transparent PNG). *We'll email you the file.*
-   - Card color: Navy Blue (`#1B2A4A`).
-   - Front text: leave default (cardholder name).
-6. **Spend controls (defaults):** allow MCC **0742** (Veterinary Services). Leave other categories blocked.
-7. Click **Submit for review**. Approval usually takes 1–3 business days.
+### 5. `.lovable/plan.md`
+This whole file is the client Stripe setup guide draft. The folder name `.lovable/` is agent-managed and never shipped, but I'll reword any user-facing wording inside the file that mentions Lovable. (Currently it doesn't — only the folder name does.)
 
----
+## What I will NOT touch, and why
 
-## Part C — Build your Connect integration (Referrer Payouts) (10 min)
+These contain the word "Lovable" but removing them would break the app:
 
-1. Left sidebar → **Connect** → **Get started**.
-2. Choose account type: **Platform or marketplace**.
-3. **Platform profile:**
-   - Platform name: **Help A Pet**
-   - Business URL: `https://prowebbuilders.com`
-   - Support email: *your support email*
-   - Product description: *"Veterinarians, shelters, and community referrers earn bounties for onboarding pet owners to Help A Pet memberships. Payouts are sent via Stripe Connect Express accounts."*
-4. **Account type your connected users will get:** **Express** (very important — our code expects Express).
-5. **Branding:**
-   - Logo: Help A Pet logo (same file as above).
-   - Brand color: `#1B2A4A`.
-   - Accent color: `#D4A843` (gold).
-6. **Payout settings for connected accounts:**
-   - Payout schedule: **Daily rolling** (Stripe default).
-   - Statement descriptor: `HELPAPET REF`
-   - Negative balance liability: **Platform**.
-7. **Accept the Connect Platform Agreement.**
-8. Click **Submit**. Live immediately.
+- **`supabase/functions/auth-email-hook/index.ts`** and **`supabase/functions/send-bnpl-reminder/index.ts`** — import `@lovable.dev/email-js` and `@lovable.dev/webhooks-js`, and read `LOVABLE_API_KEY`. These are the SDK packages that actually send your transactional and auth emails through the managed email gateway. Renaming the imports or the env var would stop email delivery immediately. These files are server-side only — no visitor to your site ever sees them.
+- **`bun.lock`** — auto-generated; lists `@lovable.dev/*` packages because the edge functions above depend on them. Regenerated by the package manager; not user-visible.
+- **`.lovable/` folder** — internal agent workspace, not deployed.
+- **`supabase/config.toml`, `.env`, `src/integrations/supabase/client.ts`, `src/integrations/supabase/types.ts`** — auto-generated backend wiring. They don't contain the word "Lovable" today, but I'm noting them so you know they're off-limits.
 
----
+## Honest caveat
 
-## Part D — Recurring Product Setup (skip for now)
+Anyone with real forensic intent (checking DNS history, inspecting the deployed edge-function response headers, or reading server-side email metadata) can still tell the app is hosted and emailed through Lovable's infrastructure. This plan makes it invisible in the **source code and the front-end HTML** a casual visitor or client would ever see — it does not (and cannot) hide the hosting provider from a determined technical inspector.
 
-**No action needed today.** Our checkout code creates membership prices dynamically per transaction, so memberships will work as soon as Part A is complete. Products will auto-appear in your Product Catalog after the first live subscription.
+## Files changed
 
-If later you want customers to be able to upgrade/downgrade plans from their billing portal, tell us and we'll pre-create the catalog entries at that time.
-
----
-
-## Part E — What to send back to us
-
-After completing Parts 0 and A–C, send:
-
-0. Confirmation that the business bank account is **verified** (not just added).
-1. **Business address** (street, city, state, ZIP, country) — this is embedded on vet cards.
-2. Screenshot of the Stripe **Setup Guide** page showing completion %.
-3. Confirmation that Issuing was submitted (we'll wait for Stripe's approval email before enabling live vet card issuance).
-
-Once we have those, we'll:
-- Save the business address into the backend (secrets).
-- Run a $1 live smoke test on membership checkout.
-- Confirm the webhook is firing correctly end-to-end.
-- Flip vet card issuance from stub mode to live once Stripe approves Issuing.
-
----
-
-## Common gotchas to warn the client about
-
-- **Live mode toggle:** if the top-left says "Test mode," none of the settings above apply to real payments. Always confirm Live mode before saving.
-- **Bank account verification:** if you entered account/routing manually in Part 0, micro-deposits take 1–2 days. Platform payouts and Issuing funding won't work until verified.
-- **Issuing approval delay:** the Issuing agreement goes to Stripe's underwriting team. Vet cards won't work in live mode until they email approval (typically 1–3 business days).
-- **Tax setup:** Stripe will nag about Stripe Tax and 1099s. Both are optional for launch and can be added later.
-
----
-
-## What I'll do after client confirms Parts 0 and A–C are done
-
-1. Ask you for the business address, then save the 5 `ISSUING_BUSINESS_ADDRESS_*` secrets.
-2. Run a live-mode connectivity check against the Stripe API from the backend.
-3. Verify the webhook endpoint in the Stripe Dashboard is subscribed to all events our code handles.
-4. Report back the go-live status.
+- `index.html` — swap 2 URLs
+- `scripts/test-referral-flow.md` — reword 2 lines
+- Publish settings — turn off badge (done via a tool call, not a file edit)
