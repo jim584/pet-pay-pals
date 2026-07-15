@@ -45,6 +45,6 @@ Use Stripe **test mode** (existing `STRIPE_SECRET_KEY`). All steps assume admin 
 20. Referrer Dashboard → Share tab → same QR experience.
 
 ## Tools for verification
-- **DB queries:** Lovable Cloud → Database → SQL editor (or `supabase--read_query`)
-- **Edge function logs:** Lovable Cloud → Functions → `stripe-webhook`, `referrer-payout`, `process-referral-bounties`
+- **DB queries:** Backend → Database → SQL editor (or `supabase--read_query`)
+- **Edge function logs:** Backend → Functions → `stripe-webhook`, `referrer-payout`, `process-referral-bounties`
 - **Stripe events:** Stripe Dashboard (test mode) → Developers → Events
