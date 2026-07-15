@@ -1,55 +1,50 @@
-# Remove visible "Lovable" references from the codebase
 
-## What a stranger can actually see
+# Plan: Reply to client re: AAVSB "Look Up A License" link
 
-Only three surfaces expose "Lovable" to an outsider looking at the shipped app or a leaked source zip:
+The client sent `https://www.aavsb.org/public-resources/look-up-a-license/` as their answer for the license verification data source. That page is **not a data source** — it's a directory of links to each state board's own website. Below is a message you can send back explaining why, plus what we actually need from them.
 
-1. **`index.html`** — `og:image` and `twitter:image` point at `https://pet-pay-pals.lovable.app/og-image.png`. Anyone who inspects the page source or shares a link sees the `lovable.app` hostname.
-2. **The published preview URL** `pet-pay-pals.lovable.app` — served by Lovable's hosting. Even if code is scrubbed, this domain gives it away.
-3. **The "Edit with Lovable" badge** on the published site (bottom-right floating button), if it is currently enabled.
+---
 
-Everything else that contains the word "Lovable" is either an internal dev note (never shipped to users) or a runtime SDK import that email delivery depends on.
+## Message to send the client
 
-## Changes I'll make (visible surface)
+> **Subject: Re: License verification — the AAVSB page isn't a data source, here's why**
+>
+> Hi [name],
+>
+> Thanks for sending the AAVSB link. I want to explain what that page actually is, because it's a common misunderstanding and it changes what we need from you.
+>
+> **What `aavsb.org/public-resources/look-up-a-license/` actually is:**
+> It's a **directory of hyperlinks**, one per state, pointing to each state veterinary board's own website. It's not a database, not an API, and it does not itself hold any license data. If you click "California," it takes you to the California DCA/VMB site. If you click "Texas," it takes you to the Texas HPC site. And so on for all 50 states plus territories.
+>
+> **Why that means we can't just "use the AAVSB page":**
+>
+> 1. **There is no data behind it to pull.** AAVSB is a membership association for the state boards — they don't operate a public license database. The page is a convenience directory, nothing more.
+> 2. **Every link goes to a different website** built on a different platform (Thentia, Accela, MyLicense, F5-protected legacy portals, custom PHP, etc.). Each one has its own form fields, its own response format, and its own terms of service. Verifying one vet in one state via that page requires a human to click through, fill out that state's form, and read the result.
+> 3. **About half the linked sites actively block automated lookups** — CAPTCHAs, WAF challenges (Cloudflare, F5 BIG-IP), or explicit "no scraping" clauses in their terms. We've already probed the major ones; the details are in our internal coverage report. Even where it's technically possible, doing it may violate that board's ToS, which is a legal risk we shouldn't take on your behalf.
+> 4. **What AAVSB *does* sell that would work — but it's a paid product, not this page.** AAVSB operates **VetNet**, a paid license-verification service used by employers, hospital chains, and licensing boards to check vet credentials across states through a single interface. That is the real product. It requires a signed agreement and a subscription. It is **not** the free "Look Up A License" page.
+>
+> **So the actual options in front of you are the same three I laid out before:**
+>
+> - **(A) AAVSB VetNet subscription** — the closest thing to a "one API for all states." You (the business) sign up with AAVSB directly, pay their fee, and we integrate against their service. Best coverage, real cost.
+> - **(B) Third-party verification vendor** — e.g. Verifiable, ProVet — $3–8 per lookup, covers all 50 states, no per-state integration work.
+> - **(C) Manual admin review** — vet uploads a photo of their license, an admin (you or a staff member) clicks the appropriate state link on the AAVSB page, verifies by hand, and approves in our dashboard. Free, but doesn't scale past a few signups per week.
+>
+> The AAVSB directory page you sent is useful for **option C** — it's exactly what an admin would use to do manual lookups. It is not usable for A or B.
+>
+> Which of the three do you want to move forward with? If you want A, I can point you at AAVSB's VetNet sales contact so you can start the subscription process; once you have credentials we can wire it in.
+>
+> Thanks,
+> [you]
 
-### 1. `index.html`
-Replace both `pet-pay-pals.lovable.app` URLs with the custom domain:
-- `og:image` → `https://prowebbuilders.com/og-image.png`
-- `twitter:image` → `https://prowebbuilders.com/og-image.png`
+---
 
-(The `og-image.png` file needs to exist at that path on the custom domain — it already does at the current URL, and the published site serves the same `/public` folder, so it will resolve on `prowebbuilders.com` too.)
+## What we need from you (project owner) before sending
 
-### 2. Hide the "Edit with Lovable" badge on the published site
-Turn off badge visibility in publish settings so visitors to `prowebbuilders.com` don't see the floating edit button.
+1. **Confirm the three options** (VetNet / vendor / manual) still match what you want to offer the client — same as the previous plan.
+2. **Confirm the VetNet framing** — I'm describing it accurately per AAVSB's public materials, but if you already know the client's budget won't cover it, we can soften option A and push them toward C.
+3. **Fear Free** — the client didn't address it. Should this reply also re-ask about Fear Free, or wait until they pick a license path first? Default in the draft above: wait.
 
-### 3. Publish visibility
-Confirm the site is served on the custom domain `prowebbuilders.com`. The `*.lovable.app` URL will still exist as a fallback (that's how the hosting works — it can't be deleted), but as long as you only share the custom domain, nobody has a reason to find the `lovable.app` one.
+## Technical notes (for you, not the client)
 
-## Changes I'll make (internal dev notes)
-
-These aren't shipped to end users, but you asked for the whole codebase, so:
-
-### 4. `scripts/test-referral-flow.md`
-Reword the two "Lovable Cloud" mentions to "backend" / "backend functions".
-
-### 5. `.lovable/plan.md`
-This whole file is the client Stripe setup guide draft. The folder name `.lovable/` is agent-managed and never shipped, but I'll reword any user-facing wording inside the file that mentions Lovable. (Currently it doesn't — only the folder name does.)
-
-## What I will NOT touch, and why
-
-These contain the word "Lovable" but removing them would break the app:
-
-- **`supabase/functions/auth-email-hook/index.ts`** and **`supabase/functions/send-bnpl-reminder/index.ts`** — import `@lovable.dev/email-js` and `@lovable.dev/webhooks-js`, and read `LOVABLE_API_KEY`. These are the SDK packages that actually send your transactional and auth emails through the managed email gateway. Renaming the imports or the env var would stop email delivery immediately. These files are server-side only — no visitor to your site ever sees them.
-- **`bun.lock`** — auto-generated; lists `@lovable.dev/*` packages because the edge functions above depend on them. Regenerated by the package manager; not user-visible.
-- **`.lovable/` folder** — internal agent workspace, not deployed.
-- **`supabase/config.toml`, `.env`, `src/integrations/supabase/client.ts`, `src/integrations/supabase/types.ts`** — auto-generated backend wiring. They don't contain the word "Lovable" today, but I'm noting them so you know they're off-limits.
-
-## Honest caveat
-
-Anyone with real forensic intent (checking DNS history, inspecting the deployed edge-function response headers, or reading server-side email metadata) can still tell the app is hosted and emailed through Lovable's infrastructure. This plan makes it invisible in the **source code and the front-end HTML** a casual visitor or client would ever see — it does not (and cannot) hide the hosting provider from a determined technical inspector.
-
-## Files changed
-
-- `index.html` — swap 2 URLs
-- `scripts/test-referral-flow.md` — reword 2 lines
-- Publish settings — turn off badge (done via a tool call, not a file edit)
+- No code changes. Our scaffolding already routes every state to `pending_review` (`supabase/functions/verify-vet-license/states/index.ts`), which is exactly the manual-review path option C describes. Whichever option the client picks, only one new adapter needs to be registered.
+- If they pick C, the admin dashboard at `AdminVetsPage` / `AdminVetDetailPage` is already the review surface — no new UI needed.
