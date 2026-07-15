@@ -1,8 +1,22 @@
 # Client Instructions: Complete Stripe Live-Mode Setup
 
-Send this to the client verbatim. It walks them through all 4 remaining Dashboard items. They'll need ~30–45 minutes and their business bank info, EIN/SSN, and legal address.
+Send this to the client verbatim. It walks them through all remaining Dashboard items. They'll need ~30–45 minutes and their business bank info, EIN/SSN, and legal address.
 
 **Before starting:** log in at https://dashboard.stripe.com and confirm the toggle in the top-left says **Live mode** (not "Test mode").
+
+---
+
+## Part 0 — Add your business bank account (5 min)
+
+Stripe uses this account for two things: (1) depositing platform revenue (membership payments), and (2) funding vet card authorizations (Issuing).
+
+1. Top-right gear → **Settings** → **Business** → **Bank accounts and debit cards**.
+2. Click **Add bank account**. Choose **United States** / **USD**.
+3. Enter the Help A Pet business checking account: routing number + account number, or link via Plaid (instant verification).
+4. If entered manually, Stripe sends two micro-deposits within 1–2 business days. Come back and enter the amounts to verify.
+5. Set this account as the **default for payouts**.
+
+You'll reuse this same bank account as the Issuing funding source in Part B.
 
 ---
 
@@ -27,7 +41,7 @@ Send this to the client verbatim. It walks them through all 4 remaining Dashboar
    - Business use case: *"Veterinary care financing for pet owners enrolled in Help A Pet memberships."*
    - Card types to issue: check **Virtual** and **Physical**.
 3. **Card program agreement** — read and accept the **Celtic Bank Commercial Card Agreement**. (Must be signed by the business's authorized officer.)
-4. **Funding source** — click **Add funding source** → link the business bank account. Add an initial balance of **$500–$2,000** (used to authorize vet card charges; can be topped up any time).
+4. **Funding source** — click **Add funding source** → select the bank account you added in Part 0. Add an initial balance of **$500–$2,000** (used to authorize vet card charges; can be topped up any time).
 5. **Card design (physical cards):**
    - Upload logo: Help A Pet logo (navy + gold, 100×140 px, transparent PNG). *We'll email you the file.*
    - Card color: Navy Blue (`#1B2A4A`).
@@ -37,7 +51,7 @@ Send this to the client verbatim. It walks them through all 4 remaining Dashboar
 
 ---
 
-## Part C — Set Up Connect for Referrer Payouts (10 min)
+## Part C — Build your Connect integration (Referrer Payouts) (10 min)
 
 1. Left sidebar → **Connect** → **Get started**.
 2. Choose account type: **Platform or marketplace**.
@@ -70,8 +84,9 @@ If later you want customers to be able to upgrade/downgrade plans from their bil
 
 ## Part E — What to send back to us
 
-After completing Parts A–C, send:
+After completing Parts 0 and A–C, send:
 
+0. Confirmation that the business bank account is **verified** (not just added).
 1. **Business address** (street, city, state, ZIP, country) — this is embedded on vet cards.
 2. Screenshot of the Stripe **Setup Guide** page showing completion %.
 3. Confirmation that Issuing was submitted (we'll wait for Stripe's approval email before enabling live vet card issuance).
@@ -87,15 +102,15 @@ Once we have those, we'll:
 ## Common gotchas to warn the client about
 
 - **Live mode toggle:** if the top-left says "Test mode," none of the settings above apply to real payments. Always confirm Live mode before saving.
-- **Bank account verification:** micro-deposits can take 1–2 days. Payouts won't work until verified.
+- **Bank account verification:** if you entered account/routing manually in Part 0, micro-deposits take 1–2 days. Platform payouts and Issuing funding won't work until verified.
 - **Issuing approval delay:** the Issuing agreement goes to Stripe's underwriting team. Vet cards won't work in live mode until they email approval (typically 1–3 business days).
 - **Tax setup:** Stripe will nag about Stripe Tax and 1099s. Both are optional for launch and can be added later.
 
 ---
 
-## What I'll do after client confirms Parts A–C are done
+## What I'll do after client confirms Parts 0 and A–C are done
 
 1. Ask you for the business address, then save the 5 `ISSUING_BUSINESS_ADDRESS_*` secrets.
 2. Run a live-mode connectivity check against the Stripe API from the backend.
-3. Verify the webhook endpoint in the Stripe Dashboard is subscribed to all events our code handles (list is in the plan file).
+3. Verify the webhook endpoint in the Stripe Dashboard is subscribed to all events our code handles.
 4. Report back the go-live status.
