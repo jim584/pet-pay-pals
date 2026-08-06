@@ -101,7 +101,29 @@ export function WalletView() {
                 <p className="text-2xl font-bold font-display">${dpSummary.expiringSoon.toFixed(2)}</p>
               </div>
             </div>
+            {dpSummary.byPet && dpSummary.byPet.length > 0 && (
+              <div className="mt-4 space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">Balance by pet</p>
+                <div className="rounded-lg border divide-y">
+                  {dpSummary.byPet.map((p) => (
+                    <div key={p.pet_id ?? "unassigned"} className="flex items-center justify-between px-3 py-2 text-sm">
+                      <span className="font-medium">{p.petName}</span>
+                      <span className="flex items-center gap-3">
+                        {p.held > 0 && (
+                          <span className="text-xs text-muted-foreground">${p.held.toFixed(2)} on hold</span>
+                        )}
+                        <span className="font-semibold">${p.available.toFixed(2)}</span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Direct Pay accrues to the specific pet its membership covers and can only be used for that pet.
+                </p>
+              </div>
+            )}
           </CardContent>
+
         </Card>
       )}
 
