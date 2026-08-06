@@ -104,7 +104,42 @@ Deno.serve(async (req) => {
           break;
         }
 
+        // Community wallet donation — the ONLY path allowed to credit a
+        // recipient wallet, and only after Stripe confirms the charge.
+        if (md.kind === "wallet_donation" && md.to_user_id && s.payment_status === "paid") {
+          const pi = typeof s.payment_intent === "string" ? s.payment_intent : s.payment_intent?.id ?? null;
+          if (pi) {
+            const { data: dup } = await admin.from("payment_history")
+              .select("id").eq("stripe_payment_intent_id", pi).maybeSingle();
+            if (dup) break;
+          }
+          const amount = (s.amount_total ?? 0) / 100;
+
+          const { error: donErr } = await admin.rpc("process_donation", {
+            _from_user_id: md.from_user_id || null,
+            _to_user_id: md.to_user_id,
+            _amount: amount,
+            _story_id: md.story_id && md.story_id.length > 0 ? md.story_id : null,
+          });
+          if (donErr) throw donErr;
+
+          if (md.from_user_id) {
+            await admin.from("payment_history").insert({
+              user_id: md.from_user_id,
+              kind: "donation",
+              status: "paid",
+              amount,
+              currency: s.currency || "usd",
+              description: "Community donation",
+              stripe_payment_intent_id: pi,
+              occurred_at: new Date().toISOString(),
+            });
+          }
+          break;
+        }
+
         // Sponsorship donation payment
+
         if (md.kind === "sponsorship_donation" && md.pet_id && s.payment_status === "paid") {
           const pi = typeof s.payment_intent === "string" ? s.payment_intent : s.payment_intent?.id ?? null;
           // Idempotency: skip if we already recorded this PI
