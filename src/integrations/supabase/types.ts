@@ -2834,6 +2834,8 @@ export type Database = {
         | "completed"
         | "failed"
         | "reversed"
+        | "settled"
+        | "cancelled"
       vet_ticket_status:
         | "submitted"
         | "under_review"
@@ -2997,7 +2999,15 @@ export const Constants = {
         "refund",
       ],
       vet_payout_method: ["manual_ach", "issued_card", "direct_charge"],
-      vet_payout_status: ["pending", "sent", "completed", "failed", "reversed"],
+      vet_payout_status: [
+        "pending",
+        "sent",
+        "completed",
+        "failed",
+        "reversed",
+        "settled",
+        "cancelled",
+      ],
       vet_ticket_status: [
         "submitted",
         "under_review",
