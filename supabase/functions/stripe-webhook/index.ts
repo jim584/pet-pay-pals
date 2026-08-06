@@ -11,19 +11,23 @@ Deno.serve(async (req) => {
   const rawBody = await req.text();
 
   let event: Stripe.Event;
+  // Fail closed. An unsigned or unverifiable payload is never processed —
+  // this endpoint moves money and must not accept unauthenticated input.
+  if (!webhookSecret) {
+    console.error("STRIPE_WEBHOOK_SECRET is not configured; refusing webhook.");
+    return new Response("Webhook Error: signing secret not configured", { status: 500 });
+  }
+  if (!sig) {
+    return new Response("Webhook Error: missing stripe-signature header", { status: 400 });
+  }
   try {
-    if (webhookSecret && sig) {
-      event = await stripe.webhooks.constructEventAsync(rawBody, sig, webhookSecret);
-    } else {
-      // Fallback (dev): parse without verification
-      event = JSON.parse(rawBody) as Stripe.Event;
-    }
+    event = await stripe.webhooks.constructEventAsync(rawBody, sig, webhookSecret);
   } catch (e) {
     console.error("Webhook signature verification failed:", e);
     return new Response(`Webhook Error: ${(e as Error).message}`, { status: 400 });
   }
 
-  // ---- Replay protection: record event id; skip if already processed ----
+  // ---- Replay protection: record event id; skip only if already succeeded ----
   const { error: dedupErr } = await admin.from("webhook_events").insert({
     provider: "stripe",
     event_id: event.id,
@@ -32,16 +36,44 @@ Deno.serve(async (req) => {
     status: "processing",
   });
   if (dedupErr) {
-    // Unique violation = already processed (or in-flight). Ack with 200 so Stripe stops retrying.
     if ((dedupErr as any).code === "23505") {
-      console.log(`Duplicate webhook event ignored: ${event.id} (${event.type})`);
-      return new Response(JSON.stringify({ received: true, duplicate: true }), {
-        status: 200, headers: { "Content-Type": "application/json" },
-      });
+      // Already seen. Only treat it as a duplicate if the earlier attempt
+      // actually succeeded — a previously failed or stalled attempt must be
+      // reprocessed, otherwise Stripe's retry silently drops the event.
+      const { data: prior } = await admin.from("webhook_events")
+        .select("status, processed_at")
+        .eq("provider", "stripe").eq("event_id", event.id)
+        .maybeSingle();
+
+      const priorStatus = prior?.status ?? "processing";
+      const stalledFor = prior?.processed_at
+        ? Date.now() - new Date(prior.processed_at).getTime()
+        : Number.MAX_SAFE_INTEGER;
+      const isStalled = priorStatus === "processing" && stalledFor > 5 * 60 * 1000;
+
+      if (priorStatus === "processed") {
+        console.log(`Duplicate webhook event ignored: ${event.id} (${event.type})`);
+        return new Response(JSON.stringify({ received: true, duplicate: true }), {
+          status: 200, headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (priorStatus === "processing" && !isStalled) {
+        // Genuinely in flight elsewhere — ask Stripe to retry later.
+        return new Response(JSON.stringify({ error: "event in flight" }), { status: 409 });
+      }
+
+      // Failed or stalled: retake ownership and reprocess.
+      console.log(`Reprocessing ${priorStatus} webhook event: ${event.id} (${event.type})`);
+      await admin.from("webhook_events")
+        .update({ status: "processing", error: null, processed_at: new Date().toISOString() })
+        .eq("provider", "stripe").eq("event_id", event.id);
+    } else {
+      console.error("webhook_events insert failed:", dedupErr);
+      // Logging failure must not silently drop a money event.
+      return new Response(JSON.stringify({ error: "event log unavailable" }), { status: 500 });
     }
-    console.error("webhook_events insert failed:", dedupErr);
-    // continue — don't block processing on logging failure
   }
+
 
   try {
     switch (event.type) {
