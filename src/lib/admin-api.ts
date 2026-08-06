@@ -875,7 +875,7 @@ export interface ReserveKpis {
 export async function fetchReserveKpis(): Promise<ReserveKpis> {
   const soon = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString();
   const [reserve, accruals, ledger] = await Promise.all([
-    supabase.from("community_reserve").select("balance").limit(1).maybeSingle(),
+    supabase.from("v_community_reserve_balance").select("balance").limit(1).maybeSingle(),
     supabase.from("direct_pay_accruals").select("remaining_amount, expires_at").eq("expired", false),
     supabase.from("dp_expiry_ledger").select("expired_amount, community_reserve_portion, help_now_portion, admin_portion"),
   ]);
