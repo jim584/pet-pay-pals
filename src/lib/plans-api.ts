@@ -114,14 +114,12 @@ export type ReserveSummary = {
   eligibleSince: string | null;
   continuousPaidMonths: number;
   monthsUntilEligible: number;
+  byPet: PetBalance[];
 };
 
 export async function fetchMyReserveSummary(userId: string): Promise<ReserveSummary> {
-  const [accruals, membership] = await Promise.all([
-    supabase
-      .from("member_reserve_accruals")
-      .select("amount, remaining_amount")
-      .eq("user_id", userId),
+  const [ledger, membership] = await Promise.all([
+    supabase.from("v_member_reserve_balance").select("*").eq("user_id", userId),
     supabase
       .from("memberships")
       .select("reserve_eligible_since, continuous_paid_months, status")
@@ -131,9 +129,19 @@ export async function fetchMyReserveSummary(userId: string): Promise<ReserveSumm
       .limit(1)
       .maybeSingle(),
   ]);
-  const rows = (accruals.data ?? []) as any[];
-  const balance = rows.reduce((s, r) => s + Number(r.remaining_amount ?? 0), 0);
-  const lifetimeAccrued = rows.reduce((s, r) => s + Number(r.amount ?? 0), 0);
+  const rows = (ledger.data ?? []) as any[];
+  const names = await petNameMap(rows.map((r) => r.pet_id));
+  const byPet: PetBalance[] = rows.map((r) => ({
+    pet_id: r.pet_id ?? null,
+    petName: (r.pet_id && names.get(r.pet_id)) || "Unassigned",
+    available: Number(r.available ?? 0),
+    accrued: Number(r.accrued ?? 0),
+    held: Number(r.held ?? 0),
+    spent: Number(r.spent ?? 0),
+    expired: Number(r.expired ?? 0),
+  }));
+  const balance = byPet.reduce((s, p) => s + p.available, 0);
+  const lifetimeAccrued = byPet.reduce((s, p) => s + p.accrued, 0);
   const m = membership.data as any;
   const months = Number(m?.continuous_paid_months ?? 0);
   const eligibleSince = m?.reserve_eligible_since ?? null;
@@ -145,8 +153,10 @@ export async function fetchMyReserveSummary(userId: string): Promise<ReserveSumm
     eligibleSince,
     continuousPaidMonths: months,
     monthsUntilEligible: Math.max(12 - months, 0),
+    byPet,
   };
 }
+
 
 export async function openCustomerPortal(): Promise<string> {
   const { data, error } = await supabase.functions.invoke("customer-portal", { body: {} });
