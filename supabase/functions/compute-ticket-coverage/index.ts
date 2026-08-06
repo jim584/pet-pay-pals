@@ -180,7 +180,7 @@ Deno.serve(async (req) => {
       const { data: rAccruals } = await admin
         .from("member_reserve_accruals")
         .select("remaining_amount")
-        .eq("membership_id", membership.id);
+        .eq("user_id", ticket.owner_id);
       reserveAvailable = (rAccruals ?? []).reduce((s: number, r: any) => s + Number(r.remaining_amount ?? 0), 0);
       if (!reserveEligible) reserveBlockedReason = "not_eligible_yet";
       else if (use_reserve && remainingAfterDp > 0) {
