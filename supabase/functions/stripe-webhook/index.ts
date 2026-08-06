@@ -641,10 +641,26 @@ Deno.serve(async (req) => {
         const ticketId = (tx.metadata?.ticket_id as string)
           || ((tx as any).card?.metadata?.ticket_id);
         if (ticketId) {
-          const settled = Math.abs(tx.amount) / 100;
+          const amountUsd = Math.abs(tx.amount) / 100;
+
+          if (tx.type === "refund") {
+            // Merchant refunded part or all of the captured amount — unwind the settlement.
+            await admin.rpc("reverse_ticket_settlement", {
+              _ticket_id: ticketId,
+              _amount: amountUsd,
+              _reason: "issuing_refund",
+              _external_ref: tx.id,
+            });
+            await admin.from("vet_payouts")
+              .update({ status: "reversed", notes: `Refunded ${amountUsd} (${tx.id})` })
+              .eq("ticket_id", ticketId).eq("status", "settled");
+            break;
+          }
+
+          // Capture
           await admin.rpc("mark_ticket_settled", {
             _ticket_id: ticketId,
-            _settled_amount: settled,
+            _settled_amount: amountUsd,
             _authorization_id: (tx.authorization as string) || tx.id,
           });
           // Freeze card so no further auths succeed on this ticket
@@ -662,6 +678,50 @@ Deno.serve(async (req) => {
         }
         break;
       }
+
+      // Disputes on issued-card spend: unwind the settlement while funds are contested,
+      // and re-settle if the dispute is lost / funds are not reinstated.
+      case "issuing_dispute.created":
+      case "issuing_dispute.funds_reinstated":
+      case "issuing_dispute.closed": {
+        const d = event.data.object as Stripe.Issuing.Dispute;
+        const txId = typeof d.transaction === "string" ? d.transaction : (d.transaction as any)?.id;
+        let ticketId: string | null = (d.metadata?.ticket_id as string) || null;
+        if (!ticketId && txId) {
+          try {
+            const tx = await stripe.issuing.transactions.retrieve(txId);
+            ticketId = (tx.metadata?.ticket_id as string)
+              || ((tx as any).card?.metadata?.ticket_id) || null;
+          } catch (e) { console.error("dispute tx lookup failed:", e); }
+        }
+        if (!ticketId) break;
+        const amountUsd = Math.abs(d.amount ?? 0) / 100;
+
+        if (event.type === "issuing_dispute.created") {
+          await admin.rpc("reverse_ticket_settlement", {
+            _ticket_id: ticketId,
+            _amount: amountUsd,
+            _reason: "issuing_dispute_opened",
+            _external_ref: d.id,
+          });
+          await admin.from("vet_payouts")
+            .update({ status: "reversed", notes: `Dispute ${d.id} opened` })
+            .eq("ticket_id", ticketId).eq("status", "settled");
+        } else if (event.type === "issuing_dispute.funds_reinstated") {
+          await admin.from("vet_payouts")
+            .update({ status: "completed", notes: `Dispute ${d.id} funds reinstated` })
+            .eq("ticket_id", ticketId).eq("status", "reversed");
+        } else if (d.status === "lost") {
+          // Dispute lost: the charge stands, so re-apply the settlement.
+          await admin.rpc("mark_ticket_settled", {
+            _ticket_id: ticketId,
+            _settled_amount: amountUsd,
+            _authorization_id: d.id,
+          });
+        }
+        break;
+      }
+
 
       case "issuing_card.updated": {
         const c = event.data.object as Stripe.Issuing.Card;
