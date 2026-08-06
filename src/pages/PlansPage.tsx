@@ -14,6 +14,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { openCheckoutUrl } from "@/lib/open-checkout";
 
+type PetOption = { id: string; name: string; species: string; vet_of_record_id: string | null };
+
 export default function PlansPage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
@@ -25,6 +27,9 @@ export default function PlansPage() {
   const [loadingPlans, setLoadingPlans] = useState(true);
   const [membership, setMembership] = useState<(Membership & { plan: MembershipPlan }) | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [pets, setPets] = useState<PetOption[]>([]);
+  const [selectedPetId, setSelectedPetId] = useState<string | null>(null);
+  const [coveredPetIds, setCoveredPetIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     setLoadingPlans(true);
