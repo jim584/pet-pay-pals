@@ -464,6 +464,29 @@ function AdminTicketCard({
           </div>
         )}
 
+        {ticket.info_request_message && (
+          <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3 space-y-1">
+            <p className="text-xs font-semibold">Information requested</p>
+            <p className="text-xs text-muted-foreground">{ticket.info_request_message}</p>
+            {ticket.info_requested_at && (
+              <p className="text-[11px] text-muted-foreground">
+                Asked {new Date(ticket.info_requested_at).toLocaleString()}
+              </p>
+            )}
+            {ticket.info_response_message && (
+              <div className="pt-2 border-t mt-2">
+                <p className="text-xs font-semibold">Submitter response</p>
+                <p className="text-xs text-muted-foreground">{ticket.info_response_message}</p>
+                {ticket.info_responded_at && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Replied {new Date(ticket.info_responded_at).toLocaleString()}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {breakdown && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 rounded-md border p-3 bg-muted/30 text-xs">
             {(["dp_use", "bnpl_use", "reserve_use", "member_remainder"] as const).map((k) => (
@@ -478,13 +501,44 @@ function AdminTicketCard({
         )}
 
         {pending && (
-          <div className="border-t pt-3">
+          <div className="border-t pt-3 flex flex-wrap gap-2">
             <Button size="sm" onClick={approve} disabled={approving}>
               {approving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
               Approve ticket
             </Button>
+            <Dialog open={infoOpen} onOpenChange={setInfoOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" variant="outline">
+                  <MessageSquareWarning className="h-4 w-4 mr-1" /> Request info
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-h-[85vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Request more information</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-2">
+                  <Label className="text-xs">What is missing?</Label>
+                  <Textarea
+                    value={infoMessage}
+                    onChange={(e) => setInfoMessage(e.target.value)}
+                    placeholder="e.g. The estimate is illegible — please upload a clearer copy showing the clinic letterhead."
+                    rows={4}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    The ticket moves to "needs info" until the submitter responds.
+                  </p>
+                </div>
+                <DialogFooter>
+                  <Button onClick={sendInfoRequest} disabled={infoBusy || infoMessage.trim().length < 5}>
+                    {infoBusy && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+                    Send request
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         )}
+
 
         {canReject && (
 
