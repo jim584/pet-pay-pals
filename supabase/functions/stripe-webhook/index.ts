@@ -330,7 +330,7 @@ Deno.serve(async (req) => {
         if (!subId) break;
 
         const { data: m } = await admin.from("memberships")
-          .select("id, user_id, plan_id, is_fear_free_member, billing_interval, continuous_paid_months, last_paid_month, reserve_eligible_since")
+          .select("id, user_id, pet_id, plan_id, is_fear_free_member, billing_interval, continuous_paid_months, last_paid_month, reserve_eligible_since")
           .eq("stripe_subscription_id", subId).maybeSingle();
         if (!m) break;
 
