@@ -358,8 +358,11 @@ function AdminTicketCard({
   const breakdown = ticket.coverage_breakdown ?? null;
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
-  const canReject = ["submitted", "under_review", "approved"].includes(ticket.status);
+  const [approving, setApproving] = useState(false);
+  const pending = ["submitted", "under_review", "awaiting_secondary_review"].includes(ticket.status);
+  const canReject = ["submitted", "under_review", "awaiting_secondary_review", "approved"].includes(ticket.status);
   const assignedClinic = clinicMap.find((c) => c.id === ticket.vet_profile_id);
+  const blockers = (ticket as any).auto_approval_blockers as string[] | null;
 
   const reject = async () => {
     if (!reason.trim()) { toast({ title: "Reason required", variant: "destructive" }); return; }
@@ -372,10 +375,22 @@ function AdminTicketCard({
     finally { setBusy(false); }
   };
 
+  const approve = async () => {
+    setApproving(true);
+    try {
+      const bd = await computeTicketCoverage(ticket.id, false);
+      await approveVetTicket(ticket.id, bd, "approved after admin review");
+      toast({ title: "Approved" });
+      onChanged();
+    } catch (e: any) { toast({ title: "Approve failed", description: e.message, variant: "destructive" }); }
+    finally { setApproving(false); }
+  };
+
   const openFile = async (path: string) => {
     try { window.open(await getTicketFileSignedUrl(path), "_blank"); }
     catch (e: any) { toast({ title: "Couldn't open", description: e.message, variant: "destructive" }); }
   };
+
 
   return (
     <Card>
