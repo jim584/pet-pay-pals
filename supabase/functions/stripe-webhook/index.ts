@@ -272,11 +272,15 @@ Deno.serve(async (req) => {
 
         const subId = typeof s.subscription === "string" ? s.subscription : s.subscription?.id;
         if (!md.user_id || !md.plan_id || !subId) break;
+        if (!md.pet_id) {
+          console.error("membership checkout completed without pet_id", { session: s.id });
+          break;
+        }
 
         const sub = await stripe.subscriptions.retrieve(subId);
         await admin.from("memberships").insert({
           user_id: md.user_id,
-          pet_id: md.pet_id || null,
+          pet_id: md.pet_id,
           plan_id: md.plan_id,
           status: "active",
           billing_interval: md.billing_interval || "month",
