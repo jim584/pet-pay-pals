@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Wallet as WalletIcon, ArrowDownRight, ArrowUpRight, CreditCard, Shield, Clock, ShieldCheck } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { fetchWallet, fetchTransactions, Wallet, WalletTransaction } from "@/lib/community-api";
-import { fetchMyMembership, fetchMyDpSummary, openCustomerPortal, fetchPaymentHistory, fetchMyReserveSummary, PaymentHistoryRow, ReserveSummary } from "@/lib/plans-api";
+import { fetchMyMembership, fetchMyDpSummary, openCustomerPortal, fetchPaymentHistory, fetchMyReserveSummary, PaymentHistoryRow, ReserveSummary, PetBalance } from "@/lib/plans-api";
 import { toast } from "@/hooks/use-toast";
 
 export function WalletView() {
