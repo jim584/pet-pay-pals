@@ -15,7 +15,7 @@ export function WalletView() {
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
   const [membership, setMembership] = useState<any>(null);
-  const [dpSummary, setDpSummary] = useState<{ available: number; expiringSoon: number }>({ available: 0, expiringSoon: 0 });
+  const [dpSummary, setDpSummary] = useState<{ available: number; expiringSoon: number; byPet: PetBalance[] }>({ available: 0, expiringSoon: 0, byPet: [] });
   const [payments, setPayments] = useState<PaymentHistoryRow[]>([]);
   const [reserve, setReserve] = useState<ReserveSummary | null>(null);
   const [loading, setLoading] = useState(true);
