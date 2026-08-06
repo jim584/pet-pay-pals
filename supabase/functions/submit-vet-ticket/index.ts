@@ -5,13 +5,19 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
-    }
+    if (!authHeader?.startsWith("Bearer ")) return json({ error: "Unauthorized" }, 401);
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
@@ -19,20 +25,27 @@ Deno.serve(async (req) => {
     );
     const token = authHeader.replace("Bearer ", "");
     const { data: userData, error: userErr } = await supabase.auth.getUser(token);
-    if (userErr || !userData?.user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
-    }
+    if (userErr || !userData?.user) return json({ error: "Unauthorized" }, 401);
     const userId = userData.user.id;
 
-    const body = await req.json();
+    const body = await req.json().catch(() => ({}));
     const {
       pet_id, vet_profile_id, clinic_name, estimate_amount,
       estimate_url, attestation_url, notes, procedure_description,
+      attestation_confirmed,
     } = body || {};
 
-    if (!pet_id || !clinic_name || !estimate_amount || Number(estimate_amount) <= 0) {
-      return new Response(JSON.stringify({ error: "pet_id, clinic_name, estimate_amount required" }),
-        { status: 400, headers: corsHeaders });
+    const amount = Number(estimate_amount);
+    if (!pet_id || !clinic_name || !amount || amount <= 0) {
+      return json({ error: "pet_id, clinic_name and a positive estimate_amount are required" }, 400);
+    }
+
+    // ---- Mandatory intake facts (audit finding: documents were optional) ----
+    if (!estimate_url) {
+      return json({ error: "An itemised estimate or invoice document is required" }, 400);
+    }
+    if (attestation_confirmed !== true) {
+      return json({ error: "You must confirm the attestation before submitting" }, 400);
     }
 
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
@@ -40,61 +53,146 @@ Deno.serve(async (req) => {
     const { data: roles } = await admin.from("user_roles").select("role").eq("user_id", userId);
     const roleSet = new Set((roles ?? []).map((r: any) => r.role));
     if (!roleSet.has("pet_owner") && (roleSet.has("vet") || roleSet.has("admin"))) {
-      return new Response(JSON.stringify({ error: "Only pet owners can submit vet tickets" }),
-        { status: 403, headers: corsHeaders });
+      return json({ error: "Only pet owners can submit vet tickets" }, 403);
     }
 
     const { data: pet } = await admin.from("pets").select("id, owner_id").eq("id", pet_id).maybeSingle();
-    if (!pet || pet.owner_id !== userId) {
-      return new Response(JSON.stringify({ error: "Pet not found or not yours" }), { status: 403, headers: corsHeaders });
-    }
+    if (!pet || pet.owner_id !== userId) return json({ error: "Pet not found or not yours" }, 403);
 
     const { data: membership } = await admin
-      .from("memberships").select("id")
-      .eq("user_id", userId).in("status", ["active","past_due"])
+      .from("memberships").select("id, status")
+      .eq("user_id", userId).in("status", ["active", "past_due"])
       .order("created_at", { ascending: false }).limit(1).maybeSingle();
 
+    // ---- Create the ticket in the only legal entry state ----
     const { data: ticket, error } = await admin.from("vet_tickets").insert({
-      pet_id, owner_id: userId,
+      pet_id,
+      owner_id: userId,
       membership_id: membership?.id ?? null,
       vet_profile_id: vet_profile_id ?? null,
-      clinic_name, estimate_amount: Number(estimate_amount),
-      estimate_url: estimate_url ?? null,
+      clinic_name,
+      estimate_amount: amount,
+      estimate_url,
       attestation_url: attestation_url ?? null,
-      notes: notes ?? null,
+      notes: [notes, procedure_description].filter(Boolean).join("\n\n") || null,
       status: "submitted",
     }).select().single();
     if (error) throw error;
 
-    // ===== Unconditional auto-approve =====
-    // Every newly submitted vet ticket is auto-approved. Coverage is computed
-    // best-effort so DP / BNPL / Reserve funding paths still work; if that fails
-    // we fall back to charging the full estimate as the member remainder so the
-    // ticket still ends in an approved state without any admin action.
-    let autoApproved = false;
+    // =====================================================================
+    // Objective eligibility rules. Every failed rule is a blocker; any
+    // blocker routes the ticket to human review. There is no path that
+    // approves a ticket when a rule fails or when a downstream call errors.
+    // =====================================================================
+    const blockers: string[] = [];
+
+    const { data: settings } = await admin
+      .from("referral_program_settings")
+      .select("auto_approve_ticket_threshold, excluded_procedures, risk_flag_thresholds")
+      .limit(1).maybeSingle();
+
+    const threshold = Number(settings?.auto_approve_ticket_threshold ?? 500);
+    const excluded: string[] = settings?.excluded_procedures ?? [];
+    const riskCfg = (settings?.risk_flag_thresholds ?? {}) as Record<string, number>;
+
+    // Rule 1 — active membership
+    if (!membership) blockers.push("no_active_membership");
+    else if (membership.status !== "active") blockers.push(`membership_${membership.status}`);
+
+    // Rule 2 — amount within the auto-approval threshold
+    if (amount > threshold) blockers.push("over_auto_approval_threshold");
+
+    // Rule 3 — excluded procedures
+    const haystack = `${clinic_name} ${procedure_description ?? ""} ${notes ?? ""}`.toLowerCase();
+    for (const proc of excluded) {
+      if (proc && haystack.includes(String(proc).toLowerCase())) {
+        blockers.push(`excluded_procedure:${proc}`);
+      }
+    }
+
+    // Rule 4 — treating vet must be in good standing
+    if (vet_profile_id) {
+      const { data: vp } = await admin.from("vet_profiles")
+        .select("is_approved, verification_status").eq("id", vet_profile_id).maybeSingle();
+      if (!vp) blockers.push("vet_profile_not_found");
+      else {
+        if (!vp.is_approved) blockers.push("vet_not_approved");
+        if (!["verified", "manual_override"].includes(vp.verification_status)) {
+          blockers.push("vet_license_not_verified");
+        }
+      }
+    } else {
+      blockers.push("no_treating_vet_selected");
+    }
+
+    // Rule 5 — velocity / fraud flags
+    const now = Date.now();
+    const since24h = new Date(now - 24 * 60 * 60 * 1000).toISOString();
+    const since30d = new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    const { count: c24 } = await admin.from("vet_tickets")
+      .select("id", { count: "exact", head: true })
+      .eq("owner_id", userId).gte("created_at", since24h);
+    if ((c24 ?? 0) > Number(riskCfg.tickets_per_24h ?? 3)) blockers.push("velocity_tickets_24h");
+
+    const { count: c30 } = await admin.from("vet_tickets")
+      .select("id", { count: "exact", head: true })
+      .eq("owner_id", userId).gte("created_at", since30d);
+    if ((c30 ?? 0) > Number(riskCfg.tickets_per_30d ?? 10)) blockers.push("velocity_tickets_30d");
+
+    // Rule 6 — duplicate estimate for the same pet, clinic and amount
+    const { count: dup } = await admin.from("vet_tickets")
+      .select("id", { count: "exact", head: true })
+      .eq("pet_id", pet_id).eq("clinic_name", clinic_name)
+      .eq("estimate_amount", amount).neq("id", ticket.id)
+      .gte("created_at", since30d);
+    if ((dup ?? 0) > 0) blockers.push("possible_duplicate_claim");
+
+    // ---- Adjudicate ----
+    if (blockers.length > 0) {
+      await admin.from("vet_tickets").update({
+        status: "under_review",
+        auto_approval_blockers: blockers,
+      }).eq("id", ticket.id);
+
+      return json({
+        ticket: { ...ticket, status: "under_review" },
+        auto_approved: false,
+        blockers,
+        message: "Your request has been received and is being reviewed.",
+      });
+    }
+
+    // All objective rules passed — compute coverage. A failure here is NOT
+    // an approval; it routes to review.
+    let breakdown: any = null;
     try {
-      let breakdown: any = null;
-      try {
-        const coverageRes = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/compute-ticket-coverage`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Authorization": authHeader },
-          body: JSON.stringify({ ticket_id: ticket.id, use_reserve: false }),
-        });
-        const coverageJson = await coverageRes.json().catch(() => ({}));
-        breakdown = coverageJson?.breakdown ?? null;
-      } catch (e) {
-        console.error("coverage compute failed, falling back:", e);
-      }
+      const coverageRes = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/compute-ticket-coverage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": authHeader },
+        body: JSON.stringify({ ticket_id: ticket.id, use_reserve: false }),
+      });
+      const coverageJson = await coverageRes.json().catch(() => ({}));
+      breakdown = coverageJson?.breakdown ?? null;
+    } catch (e) {
+      console.error("coverage compute failed:", e);
+    }
 
-      if (!breakdown) {
-        breakdown = {
-          dp_use: 0,
-          bnpl_use: 0,
-          reserve_use: 0,
-          member_remainder: Number(estimate_amount),
-        };
-      }
+    if (!breakdown) {
+      await admin.from("vet_tickets").update({
+        status: "under_review",
+        auto_approval_blockers: ["coverage_unavailable"],
+      }).eq("id", ticket.id);
+      return json({
+        ticket: { ...ticket, status: "under_review" },
+        auto_approved: false,
+        blockers: ["coverage_unavailable"],
+        message: "Your request has been received and is being reviewed.",
+      });
+    }
 
+    let approved = false;
+    try {
       const approveRes = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/approve-vet-ticket`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -106,37 +204,28 @@ Deno.serve(async (req) => {
         }),
       });
       const approveJson = await approveRes.json().catch(() => ({}));
-      autoApproved = !!approveJson?.ok;
-
-      // Ultimate fallback: if approve-vet-ticket refused for any reason,
-      // still mark the ticket approved directly so no admin action is needed.
-      if (!autoApproved) {
-        await admin.from("vet_tickets").update({
-          status: "approved",
-          approved_amount: Number(estimate_amount),
-          coverage_breakdown: breakdown,
-          admin_notes: "auto-approved (fallback)",
-          reviewed_at: new Date().toISOString(),
-        }).eq("id", ticket.id);
-        autoApproved = true;
-      }
+      approved = !!approveJson?.ok;
     } catch (e) {
-      console.error("auto-approve attempt failed:", e);
-      // Last-ditch: mark approved so it never sits waiting on an admin.
-      await admin.from("vet_tickets").update({
-        status: "approved",
-        approved_amount: Number(estimate_amount),
-        admin_notes: "auto-approved (error fallback)",
-        reviewed_at: new Date().toISOString(),
-      }).eq("id", ticket.id);
-      autoApproved = true;
+      console.error("approve-vet-ticket call failed:", e);
     }
 
-    return new Response(JSON.stringify({ ticket, auto_approved: autoApproved, blockers: [] }),
+    if (!approved) {
+      // No approval fallback. The ticket waits for a human.
+      await admin.from("vet_tickets").update({
+        status: "under_review",
+        auto_approval_blockers: ["approval_service_unavailable"],
+      }).eq("id", ticket.id);
+      return json({
+        ticket: { ...ticket, status: "under_review" },
+        auto_approved: false,
+        blockers: ["approval_service_unavailable"],
+        message: "Your request has been received and is being reviewed.",
+      });
+    }
 
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return json({ ticket, auto_approved: true, blockers: [] });
   } catch (e) {
     console.error("submit-vet-ticket error:", e);
-    return new Response(JSON.stringify({ error: (e as Error).message }), { status: 500, headers: corsHeaders });
+    return json({ error: (e as Error).message }, 500);
   }
 });
