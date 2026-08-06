@@ -20,24 +20,25 @@ import {
 import { toast } from "@/hooks/use-toast";
 import {
   listAllTicketsForAdmin, computeTicketCoverage, approveVetTicket,
-  rejectVetTicket, getTicketFileSignedUrl, type VetTicket,
+  rejectVetTicket, requestTicketInfo, getTicketFileSignedUrl, type VetTicket,
 } from "@/lib/vet-tickets-api";
+import { Textarea } from "@/components/ui/textarea";
 
 
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, FileText, ShieldAlert, CalendarIcon, X, Filter } from "lucide-react";
+import { Loader2, FileText, ShieldAlert, CalendarIcon, X, Filter, MessageSquareWarning } from "lucide-react";
 import { Navigate } from "react-router-dom";
 import { TicketMessagesDialog } from "@/components/vet-tickets/TicketMessagesDialog";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
 const STATUS_OPTIONS = [
-  "submitted", "under_review", "approved", "funded",
+  "submitted", "under_review", "needs_info", "approved", "funded",
   "card_issued", "settled", "rejected", "expired", "cancelled",
 ] as const;
 
 const STATUS_VARIANT: Record<string, string> = {
-  submitted: "secondary", under_review: "secondary",
+  submitted: "secondary", under_review: "secondary", needs_info: "outline",
   approved: "default", funded: "default", card_issued: "default", settled: "default",
   rejected: "destructive", expired: "destructive", cancelled: "destructive",
 };
