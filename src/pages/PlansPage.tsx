@@ -149,6 +149,40 @@ export default function PlansPage() {
         <p className="text-muted-foreground mt-1">Choose a plan that fits your pet and budget.</p>
       </div>
 
+      <Card>
+        <CardContent className="p-5 space-y-2">
+          <Label htmlFor="pet-select">Which pet is this membership for?</Label>
+          {pets.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Add a pet first — every membership, benefit and payment plan is tied to one pet.{" "}
+              <Button variant="link" className="px-1 h-auto" onClick={() => navigate("/dashboard/pets")}>
+                Add a pet
+              </Button>
+            </p>
+          ) : (
+            <>
+              <Select value={selectedPetId ?? undefined} onValueChange={setSelectedPetId}>
+                <SelectTrigger id="pet-select" className="max-w-sm">
+                  <SelectValue placeholder="Select a pet" />
+                </SelectTrigger>
+                <SelectContent>
+                  {pets.map((p) => (
+                    <SelectItem key={p.id} value={p.id} disabled={coveredPetIds.has(p.id)}>
+                      {p.name} · {p.species}
+                      {coveredPetIds.has(p.id) ? " (already covered)" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Direct Pay, Reserve and payment plans all accrue to this pet.
+              </p>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+
       {membership && (
         <Card className="border-primary/40 bg-primary/5">
           <CardContent className="p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
