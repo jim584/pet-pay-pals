@@ -315,17 +315,32 @@ function NewTicketDialog({ pets, clinics, onCreated }: {
                  onChange={(e) => setEstimateAmount(e.target.value)} placeholder="450.00" />
         </div>
         <div>
-          <Label>Estimate / invoice (PDF or image)</Label>
+          <Label>Estimate / invoice (PDF or image) <span className="text-destructive">*</span></Label>
           <Input type="file" accept=".pdf,image/*" onChange={(e) => setEstimateFile(e.target.files?.[0] ?? null)} />
+          <p className="text-xs text-muted-foreground mt-1">Required. Attach the itemised document from your clinic.</p>
         </div>
         <div>
-          <Label>Veterinarian attestation form</Label>
+          <Label>Veterinarian attestation form (optional upload)</Label>
           <Input type="file" accept=".pdf,image/*" onChange={(e) => setAttestationFile(e.target.files?.[0] ?? null)} />
         </div>
         <div>
           <Label>Notes (optional)</Label>
           <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
         </div>
+        <label className="flex items-start gap-2 rounded-lg border border-border bg-muted/40 p-3 cursor-pointer">
+          <input
+            type="checkbox"
+            className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
+            checked={attestationConfirmed}
+            onChange={(e) => setAttestationConfirmed(e.target.checked)}
+          />
+          <span className="text-xs text-muted-foreground">
+            I confirm that the attached estimate is genuine, was issued by the clinic named above for
+            the pet selected, relates to treatment that has not already been claimed, and that the
+            information I have provided is true and complete.
+          </span>
+        </label>
+
       </div>
       <DialogFooter>
         <Button onClick={submit} disabled={submitting}>
