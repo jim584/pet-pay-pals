@@ -429,8 +429,19 @@ function AdminTicketCard({
         <p className="text-xs text-muted-foreground">
           {ticket.status === "rejected"
             ? `Rejected · Updated ${new Date(ticket.updated_at).toLocaleString()}`
-            : `Approved ${fmt(ticket.approved_amount ?? ticket.estimate_amount)} · Updated ${new Date(ticket.updated_at).toLocaleString()}`}
+            : pending
+              ? `Awaiting decision · Updated ${new Date(ticket.updated_at).toLocaleString()}`
+              : `Approved ${fmt(ticket.approved_amount ?? ticket.estimate_amount)} · Updated ${new Date(ticket.updated_at).toLocaleString()}`}
         </p>
+
+        {pending && blockers && blockers.length > 0 && (
+          <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
+            <p className="text-xs font-semibold text-destructive mb-1">Why this needs review</p>
+            <ul className="text-xs text-muted-foreground list-disc pl-4 space-y-0.5">
+              {blockers.map((b) => <li key={b}>{b.replace(/_/g, " ")}</li>)}
+            </ul>
+          </div>
+        )}
 
         {breakdown && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 rounded-md border p-3 bg-muted/30 text-xs">
@@ -445,7 +456,17 @@ function AdminTicketCard({
           </div>
         )}
 
+        {pending && (
+          <div className="border-t pt-3">
+            <Button size="sm" onClick={approve} disabled={approving}>
+              {approving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+              Approve ticket
+            </Button>
+          </div>
+        )}
+
         {canReject && (
+
           <div className="border-t pt-3 space-y-2">
             <Label className="text-xs">Rejection reason (fraud / abuse only)</Label>
             <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. suspected fraud" />
