@@ -2277,6 +2277,11 @@ export type Database = {
           estimate_amount: number
           estimate_url: string | null
           id: string
+          info_request_message: string | null
+          info_requested_at: string | null
+          info_requested_by: string | null
+          info_responded_at: string | null
+          info_response_message: string | null
           issued_card_id: string | null
           last_authorization_id: string | null
           member_remainder_paid: boolean
@@ -2308,6 +2313,11 @@ export type Database = {
           estimate_amount: number
           estimate_url?: string | null
           id?: string
+          info_request_message?: string | null
+          info_requested_at?: string | null
+          info_requested_by?: string | null
+          info_responded_at?: string | null
+          info_response_message?: string | null
           issued_card_id?: string | null
           last_authorization_id?: string | null
           member_remainder_paid?: boolean
@@ -2339,6 +2349,11 @@ export type Database = {
           estimate_amount?: number
           estimate_url?: string | null
           id?: string
+          info_request_message?: string | null
+          info_requested_at?: string | null
+          info_requested_by?: string | null
+          info_responded_at?: string | null
+          info_response_message?: string | null
           issued_card_id?: string | null
           last_authorization_id?: string | null
           member_remainder_paid?: boolean
@@ -2712,6 +2727,7 @@ export type Database = {
         | "cancelled"
         | "awaiting_secondary_review"
         | "auto_approved"
+        | "needs_info"
       vet_verification_status:
         | "pending"
         | "verified"
@@ -2875,6 +2891,7 @@ export const Constants = {
         "cancelled",
         "awaiting_secondary_review",
         "auto_approved",
+        "needs_info",
       ],
       vet_verification_status: [
         "pending",
