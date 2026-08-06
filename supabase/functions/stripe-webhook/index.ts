@@ -579,6 +579,62 @@ Deno.serve(async (req) => {
         break;
       }
 
+      // Disputes on regular charges (member remainder, BNPL repayments, donations).
+      case "charge.dispute.created":
+      case "charge.dispute.closed": {
+        const d = event.data.object as Stripe.Dispute;
+        const piId = typeof d.payment_intent === "string" ? d.payment_intent : d.payment_intent?.id ?? null;
+        if (!piId) break;
+        const { data: ph } = await admin.from("payment_history")
+          .select("id, user_id, membership_id, vet_ticket_id, bnpl_obligation_id, amount")
+          .eq("stripe_payment_intent_id", piId).maybeSingle();
+        if (!ph) break;
+        const amountUsd = (d.amount ?? 0) / 100;
+
+        if (event.type === "charge.dispute.created") {
+          await admin.from("payment_history").insert({
+            user_id: ph.user_id,
+            membership_id: ph.membership_id,
+            vet_ticket_id: ph.vet_ticket_id,
+            bnpl_obligation_id: ph.bnpl_obligation_id,
+            kind: "dispute",
+            status: "disputed",
+            amount: amountUsd,
+            currency: d.currency || "usd",
+            description: "Payment disputed by cardholder",
+            stripe_payment_intent_id: piId,
+            stripe_charge_id: typeof d.charge === "string" ? d.charge : (d.charge as any)?.id ?? null,
+            occurred_at: new Date().toISOString(),
+          });
+          // Funds are contested: unwind any ticket settlement funded by this payment.
+          if (ph.vet_ticket_id) {
+            await admin.rpc("reverse_ticket_settlement", {
+              _ticket_id: ph.vet_ticket_id,
+              _amount: amountUsd,
+              _reason: "charge_dispute_opened",
+              _external_ref: d.id,
+            });
+          }
+        } else {
+          await admin.from("payment_history").insert({
+            user_id: ph.user_id,
+            membership_id: ph.membership_id,
+            vet_ticket_id: ph.vet_ticket_id,
+            bnpl_obligation_id: ph.bnpl_obligation_id,
+            kind: "dispute",
+            status: d.status === "won" ? "dispute_won" : "dispute_lost",
+            amount: amountUsd,
+            currency: d.currency || "usd",
+            description: `Dispute ${d.status}`,
+            stripe_payment_intent_id: piId,
+            stripe_charge_id: typeof d.charge === "string" ? d.charge : (d.charge as any)?.id ?? null,
+            occurred_at: new Date().toISOString(),
+          });
+        }
+        break;
+      }
+
+
       case "customer.subscription.updated": {
         const sub = event.data.object as Stripe.Subscription;
         const status = sub.status === "active" || sub.status === "trialing" ? "active"
