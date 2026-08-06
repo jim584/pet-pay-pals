@@ -315,7 +315,7 @@ Deno.serve(async (req) => {
           .select("id").eq("stripe_payment_intent_id", pi.id).maybeSingle();
         if (dup) break;
         const { data: ob } = await admin.from("bnpl_obligations")
-          .select("id, owner_id").eq("id", md.obligation_id).maybeSingle();
+          .select("id, owner_id, pet_id").eq("id", md.obligation_id).maybeSingle();
         if (!ob) break;
         const amountUsd = (pi.amount_received ?? pi.amount ?? 0) / 100;
         await admin.from("bnpl_payments").insert({
@@ -325,6 +325,17 @@ Deno.serve(async (req) => {
           external_ref: pi.id,
           notes: md.installment_id ? `autopay installment ${md.installment_id}` : "autopay",
           recorded_by: ob.owner_id,
+        });
+        await postLedger(admin, {
+          user_id: ob.owner_id,
+          pet_id: ob.pet_id,
+          obligation_id: ob.id,
+          bucket: "bnpl",
+          entry_type: "finalize",
+          amount: amountUsd,
+          external_ref: pi.id,
+          idempotency_key: `bnpl_payment:${pi.id}`,
+          description: "Payment plan autopay repayment",
         });
         await admin.from("payment_history").insert({
           user_id: ob.owner_id,
