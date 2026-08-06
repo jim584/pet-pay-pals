@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 export type VetTicketStatus =
   | "submitted" | "under_review" | "approved" | "rejected"
   | "funded" | "card_issued" | "settled" | "expired" | "cancelled"
-  | "awaiting_secondary_review" | "auto_approved";
+  | "awaiting_secondary_review" | "auto_approved" | "needs_info";
 
 export type CoverageBreakdown = {
   estimate: number;
