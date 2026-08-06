@@ -139,6 +139,20 @@ export async function rejectVetTicket(ticket_id: string, reason: string) {
   return data;
 }
 
+export async function requestTicketInfo(ticket_id: string, message: string) {
+  const { data, error } = await supabase.functions.invoke("request-ticket-info", { body: { ticket_id, message } });
+  if (error) throw error;
+  return data;
+}
+
+export async function respondTicketInfo(ticket_id: string, message: string, document_url?: string | null) {
+  const { data, error } = await supabase.functions.invoke("respond-ticket-info",
+    { body: { ticket_id, message, document_url: document_url ?? null } });
+  if (error) throw error;
+  return data;
+}
+
+
 export async function startMemberRemainderCheckout(ticket_id: string): Promise<string> {
   const { data, error } = await supabase.functions.invoke("collect-member-remainder", { body: { ticket_id } });
   if (error) throw error;
