@@ -243,7 +243,7 @@ Deno.serve(async (req) => {
             if (dup) break;
           }
           const { data: ob } = await admin.from("bnpl_obligations")
-            .select("id, owner_id").eq("id", obligationId).maybeSingle();
+            .select("id, owner_id, pet_id").eq("id", obligationId).maybeSingle();
           if (!ob) break;
           const amountUsd = (s.amount_total ?? 0) / 100;
           // Insert payment (trigger updates outstanding & installments)
@@ -254,6 +254,17 @@ Deno.serve(async (req) => {
             external_ref: pi,
             notes: installmentId ? `installment ${installmentId}` : "full balance",
             recorded_by: ob.owner_id,
+          });
+          await postLedger(admin, {
+            user_id: ob.owner_id,
+            pet_id: ob.pet_id,
+            obligation_id: ob.id,
+            bucket: "bnpl",
+            entry_type: "finalize",
+            amount: amountUsd,
+            external_ref: pi,
+            idempotency_key: `bnpl_payment:${pi ?? s.id}`,
+            description: "Payment plan repayment",
           });
           await admin.from("payment_history").insert({
             user_id: ob.owner_id,
@@ -266,6 +277,7 @@ Deno.serve(async (req) => {
             bnpl_obligation_id: obligationId,
             occurred_at: new Date().toISOString(),
           });
+
           break;
         }
 
