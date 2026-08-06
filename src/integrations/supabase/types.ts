@@ -842,6 +842,71 @@ export type Database = {
         }
         Relationships: []
       }
+      ledger_entries: {
+        Row: {
+          accrual_id: string | null
+          amount: number
+          bucket: string
+          created_at: string
+          description: string | null
+          entry_type: string
+          external_ref: string | null
+          id: string
+          idempotency_key: string
+          membership_id: string | null
+          metadata: Json
+          obligation_id: string | null
+          parent_entry_id: string | null
+          pet_id: string | null
+          ticket_id: string | null
+          user_id: string
+        }
+        Insert: {
+          accrual_id?: string | null
+          amount: number
+          bucket: string
+          created_at?: string
+          description?: string | null
+          entry_type: string
+          external_ref?: string | null
+          id?: string
+          idempotency_key: string
+          membership_id?: string | null
+          metadata?: Json
+          obligation_id?: string | null
+          parent_entry_id?: string | null
+          pet_id?: string | null
+          ticket_id?: string | null
+          user_id: string
+        }
+        Update: {
+          accrual_id?: string | null
+          amount?: number
+          bucket?: string
+          created_at?: string
+          description?: string | null
+          entry_type?: string
+          external_ref?: string | null
+          id?: string
+          idempotency_key?: string
+          membership_id?: string | null
+          metadata?: Json
+          obligation_id?: string | null
+          parent_entry_id?: string | null
+          pet_id?: string | null
+          ticket_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ledger_entries_parent_entry_id_fkey"
+            columns: ["parent_entry_id"]
+            isOneToOne: false
+            referencedRelation: "ledger_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       member_reserve_accruals: {
         Row: {
           accrual_month: string
@@ -2582,7 +2647,43 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      v_ledger_balances: {
+        Row: {
+          accrued: number | null
+          available: number | null
+          bucket: string | null
+          expired: number | null
+          held: number | null
+          paid_out: number | null
+          pet_id: string | null
+          spent: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
+      v_member_reserve_balance: {
+        Row: {
+          accrued: number | null
+          available: number | null
+          held: number | null
+          pet_id: string | null
+          spent: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
+      v_pet_dp_balance: {
+        Row: {
+          accrued: number | null
+          available: number | null
+          expired: number | null
+          held: number | null
+          pet_id: string | null
+          spent: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       allocate_bnpl_payment_to_installments: {
@@ -2644,6 +2745,24 @@ export type Database = {
           _ticket_id: string
         }
         Returns: undefined
+      }
+      post_ledger_entry: {
+        Args: {
+          _accrual_id?: string
+          _amount: number
+          _bucket: string
+          _description?: string
+          _entry_type: string
+          _external_ref?: string
+          _idempotency_key: string
+          _membership_id?: string
+          _metadata?: Json
+          _obligation_id?: string
+          _pet_id?: string
+          _ticket_id?: string
+          _user_id: string
+        }
+        Returns: string
       }
       process_donation: {
         Args: {
