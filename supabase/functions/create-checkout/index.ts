@@ -149,7 +149,7 @@ Deno.serve(async (req) => {
         user_id: userId,
         plan_id: plan.id,
         plan_code: plan.plan_code,
-        pet_id: pet_id ?? "",
+        pet_id: pet_id,
         billing_interval: interval,
         is_fear_free_member: String(!!is_fear_free_member),
       },
