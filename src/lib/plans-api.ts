@@ -190,7 +190,8 @@ export async function fetchPaymentHistory(userId: string): Promise<PaymentHistor
 
 export async function startCheckout(args: {
   plan_id: string;
-  pet_id?: string | null;
+  /** Required — every membership is bound to one specific pet. */
+  pet_id: string;
   billing_interval: "month" | "year";
   /** @deprecated Server now derives Fear Free status from Vet of Record. Ignored. */
   is_fear_free_member?: boolean;
