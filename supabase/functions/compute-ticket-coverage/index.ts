@@ -52,14 +52,27 @@ Deno.serve(async (req) => {
 
     const estimate = Number(ticket.estimate_amount);
 
-    // Membership + plan
+    // Membership + plan. Benefits are pet-bound: the membership must cover THIS pet.
     let plan: any = null, membership: any = null;
     if (ticket.membership_id) {
       const { data: m } = await admin.from("memberships")
         .select("*, plan:membership_plans(*)").eq("id", ticket.membership_id).maybeSingle();
+      if (m && m.pet_id && m.pet_id !== ticket.pet_id) {
+        return new Response(JSON.stringify({ error: "membership_pet_mismatch" }), { status: 400, headers: corsHeaders });
+      }
       membership = m;
       plan = m?.plan;
     }
+    if (!membership) {
+      const { data: m } = await admin.from("memberships")
+        .select("*, plan:membership_plans(*)")
+        .eq("pet_id", ticket.pet_id)
+        .in("status", ["active", "past_due"])
+        .order("created_at", { ascending: false }).limit(1).maybeSingle();
+      membership = m;
+      plan = m?.plan;
+    }
+
 
     const tier: string = plan?.tier ?? "bronze";
     const planCap = plan?.plan_cap ?? PLAN_YEAR_CAPS[tier] ?? null;
