@@ -144,7 +144,7 @@ export default function AdminVetTicketsPage() {
       <div>
         <h1 className="text-2xl font-bold">Vet ticket queue</h1>
         <p className="text-sm text-muted-foreground">
-          Vet tickets are auto-approved on submission. Use this page to review, filter, reassign, or reject for fraud.
+          Tickets meeting every eligibility rule are approved automatically. Anything flagged for review appears here for an approve or reject decision.
         </p>
       </div>
 
