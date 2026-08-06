@@ -4,6 +4,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { fetchPlans, startCheckout, fetchMyMembership, openCustomerPortal, MembershipPlan, Membership } from "@/lib/plans-api";
 import { PlanCard } from "@/components/plans/PlanCard";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,8 @@ import { ArrowLeft, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { openCheckoutUrl } from "@/lib/open-checkout";
+
+type PetOption = { id: string; name: string; species: string; vet_of_record_id: string | null };
 
 export default function PlansPage() {
   const { user, loading } = useAuth();
@@ -25,6 +28,9 @@ export default function PlansPage() {
   const [loadingPlans, setLoadingPlans] = useState(true);
   const [membership, setMembership] = useState<(Membership & { plan: MembershipPlan }) | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [pets, setPets] = useState<PetOption[]>([]);
+  const [selectedPetId, setSelectedPetId] = useState<string | null>(null);
+  const [coveredPetIds, setCoveredPetIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     setLoadingPlans(true);
@@ -42,55 +48,82 @@ export default function PlansPage() {
     }).catch(() => {});
   }, [user]);
 
-  // Auto-derive Fear Free status from any pet's Vet of Record
+  // Load the user's pets; a membership is always bound to one specific pet.
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data: pets } = await supabase
+      const { data } = await supabase
         .from("pets")
-        .select("vet_of_record_id")
-        .eq("owner_id", user.id);
-      const vetIds = (pets ?? []).map((p: any) => p.vet_of_record_id).filter(Boolean);
-      if (vetIds.length === 0) {
-        setIsFearFree(false);
-        setFearFreeReason("Add a Vet of Record to your pet to qualify for Fear Free pricing.");
-        return;
-      }
+        .select("id, name, species, vet_of_record_id")
+        .eq("owner_id", user.id)
+        .order("created_at", { ascending: true });
+      const list = (data ?? []) as PetOption[];
+      setPets(list);
+      const { data: covered } = await supabase
+        .from("memberships")
+        .select("pet_id")
+        .eq("user_id", user.id)
+        .in("status", ["active", "past_due", "pending"]);
+      const coveredIds = new Set((covered ?? []).map((m: any) => m.pet_id).filter(Boolean));
+      setCoveredPetIds(coveredIds);
+      const firstFree = list.find((p) => !coveredIds.has(p.id));
+      setSelectedPetId((prev) => prev ?? firstFree?.id ?? list[0]?.id ?? null);
+    })();
+  }, [user]);
+
+  // Fear Free status is derived from the SELECTED pet's Vet of Record only.
+  useEffect(() => {
+    const pet = pets.find((p) => p.id === selectedPetId);
+    if (!pet) {
+      setIsFearFree(false);
+      setFearFreeReason("Add a pet to see your membership pricing.");
+      return;
+    }
+    if (pet.species === "dog" || pet.species === "cat") setSpecies(pet.species);
+    if (!pet.vet_of_record_id) {
+      setIsFearFree(false);
+      setFearFreeReason(`Add a Vet of Record to ${pet.name} to qualify for Fear Free pricing.`);
+      return;
+    }
+    (async () => {
       const { data: vets } = await supabase
         .from("vet_profiles")
         .select("fear_free_certified, clinic_name")
-        .in("id", vetIds)
+        .eq("id", pet.vet_of_record_id!)
         .eq("fear_free_certified", true);
       if (vets && vets.length > 0) {
         setIsFearFree(true);
-        setFearFreeReason(`Verified via your Vet of Record (${vets[0].clinic_name}).`);
+        setFearFreeReason(`Verified via ${pet.name}'s Vet of Record (${vets[0].clinic_name}).`);
       } else {
         setIsFearFree(false);
-        setFearFreeReason("Your Vet of Record isn't Fear Free certified yet.");
+        setFearFreeReason(`${pet.name}'s Vet of Record isn't Fear Free certified yet.`);
       }
     })();
-  }, [user]);
+  }, [pets, selectedPetId]);
 
   if (!loading && !user) return <Navigate to="/auth" replace />;
 
   const handleSubscribe = async (plan: MembershipPlan) => {
     try {
-      // Membership must be tied to a pet. Block checkout if user has no pet.
-      const { count, error: petCountErr } = await supabase
-        .from("pets")
-        .select("id", { count: "exact", head: true })
-        .eq("owner_id", user!.id);
-      if (petCountErr) throw petCountErr;
-      if (!count || count === 0) {
+      if (pets.length === 0) {
         toast.error("Add your pet first", {
           description: "Your membership is tied to a pet. Add one to continue.",
         });
         navigate("/dashboard/pets");
         return;
       }
+      if (!selectedPetId) {
+        toast.error("Choose a pet", { description: "Select which pet this membership covers." });
+        return;
+      }
+      if (coveredPetIds.has(selectedPetId)) {
+        toast.error("Already covered", { description: "That pet already has a membership." });
+        return;
+      }
 
       const url = await startCheckout({
         plan_id: plan.id,
+        pet_id: selectedPetId,
         billing_interval: billingInterval,
       });
       openCheckoutUrl(url);
@@ -98,6 +131,7 @@ export default function PlansPage() {
       toast.error(e.message || "Could not start checkout");
     }
   };
+
 
   return (
     <div className="container mx-auto max-w-6xl p-6 space-y-6">
@@ -115,6 +149,40 @@ export default function PlansPage() {
         <h1 className="text-3xl font-bold font-display">Together™ Membership Plans</h1>
         <p className="text-muted-foreground mt-1">Choose a plan that fits your pet and budget.</p>
       </div>
+
+      <Card>
+        <CardContent className="p-5 space-y-2">
+          <Label htmlFor="pet-select">Which pet is this membership for?</Label>
+          {pets.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Add a pet first — every membership, benefit and payment plan is tied to one pet.{" "}
+              <Button variant="link" className="px-1 h-auto" onClick={() => navigate("/dashboard/pets")}>
+                Add a pet
+              </Button>
+            </p>
+          ) : (
+            <>
+              <Select value={selectedPetId ?? undefined} onValueChange={setSelectedPetId}>
+                <SelectTrigger id="pet-select" className="max-w-sm">
+                  <SelectValue placeholder="Select a pet" />
+                </SelectTrigger>
+                <SelectContent>
+                  {pets.map((p) => (
+                    <SelectItem key={p.id} value={p.id} disabled={coveredPetIds.has(p.id)}>
+                      {p.name} · {p.species}
+                      {coveredPetIds.has(p.id) ? " (already covered)" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Direct Pay, Reserve and payment plans all accrue to this pet.
+              </p>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
 
       {membership && (
         <Card className="border-primary/40 bg-primary/5">

@@ -243,7 +243,7 @@ Deno.serve(async (req) => {
             if (dup) break;
           }
           const { data: ob } = await admin.from("bnpl_obligations")
-            .select("id, owner_id").eq("id", obligationId).maybeSingle();
+            .select("id, owner_id, pet_id").eq("id", obligationId).maybeSingle();
           if (!ob) break;
           const amountUsd = (s.amount_total ?? 0) / 100;
           // Insert payment (trigger updates outstanding & installments)
@@ -254,6 +254,17 @@ Deno.serve(async (req) => {
             external_ref: pi,
             notes: installmentId ? `installment ${installmentId}` : "full balance",
             recorded_by: ob.owner_id,
+          });
+          await postLedger(admin, {
+            user_id: ob.owner_id,
+            pet_id: ob.pet_id,
+            obligation_id: ob.id,
+            bucket: "bnpl",
+            entry_type: "finalize",
+            amount: amountUsd,
+            external_ref: pi,
+            idempotency_key: `bnpl_payment:${pi ?? s.id}`,
+            description: "Payment plan repayment",
           });
           await admin.from("payment_history").insert({
             user_id: ob.owner_id,
@@ -266,17 +277,22 @@ Deno.serve(async (req) => {
             bnpl_obligation_id: obligationId,
             occurred_at: new Date().toISOString(),
           });
+
           break;
         }
 
 
         const subId = typeof s.subscription === "string" ? s.subscription : s.subscription?.id;
         if (!md.user_id || !md.plan_id || !subId) break;
+        if (!md.pet_id) {
+          console.error("membership checkout completed without pet_id", { session: s.id });
+          break;
+        }
 
         const sub = await stripe.subscriptions.retrieve(subId);
         await admin.from("memberships").insert({
           user_id: md.user_id,
-          pet_id: md.pet_id || null,
+          pet_id: md.pet_id,
           plan_id: md.plan_id,
           status: "active",
           billing_interval: md.billing_interval || "month",
@@ -299,7 +315,7 @@ Deno.serve(async (req) => {
           .select("id").eq("stripe_payment_intent_id", pi.id).maybeSingle();
         if (dup) break;
         const { data: ob } = await admin.from("bnpl_obligations")
-          .select("id, owner_id").eq("id", md.obligation_id).maybeSingle();
+          .select("id, owner_id, pet_id").eq("id", md.obligation_id).maybeSingle();
         if (!ob) break;
         const amountUsd = (pi.amount_received ?? pi.amount ?? 0) / 100;
         await admin.from("bnpl_payments").insert({
@@ -309,6 +325,17 @@ Deno.serve(async (req) => {
           external_ref: pi.id,
           notes: md.installment_id ? `autopay installment ${md.installment_id}` : "autopay",
           recorded_by: ob.owner_id,
+        });
+        await postLedger(admin, {
+          user_id: ob.owner_id,
+          pet_id: ob.pet_id,
+          obligation_id: ob.id,
+          bucket: "bnpl",
+          entry_type: "finalize",
+          amount: amountUsd,
+          external_ref: pi.id,
+          idempotency_key: `bnpl_payment:${pi.id}`,
+          description: "Payment plan autopay repayment",
         });
         await admin.from("payment_history").insert({
           user_id: ob.owner_id,
@@ -330,7 +357,7 @@ Deno.serve(async (req) => {
         if (!subId) break;
 
         const { data: m } = await admin.from("memberships")
-          .select("id, user_id, plan_id, is_fear_free_member, billing_interval, continuous_paid_months, last_paid_month, reserve_eligible_since")
+          .select("id, user_id, pet_id, plan_id, is_fear_free_member, billing_interval, continuous_paid_months, last_paid_month, reserve_eligible_since")
           .eq("stripe_subscription_id", subId).maybeSingle();
         if (!m) break;
 
@@ -377,7 +404,7 @@ Deno.serve(async (req) => {
             const expiresAt = plan.dp_window_months
               ? new Date(accrualMonth.getFullYear(), accrualMonth.getMonth() + plan.dp_window_months, 1)
               : null;
-            await admin.from("direct_pay_accruals").insert({
+            const { data: accrualRow } = await admin.from("direct_pay_accruals").insert({
               membership_id: m.id,
               user_id: m.user_id,
               accrual_month: accrualMonth.toISOString().slice(0, 10),
@@ -385,6 +412,19 @@ Deno.serve(async (req) => {
               remaining_amount: monthlyDP,
               expires_at: expiresAt ? expiresAt.toISOString() : null,
               stripe_invoice_id: inv.id,
+            }).select("id").single();
+
+            await postLedger(admin, {
+              user_id: m.user_id,
+              pet_id: m.pet_id ?? null,
+              membership_id: m.id,
+              bucket: "direct_pay",
+              entry_type: "accrual",
+              amount: monthlyDP,
+              accrual_id: accrualRow?.id ?? null,
+              external_ref: inv.id,
+              idempotency_key: `dp_accrual:${inv.id}:${i}`,
+              description: "Direct Pay accrual from membership invoice",
             });
           }
         }
@@ -401,16 +441,30 @@ Deno.serve(async (req) => {
           if (monthlyReserve > 0) {
             for (let i = 0; i < monthsCovered; i++) {
               const accrualMonth = new Date(nowR.getFullYear(), nowR.getMonth() + i, 1);
-              await admin.from("member_reserve_accruals").insert({
+              const { data: reserveRow } = await admin.from("member_reserve_accruals").insert({
                 membership_id: m.id,
                 user_id: m.user_id,
                 accrual_month: accrualMonth.toISOString().slice(0, 10),
                 amount: monthlyReserve,
                 remaining_amount: monthlyReserve,
                 stripe_invoice_id: inv.id,
+              }).select("id").single();
+
+              await postLedger(admin, {
+                user_id: m.user_id,
+                pet_id: m.pet_id ?? null,
+                membership_id: m.id,
+                bucket: "member_reserve",
+                entry_type: "accrual",
+                amount: monthlyReserve,
+                accrual_id: reserveRow?.id ?? null,
+                external_ref: inv.id,
+                idempotency_key: `reserve_accrual:${inv.id}:${i}`,
+                description: "Member Reserve accrual from membership invoice",
               });
             }
           }
+
 
           // Continuous-paid-months counter + reserve eligibility (12 consecutive months).
           // Detect a gap since last paid month: if the previous paid month is not the
@@ -525,6 +579,62 @@ Deno.serve(async (req) => {
         break;
       }
 
+      // Disputes on regular charges (member remainder, BNPL repayments, donations).
+      case "charge.dispute.created":
+      case "charge.dispute.closed": {
+        const d = event.data.object as Stripe.Dispute;
+        const piId = typeof d.payment_intent === "string" ? d.payment_intent : d.payment_intent?.id ?? null;
+        if (!piId) break;
+        const { data: ph } = await admin.from("payment_history")
+          .select("id, user_id, membership_id, vet_ticket_id, bnpl_obligation_id, amount")
+          .eq("stripe_payment_intent_id", piId).maybeSingle();
+        if (!ph) break;
+        const amountUsd = (d.amount ?? 0) / 100;
+
+        if (event.type === "charge.dispute.created") {
+          await admin.from("payment_history").insert({
+            user_id: ph.user_id,
+            membership_id: ph.membership_id,
+            vet_ticket_id: ph.vet_ticket_id,
+            bnpl_obligation_id: ph.bnpl_obligation_id,
+            kind: "dispute",
+            status: "disputed",
+            amount: amountUsd,
+            currency: d.currency || "usd",
+            description: "Payment disputed by cardholder",
+            stripe_payment_intent_id: piId,
+            stripe_charge_id: typeof d.charge === "string" ? d.charge : (d.charge as any)?.id ?? null,
+            occurred_at: new Date().toISOString(),
+          });
+          // Funds are contested: unwind any ticket settlement funded by this payment.
+          if (ph.vet_ticket_id) {
+            await admin.rpc("reverse_ticket_settlement", {
+              _ticket_id: ph.vet_ticket_id,
+              _amount: amountUsd,
+              _reason: "charge_dispute_opened",
+              _external_ref: d.id,
+            });
+          }
+        } else {
+          await admin.from("payment_history").insert({
+            user_id: ph.user_id,
+            membership_id: ph.membership_id,
+            vet_ticket_id: ph.vet_ticket_id,
+            bnpl_obligation_id: ph.bnpl_obligation_id,
+            kind: "dispute",
+            status: d.status === "won" ? "dispute_won" : "dispute_lost",
+            amount: amountUsd,
+            currency: d.currency || "usd",
+            description: `Dispute ${d.status}`,
+            stripe_payment_intent_id: piId,
+            stripe_charge_id: typeof d.charge === "string" ? d.charge : (d.charge as any)?.id ?? null,
+            occurred_at: new Date().toISOString(),
+          });
+        }
+        break;
+      }
+
+
       case "customer.subscription.updated": {
         const sub = event.data.object as Stripe.Subscription;
         const status = sub.status === "active" || sub.status === "trialing" ? "active"
@@ -610,10 +720,26 @@ Deno.serve(async (req) => {
         const ticketId = (tx.metadata?.ticket_id as string)
           || ((tx as any).card?.metadata?.ticket_id);
         if (ticketId) {
-          const settled = Math.abs(tx.amount) / 100;
+          const amountUsd = Math.abs(tx.amount) / 100;
+
+          if (tx.type === "refund") {
+            // Merchant refunded part or all of the captured amount — unwind the settlement.
+            await admin.rpc("reverse_ticket_settlement", {
+              _ticket_id: ticketId,
+              _amount: amountUsd,
+              _reason: "issuing_refund",
+              _external_ref: tx.id,
+            });
+            await admin.from("vet_payouts")
+              .update({ status: "reversed", notes: `Refunded ${amountUsd} (${tx.id})` })
+              .eq("ticket_id", ticketId).eq("status", "settled");
+            break;
+          }
+
+          // Capture
           await admin.rpc("mark_ticket_settled", {
             _ticket_id: ticketId,
-            _settled_amount: settled,
+            _settled_amount: amountUsd,
             _authorization_id: (tx.authorization as string) || tx.id,
           });
           // Freeze card so no further auths succeed on this ticket
@@ -631,6 +757,50 @@ Deno.serve(async (req) => {
         }
         break;
       }
+
+      // Disputes on issued-card spend: unwind the settlement while funds are contested,
+      // and re-settle if the dispute is lost / funds are not reinstated.
+      case "issuing_dispute.created":
+      case "issuing_dispute.funds_reinstated":
+      case "issuing_dispute.closed": {
+        const d = event.data.object as Stripe.Issuing.Dispute;
+        const txId = typeof d.transaction === "string" ? d.transaction : (d.transaction as any)?.id;
+        let ticketId: string | null = (d.metadata?.ticket_id as string) || null;
+        if (!ticketId && txId) {
+          try {
+            const tx = await stripe.issuing.transactions.retrieve(txId);
+            ticketId = (tx.metadata?.ticket_id as string)
+              || ((tx as any).card?.metadata?.ticket_id) || null;
+          } catch (e) { console.error("dispute tx lookup failed:", e); }
+        }
+        if (!ticketId) break;
+        const amountUsd = Math.abs(d.amount ?? 0) / 100;
+
+        if (event.type === "issuing_dispute.created") {
+          await admin.rpc("reverse_ticket_settlement", {
+            _ticket_id: ticketId,
+            _amount: amountUsd,
+            _reason: "issuing_dispute_opened",
+            _external_ref: d.id,
+          });
+          await admin.from("vet_payouts")
+            .update({ status: "reversed", notes: `Dispute ${d.id} opened` })
+            .eq("ticket_id", ticketId).eq("status", "settled");
+        } else if (event.type === "issuing_dispute.funds_reinstated") {
+          await admin.from("vet_payouts")
+            .update({ status: "completed", notes: `Dispute ${d.id} funds reinstated` })
+            .eq("ticket_id", ticketId).eq("status", "reversed");
+        } else if (d.status === "lost") {
+          // Dispute lost: the charge stands, so re-apply the settlement.
+          await admin.rpc("mark_ticket_settled", {
+            _ticket_id: ticketId,
+            _settled_amount: amountUsd,
+            _authorization_id: d.id,
+          });
+        }
+        break;
+      }
+
 
       case "issuing_card.updated": {
         const c = event.data.object as Stripe.Issuing.Card;
@@ -680,6 +850,46 @@ Deno.serve(async (req) => {
 });
 
 // ===== Helpers =====
+
+/** Post an append-only ledger entry. Never throws — ledger failures are logged, not fatal. */
+async function postLedger(admin: any, args: {
+  user_id: string;
+  bucket: "direct_pay" | "member_reserve" | "community_reserve" | "bnpl";
+  entry_type: string;
+  amount: number;
+  idempotency_key: string;
+  pet_id?: string | null;
+  membership_id?: string | null;
+  ticket_id?: string | null;
+  obligation_id?: string | null;
+  accrual_id?: string | null;
+  external_ref?: string | null;
+  description?: string | null;
+  metadata?: Record<string, unknown>;
+}) {
+  try {
+    const { error } = await admin.rpc("post_ledger_entry", {
+      _user_id: args.user_id,
+      _bucket: args.bucket,
+      _entry_type: args.entry_type,
+      _amount: args.amount,
+      _idempotency_key: args.idempotency_key,
+      _pet_id: args.pet_id ?? null,
+      _membership_id: args.membership_id ?? null,
+      _ticket_id: args.ticket_id ?? null,
+      _obligation_id: args.obligation_id ?? null,
+      _accrual_id: args.accrual_id ?? null,
+      _external_ref: args.external_ref ?? null,
+      _description: args.description ?? null,
+      _metadata: args.metadata ?? {},
+    });
+    if (error) console.error("post_ledger_entry failed:", args.idempotency_key, error);
+  } catch (e) {
+    console.error("post_ledger_entry threw:", args.idempotency_key, e);
+  }
+}
+
+
 
 async function upsertPaymentByInvoice(admin: any, invoiceId: string, row: Record<string, unknown>) {
   const { data: existing } = await admin

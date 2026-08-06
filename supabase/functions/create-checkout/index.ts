@@ -53,11 +53,35 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+    if (!pet_id) {
+      return new Response(
+        JSON.stringify({ error: "pet_required", message: "Select which pet this membership covers." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const selectedPet = userPets.find((p: any) => p.id === pet_id);
+    if (!selectedPet) {
+      return new Response(
+        JSON.stringify({ error: "invalid_pet", message: "That pet does not belong to your account." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    // One active membership per pet.
+    const { data: existingForPet } = await admin
+      .from("memberships").select("id, status").eq("pet_id", pet_id)
+      .in("status", ["active", "past_due", "pending"]).limit(1).maybeSingle();
+    if (existingForPet) {
+      return new Response(
+        JSON.stringify({ error: "pet_already_covered", message: "This pet already has a membership." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
-    // Server-side Fear Free recompute: trust ONLY admin-verified Vet of Record certification.
-    const vetIds = userPets.map((p: any) => p.vet_of_record_id).filter(Boolean);
+    // Server-side Fear Free recompute: trust ONLY the selected pet's admin-verified Vet of Record.
+    const vetIds = [selectedPet.vet_of_record_id].filter(Boolean);
     let is_fear_free_member = false;
     if (vetIds.length > 0) {
+
       const { data: ffVets } = await admin
         .from("vet_profiles")
         .select("id")
@@ -125,7 +149,7 @@ Deno.serve(async (req) => {
         user_id: userId,
         plan_id: plan.id,
         plan_code: plan.plan_code,
-        pet_id: pet_id ?? "",
+        pet_id: pet_id,
         billing_interval: interval,
         is_fear_free_member: String(!!is_fear_free_member),
       },
