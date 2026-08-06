@@ -88,7 +88,7 @@ Deno.serve(async (req) => {
         const { data: usedRows } = await admin
           .from("vet_tickets")
           .select("approved_amount, status, created_at")
-          .eq("owner_id", ticket.owner_id)
+          .eq("pet_id", ticket.pet_id)
           .gte("created_at", yearStart).lt("created_at", yearEnd)
           .in("status", ["approved","funded","card_issued","settled"])
           .neq("id", ticket_id);
@@ -97,16 +97,20 @@ Deno.serve(async (req) => {
       }
     }
 
-    // DP available within window
+    // DP available within window — scoped to THIS pet's membership.
     const cutoff = dpWindow === null ? "1900-01-01"
       : new Date(Date.now() - dpWindow * 30.4375 * 86400000).toISOString().slice(0, 10);
-    const { data: accruals } = await admin
-      .from("direct_pay_accruals")
-      .select("remaining_amount, accrual_month")
-      .eq("user_id", ticket.owner_id).eq("expired", false)
-      .gte("accrual_month", cutoff)
-      .order("accrual_month", { ascending: true });
-    const dpAvailable = (accruals ?? []).reduce((s: number, r: any) => s + Number(r.remaining_amount), 0);
+    let dpAvailable = 0;
+    if (membership) {
+      const { data: accruals } = await admin
+        .from("direct_pay_accruals")
+        .select("remaining_amount, accrual_month")
+        .eq("membership_id", membership.id).eq("expired", false)
+        .gte("accrual_month", cutoff)
+        .order("accrual_month", { ascending: true });
+      dpAvailable = (accruals ?? []).reduce((s: number, r: any) => s + Number(r.remaining_amount), 0);
+    }
+
 
     // Existing BNPL outstanding for this pet (reduces capacity)
     const { data: bnplRows } = await admin
