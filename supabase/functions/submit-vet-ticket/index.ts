@@ -59,9 +59,10 @@ Deno.serve(async (req) => {
     const { data: pet } = await admin.from("pets").select("id, owner_id").eq("id", pet_id).maybeSingle();
     if (!pet || pet.owner_id !== userId) return json({ error: "Pet not found or not yours" }, 403);
 
+    // Benefits are pet-bound: only a membership covering THIS pet applies.
     const { data: membership } = await admin
       .from("memberships").select("id, status")
-      .eq("user_id", userId).in("status", ["active", "past_due"])
+      .eq("user_id", userId).eq("pet_id", pet_id).in("status", ["active", "past_due"])
       .order("created_at", { ascending: false }).limit(1).maybeSingle();
 
     // ---- Create the ticket in the only legal entry state ----
