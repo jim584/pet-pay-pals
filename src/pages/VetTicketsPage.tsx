@@ -16,17 +16,17 @@ import {
 import { toast } from "@/hooks/use-toast";
 import {
   listMyTickets, listTicketsForVet, submitVetTicket, uploadTicketFile, startMemberRemainderCheckout,
-  getTicketFileSignedUrl, computeTicketCoverage, type VetTicket, type CoverageBreakdown,
+  getTicketFileSignedUrl, computeTicketCoverage, respondTicketInfo, type VetTicket, type CoverageBreakdown,
 } from "@/lib/vet-tickets-api";
 import { fetchVetProfile } from "@/lib/vet-api";
-import { Loader2, Plus, FileText, ExternalLink, ShieldCheck, Info } from "lucide-react";
+import { Loader2, Plus, FileText, ExternalLink, ShieldCheck, Info, AlertCircle } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { TicketMessagesDialog } from "@/components/vet-tickets/TicketMessagesDialog";
 import { openCheckoutUrl } from "@/lib/open-checkout";
 import { ReconsiderationButton } from "@/components/vet/ReconsiderationButton";
 
 const STATUS_VARIANT: Record<string, string> = {
-  submitted: "secondary", under_review: "secondary",
+  submitted: "secondary", under_review: "secondary", needs_info: "outline",
   approved: "default", funded: "default", card_issued: "default", settled: "default",
   rejected: "destructive", expired: "destructive", cancelled: "destructive",
 };
@@ -353,10 +353,36 @@ function NewTicketDialog({ pets, clinics, onCreated }: {
 }
 
 function TicketCard({ ticket, onChanged }: { ticket: VetTicket; onChanged: () => void }) {
+  const { user } = useAuth();
   const [paying, setPaying] = useState(false);
   const [useReserve, setUseReserve] = useState(false);
   const [previewBreakdown, setPreviewBreakdown] = useState<CoverageBreakdown | null>(null);
   const [previewing, setPreviewing] = useState(false);
+  const [infoReply, setInfoReply] = useState("");
+  const [infoFile, setInfoFile] = useState<File | null>(null);
+  const [sendingInfo, setSendingInfo] = useState(false);
+
+  const sendInfoResponse = async () => {
+    if (!infoReply.trim() && !infoFile) {
+      toast({ title: "Add a reply or a document", variant: "destructive" });
+      return;
+    }
+    setSendingInfo(true);
+    try {
+      let path: string | null = null;
+      if (infoFile && user) path = await uploadTicketFile(user.id, infoFile, "estimate");
+      await respondTicketInfo(ticket.id, infoReply.trim(), path);
+      toast({ title: "Response sent", description: "Your ticket is back with the review team." });
+      setInfoReply("");
+      setInfoFile(null);
+      onChanged();
+    } catch (e: any) {
+      toast({ title: "Couldn't send response", description: e.message, variant: "destructive" });
+    } finally {
+      setSendingInfo(false);
+    }
+  };
+
 
   // Auto-preview reserve eligibility once for submitted/under_review tickets
   useEffect(() => {
@@ -482,6 +508,39 @@ function TicketCard({ ticket, onChanged }: { ticket: VetTicket; onChanged: () =>
                 Reserve pool access unlocks after 12 consecutive months of paid membership.
               </p>
             )}
+          </div>
+        )}
+
+        {ticket.status === "needs_info" && (
+          <div className="rounded-md border border-amber-500/50 bg-amber-500/5 p-3 space-y-3">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 mt-0.5 text-amber-600 dark:text-amber-400 shrink-0" />
+              <div>
+                <p className="text-sm font-medium">Action required</p>
+                <p className="text-xs text-muted-foreground">
+                  {ticket.info_request_message || "Our review team needs more information before this ticket can move forward."}
+                </p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Upload a document (optional)</Label>
+              <Input
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={(e) => setInfoFile(e.target.files?.[0] ?? null)}
+              />
+              <Label className="text-xs">Your reply</Label>
+              <Textarea
+                rows={3}
+                value={infoReply}
+                onChange={(e) => setInfoReply(e.target.value)}
+                placeholder="Explain or describe what you're sending."
+              />
+              <Button size="sm" onClick={sendInfoResponse} disabled={sendingInfo || (!infoReply.trim() && !infoFile)}>
+                {sendingInfo && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+                Send response
+              </Button>
+            </div>
           </div>
         )}
 

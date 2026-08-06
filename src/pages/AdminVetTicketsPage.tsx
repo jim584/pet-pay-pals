@@ -20,24 +20,25 @@ import {
 import { toast } from "@/hooks/use-toast";
 import {
   listAllTicketsForAdmin, computeTicketCoverage, approveVetTicket,
-  rejectVetTicket, getTicketFileSignedUrl, type VetTicket,
+  rejectVetTicket, requestTicketInfo, getTicketFileSignedUrl, type VetTicket,
 } from "@/lib/vet-tickets-api";
+import { Textarea } from "@/components/ui/textarea";
 
 
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, FileText, ShieldAlert, CalendarIcon, X, Filter } from "lucide-react";
+import { Loader2, FileText, ShieldAlert, CalendarIcon, X, Filter, MessageSquareWarning } from "lucide-react";
 import { Navigate } from "react-router-dom";
 import { TicketMessagesDialog } from "@/components/vet-tickets/TicketMessagesDialog";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
 const STATUS_OPTIONS = [
-  "submitted", "under_review", "approved", "funded",
+  "submitted", "under_review", "needs_info", "approved", "funded",
   "card_issued", "settled", "rejected", "expired", "cancelled",
 ] as const;
 
 const STATUS_VARIANT: Record<string, string> = {
-  submitted: "secondary", under_review: "secondary",
+  submitted: "secondary", under_review: "secondary", needs_info: "outline",
   approved: "default", funded: "default", card_issued: "default", settled: "default",
   rejected: "destructive", expired: "destructive", cancelled: "destructive",
 };
@@ -360,8 +361,11 @@ function AdminTicketCard({
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [approving, setApproving] = useState(false);
-  const pending = ["submitted", "under_review", "awaiting_secondary_review"].includes(ticket.status);
-  const canReject = ["submitted", "under_review", "awaiting_secondary_review", "approved"].includes(ticket.status);
+  const [infoMessage, setInfoMessage] = useState("");
+  const [infoBusy, setInfoBusy] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
+  const pending = ["submitted", "under_review", "awaiting_secondary_review", "needs_info"].includes(ticket.status);
+  const canReject = ["submitted", "under_review", "awaiting_secondary_review", "needs_info", "approved"].includes(ticket.status);
   const assignedClinic = clinicMap.find((c) => c.id === ticket.vet_profile_id);
   const blockers = (ticket as any).auto_approval_blockers as string[] | null;
 
@@ -376,6 +380,22 @@ function AdminTicketCard({
     finally { setBusy(false); }
   };
 
+  const sendInfoRequest = async () => {
+    if (infoMessage.trim().length < 5) {
+      toast({ title: "Please describe what is missing", variant: "destructive" });
+      return;
+    }
+    setInfoBusy(true);
+    try {
+      await requestTicketInfo(ticket.id, infoMessage.trim());
+      toast({ title: "Info requested", description: "The submitter has been asked to respond." });
+      setInfoMessage("");
+      setInfoOpen(false);
+      onChanged();
+    } catch (e: any) { toast({ title: "Request failed", description: e.message, variant: "destructive" }); }
+    finally { setInfoBusy(false); }
+  };
+
   const approve = async () => {
     setApproving(true);
     try {
@@ -386,6 +406,7 @@ function AdminTicketCard({
     } catch (e: any) { toast({ title: "Approve failed", description: e.message, variant: "destructive" }); }
     finally { setApproving(false); }
   };
+
 
   const openFile = async (path: string) => {
     try { window.open(await getTicketFileSignedUrl(path), "_blank"); }
@@ -443,6 +464,29 @@ function AdminTicketCard({
           </div>
         )}
 
+        {ticket.info_request_message && (
+          <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3 space-y-1">
+            <p className="text-xs font-semibold">Information requested</p>
+            <p className="text-xs text-muted-foreground">{ticket.info_request_message}</p>
+            {ticket.info_requested_at && (
+              <p className="text-[11px] text-muted-foreground">
+                Asked {new Date(ticket.info_requested_at).toLocaleString()}
+              </p>
+            )}
+            {ticket.info_response_message && (
+              <div className="pt-2 border-t mt-2">
+                <p className="text-xs font-semibold">Submitter response</p>
+                <p className="text-xs text-muted-foreground">{ticket.info_response_message}</p>
+                {ticket.info_responded_at && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Replied {new Date(ticket.info_responded_at).toLocaleString()}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {breakdown && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 rounded-md border p-3 bg-muted/30 text-xs">
             {(["dp_use", "bnpl_use", "reserve_use", "member_remainder"] as const).map((k) => (
@@ -457,13 +501,44 @@ function AdminTicketCard({
         )}
 
         {pending && (
-          <div className="border-t pt-3">
+          <div className="border-t pt-3 flex flex-wrap gap-2">
             <Button size="sm" onClick={approve} disabled={approving}>
               {approving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
               Approve ticket
             </Button>
+            <Dialog open={infoOpen} onOpenChange={setInfoOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" variant="outline">
+                  <MessageSquareWarning className="h-4 w-4 mr-1" /> Request info
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-h-[85vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Request more information</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-2">
+                  <Label className="text-xs">What is missing?</Label>
+                  <Textarea
+                    value={infoMessage}
+                    onChange={(e) => setInfoMessage(e.target.value)}
+                    placeholder="e.g. The estimate is illegible — please upload a clearer copy showing the clinic letterhead."
+                    rows={4}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    The ticket moves to "needs info" until the submitter responds.
+                  </p>
+                </div>
+                <DialogFooter>
+                  <Button onClick={sendInfoRequest} disabled={infoBusy || infoMessage.trim().length < 5}>
+                    {infoBusy && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+                    Send request
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         )}
+
 
         {canReject && (
 

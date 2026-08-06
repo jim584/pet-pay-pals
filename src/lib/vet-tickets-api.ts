@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 export type VetTicketStatus =
   | "submitted" | "under_review" | "approved" | "rejected"
   | "funded" | "card_issued" | "settled" | "expired" | "cancelled"
-  | "awaiting_secondary_review" | "auto_approved";
+  | "awaiting_secondary_review" | "auto_approved" | "needs_info";
 
 export type CoverageBreakdown = {
   estimate: number;
@@ -45,6 +45,12 @@ export type VetTicket = {
   authorized_until: string | null;
   merchant_lock_type: string | null;
   issued_card_id: string | null;
+  info_request_message?: string | null;
+  info_requested_at?: string | null;
+  info_requested_by?: string | null;
+  info_response_message?: string | null;
+  info_responded_at?: string | null;
+  auto_approval_blockers?: string[] | null;
   created_at: string;
   updated_at: string;
 };
@@ -132,6 +138,20 @@ export async function rejectVetTicket(ticket_id: string, reason: string) {
   if (error) throw error;
   return data;
 }
+
+export async function requestTicketInfo(ticket_id: string, message: string) {
+  const { data, error } = await supabase.functions.invoke("request-ticket-info", { body: { ticket_id, message } });
+  if (error) throw error;
+  return data;
+}
+
+export async function respondTicketInfo(ticket_id: string, message: string, document_url?: string | null) {
+  const { data, error } = await supabase.functions.invoke("respond-ticket-info",
+    { body: { ticket_id, message, document_url: document_url ?? null } });
+  if (error) throw error;
+  return data;
+}
+
 
 export async function startMemberRemainderCheckout(ticket_id: string): Promise<string> {
   const { data, error } = await supabase.functions.invoke("collect-member-remainder", { body: { ticket_id } });
