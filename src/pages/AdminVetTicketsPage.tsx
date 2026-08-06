@@ -19,9 +19,10 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import {
-  listAllTicketsForAdmin,
+  listAllTicketsForAdmin, computeTicketCoverage, approveVetTicket,
   rejectVetTicket, getTicketFileSignedUrl, type VetTicket,
 } from "@/lib/vet-tickets-api";
+
 
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, FileText, ShieldAlert, CalendarIcon, X, Filter } from "lucide-react";
@@ -143,7 +144,7 @@ export default function AdminVetTicketsPage() {
       <div>
         <h1 className="text-2xl font-bold">Vet ticket queue</h1>
         <p className="text-sm text-muted-foreground">
-          Vet tickets are auto-approved on submission. Use this page to review, filter, reassign, or reject for fraud.
+          Tickets meeting every eligibility rule are approved automatically. Anything flagged for review appears here for an approve or reject decision.
         </p>
       </div>
 
@@ -358,8 +359,11 @@ function AdminTicketCard({
   const breakdown = ticket.coverage_breakdown ?? null;
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
-  const canReject = ["submitted", "under_review", "approved"].includes(ticket.status);
+  const [approving, setApproving] = useState(false);
+  const pending = ["submitted", "under_review", "awaiting_secondary_review"].includes(ticket.status);
+  const canReject = ["submitted", "under_review", "awaiting_secondary_review", "approved"].includes(ticket.status);
   const assignedClinic = clinicMap.find((c) => c.id === ticket.vet_profile_id);
+  const blockers = (ticket as any).auto_approval_blockers as string[] | null;
 
   const reject = async () => {
     if (!reason.trim()) { toast({ title: "Reason required", variant: "destructive" }); return; }
@@ -372,10 +376,22 @@ function AdminTicketCard({
     finally { setBusy(false); }
   };
 
+  const approve = async () => {
+    setApproving(true);
+    try {
+      const bd = await computeTicketCoverage(ticket.id, false);
+      await approveVetTicket(ticket.id, bd, "approved after admin review");
+      toast({ title: "Approved" });
+      onChanged();
+    } catch (e: any) { toast({ title: "Approve failed", description: e.message, variant: "destructive" }); }
+    finally { setApproving(false); }
+  };
+
   const openFile = async (path: string) => {
     try { window.open(await getTicketFileSignedUrl(path), "_blank"); }
     catch (e: any) { toast({ title: "Couldn't open", description: e.message, variant: "destructive" }); }
   };
+
 
   return (
     <Card>
@@ -413,8 +429,19 @@ function AdminTicketCard({
         <p className="text-xs text-muted-foreground">
           {ticket.status === "rejected"
             ? `Rejected · Updated ${new Date(ticket.updated_at).toLocaleString()}`
-            : `Approved ${fmt(ticket.approved_amount ?? ticket.estimate_amount)} · Updated ${new Date(ticket.updated_at).toLocaleString()}`}
+            : pending
+              ? `Awaiting decision · Updated ${new Date(ticket.updated_at).toLocaleString()}`
+              : `Approved ${fmt(ticket.approved_amount ?? ticket.estimate_amount)} · Updated ${new Date(ticket.updated_at).toLocaleString()}`}
         </p>
+
+        {pending && blockers && blockers.length > 0 && (
+          <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
+            <p className="text-xs font-semibold text-destructive mb-1">Why this needs review</p>
+            <ul className="text-xs text-muted-foreground list-disc pl-4 space-y-0.5">
+              {blockers.map((b) => <li key={b}>{b.replace(/_/g, " ")}</li>)}
+            </ul>
+          </div>
+        )}
 
         {breakdown && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 rounded-md border p-3 bg-muted/30 text-xs">
@@ -429,7 +456,17 @@ function AdminTicketCard({
           </div>
         )}
 
+        {pending && (
+          <div className="border-t pt-3">
+            <Button size="sm" onClick={approve} disabled={approving}>
+              {approving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+              Approve ticket
+            </Button>
+          </div>
+        )}
+
         {canReject && (
+
           <div className="border-t pt-3 space-y-2">
             <Label className="text-xs">Rejection reason (fraud / abuse only)</Label>
             <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. suspected fraud" />

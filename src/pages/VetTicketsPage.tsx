@@ -71,7 +71,7 @@ function OwnerVetTicketsView() {
         <div>
           <h1 className="text-2xl font-bold">Vet Tickets</h1>
           <p className="text-sm text-muted-foreground">Submit a vet bill for coverage from your plan. Use any clinic you like — Fear Free certified, your local vet, or a national chain like Banfield.</p>
-          <p className="text-xs text-muted-foreground mt-1">Tickets <strong>under $500</strong> with the vet attestation attached are <strong>approved automatically</strong>. Larger tickets or those missing an attestation go to admin review.</p>
+          <p className="text-xs text-muted-foreground mt-1">Every request is checked against our eligibility rules. Requests that meet all of them are approved straight away; anything else is reviewed by our team.</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
@@ -213,6 +213,7 @@ function NewTicketDialog({ pets, clinics, onCreated }: {
   const [notes, setNotes] = useState("");
   const [estimateFile, setEstimateFile] = useState<File | null>(null);
   const [attestationFile, setAttestationFile] = useState<File | null>(null);
+  const [attestationConfirmed, setAttestationConfirmed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const selectedClinic = clinics.find((c) => c.id === clinicId);
@@ -225,11 +226,18 @@ function NewTicketDialog({ pets, clinics, onCreated }: {
       toast({ title: "Missing info", description: "Pet, clinic, and amount are required.", variant: "destructive" });
       return;
     }
+    if (!estimateFile) {
+      toast({ title: "Estimate required", description: "Attach the itemised estimate or invoice from your clinic.", variant: "destructive" });
+      return;
+    }
+    if (!attestationConfirmed) {
+      toast({ title: "Attestation required", description: "Please confirm the declaration before submitting.", variant: "destructive" });
+      return;
+    }
     setSubmitting(true);
     try {
-      let estimateUrl: string | null = null;
       let attestationUrl: string | null = null;
-      if (estimateFile) estimateUrl = await uploadTicketFile(user.id, estimateFile, "estimate");
+      const estimateUrl = await uploadTicketFile(user.id, estimateFile, "estimate");
       if (attestationFile) attestationUrl = await uploadTicketFile(user.id, attestationFile, "attestation");
       const res = await submitVetTicket({
         pet_id: petId,
@@ -238,20 +246,20 @@ function NewTicketDialog({ pets, clinics, onCreated }: {
         estimate_amount: Number(estimateAmount),
         estimate_url: estimateUrl, attestation_url: attestationUrl,
         notes: notes || null,
+        attestation_confirmed: true,
       });
       toast({
-        title: res.auto_approved ? "Ticket auto-approved" : "Ticket submitted",
+        title: res.auto_approved ? "Ticket approved" : "Ticket submitted for review",
         description: res.auto_approved
-          ? "Your attestation met the small-ticket auto-approval rules. Check your ticket for next steps."
-          : effectiveVetProfileId
-            ? "Sent to your clinic and our admin team for review."
-            : "Sent to our admin team for review (clinic isn't on Help A Pet yet).",
+          ? "Your request met every eligibility rule and was approved. Check your ticket for next steps."
+          : "Your request has been received and is being reviewed by our team.",
       });
       onCreated();
     } catch (e: any) {
       toast({ title: "Couldn't submit", description: e.message, variant: "destructive" });
     } finally { setSubmitting(false); }
   };
+
 
   return (
     <DialogContent className="max-h-[85vh] overflow-y-auto">
@@ -307,17 +315,32 @@ function NewTicketDialog({ pets, clinics, onCreated }: {
                  onChange={(e) => setEstimateAmount(e.target.value)} placeholder="450.00" />
         </div>
         <div>
-          <Label>Estimate / invoice (PDF or image)</Label>
+          <Label>Estimate / invoice (PDF or image) <span className="text-destructive">*</span></Label>
           <Input type="file" accept=".pdf,image/*" onChange={(e) => setEstimateFile(e.target.files?.[0] ?? null)} />
+          <p className="text-xs text-muted-foreground mt-1">Required. Attach the itemised document from your clinic.</p>
         </div>
         <div>
-          <Label>Veterinarian attestation form</Label>
+          <Label>Veterinarian attestation form (optional upload)</Label>
           <Input type="file" accept=".pdf,image/*" onChange={(e) => setAttestationFile(e.target.files?.[0] ?? null)} />
         </div>
         <div>
           <Label>Notes (optional)</Label>
           <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
         </div>
+        <label className="flex items-start gap-2 rounded-lg border border-border bg-muted/40 p-3 cursor-pointer">
+          <input
+            type="checkbox"
+            className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
+            checked={attestationConfirmed}
+            onChange={(e) => setAttestationConfirmed(e.target.checked)}
+          />
+          <span className="text-xs text-muted-foreground">
+            I confirm that the attached estimate is genuine, was issued by the clinic named above for
+            the pet selected, relates to treatment that has not already been claimed, and that the
+            information I have provided is true and complete.
+          </span>
+        </label>
+
       </div>
       <DialogFooter>
         <Button onClick={submit} disabled={submitting}>

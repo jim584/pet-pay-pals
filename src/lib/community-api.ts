@@ -261,15 +261,26 @@ export async function fetchTransactions(walletId: string) {
   return data as WalletTransaction[];
 }
 
-export async function sendDonation(fromUserId: string, toUserId: string, amount: number, storyId?: string) {
-  const { error } = await supabase.rpc("process_donation", {
-    _from_user_id: fromUserId,
-    _to_user_id: toUserId,
-    _amount: amount,
-    _story_id: storyId || null,
+/**
+ * Starts a Stripe Checkout session for a community donation.
+ * Wallet balances are credited by the backend only after Stripe confirms
+ * the charge — the client can no longer move money directly.
+ * Returns the checkout URL to redirect the donor to.
+ */
+export async function sendDonation(_fromUserId: string, toUserId: string, amount: number, storyId?: string) {
+  const { data, error } = await supabase.functions.invoke("create-donation-checkout", {
+    body: {
+      kind: "wallet_donation",
+      to_user_id: toUserId,
+      story_id: storyId || null,
+      amount,
+    },
   });
   if (error) throw error;
+  if (!data?.url) throw new Error("Could not start checkout");
+  return data.url as string;
 }
+
 
 export async function uploadStoryPhoto(userId: string, file: File): Promise<string> {
   const ext = file.name.split(".").pop();

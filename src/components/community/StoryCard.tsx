@@ -110,16 +110,17 @@ export function StoryCard({ story, onRefresh }: { story: PetStory; onRefresh: ()
     if (isNaN(amount) || amount <= 0) { toast.error("Enter a valid amount"); return; }
     setDonating(true);
     try {
-      await sendDonation(user.id, story.author_id, amount, story.id);
-      toast.success(`$${amount.toFixed(2)} donated! 60% → Direct Pay, 40% → Wallet`);
+      const url = await sendDonation(user.id, story.author_id, amount, story.id);
       setShowDonate(false);
       setDonateAmount("");
+      window.location.href = url;
     } catch (err: any) {
       toast.error(err.message);
     } finally {
       setDonating(false);
     }
   };
+
 
   const isAuthor = user?.id === story.author_id;
   const petName = (story as any).pets?.name || "Unknown Pet";
