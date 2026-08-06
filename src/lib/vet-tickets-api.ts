@@ -45,6 +45,12 @@ export type VetTicket = {
   authorized_until: string | null;
   merchant_lock_type: string | null;
   issued_card_id: string | null;
+  info_request_message?: string | null;
+  info_requested_at?: string | null;
+  info_requested_by?: string | null;
+  info_response_message?: string | null;
+  info_responded_at?: string | null;
+  auto_approval_blockers?: string[] | null;
   created_at: string;
   updated_at: string;
 };
