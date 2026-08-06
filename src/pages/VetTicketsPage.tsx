@@ -353,10 +353,36 @@ function NewTicketDialog({ pets, clinics, onCreated }: {
 }
 
 function TicketCard({ ticket, onChanged }: { ticket: VetTicket; onChanged: () => void }) {
+  const { user } = useAuth();
   const [paying, setPaying] = useState(false);
   const [useReserve, setUseReserve] = useState(false);
   const [previewBreakdown, setPreviewBreakdown] = useState<CoverageBreakdown | null>(null);
   const [previewing, setPreviewing] = useState(false);
+  const [infoReply, setInfoReply] = useState("");
+  const [infoFile, setInfoFile] = useState<File | null>(null);
+  const [sendingInfo, setSendingInfo] = useState(false);
+
+  const sendInfoResponse = async () => {
+    if (!infoReply.trim() && !infoFile) {
+      toast({ title: "Add a reply or a document", variant: "destructive" });
+      return;
+    }
+    setSendingInfo(true);
+    try {
+      let path: string | null = null;
+      if (infoFile && user) path = await uploadTicketFile(user.id, infoFile, "estimate");
+      await respondTicketInfo(ticket.id, infoReply.trim(), path);
+      toast({ title: "Response sent", description: "Your ticket is back with the review team." });
+      setInfoReply("");
+      setInfoFile(null);
+      onChanged();
+    } catch (e: any) {
+      toast({ title: "Couldn't send response", description: e.message, variant: "destructive" });
+    } finally {
+      setSendingInfo(false);
+    }
+  };
+
 
   // Auto-preview reserve eligibility once for submitted/under_review tickets
   useEffect(() => {
