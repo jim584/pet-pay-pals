@@ -7,7 +7,7 @@ Deno.serve(async (_req) => {
 
   const { data: rows, error } = await admin
     .from("direct_pay_accruals")
-    .select("id, remaining_amount, expires_at")
+    .select("id, remaining_amount, expires_at, user_id, membership_id")
     .eq("expired", false)
     .not("expires_at", "is", null)
     .lte("expires_at", nowIso)
@@ -16,6 +16,14 @@ Deno.serve(async (_req) => {
   if (error) {
     console.error("query expired DP error:", error);
     return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+  }
+
+  // Resolve the pet each accrual belongs to (benefits are pet-bound).
+  const membershipIds = Array.from(new Set((rows ?? []).map((r: any) => r.membership_id).filter(Boolean)));
+  const petByMembership = new Map<string, string | null>();
+  if (membershipIds.length) {
+    const { data: mems } = await admin.from("memberships").select("id, pet_id").in("id", membershipIds);
+    for (const m of mems ?? []) petByMembership.set(m.id, m.pet_id ?? null);
   }
 
   let processed = 0;
@@ -42,9 +50,28 @@ Deno.serve(async (_req) => {
       expired: true, expired_at: nowIso, remaining_amount: 0,
     }).eq("id", r.id);
 
+    // Append-only ledger: record the expiry against the pet's Direct Pay bucket.
+    const { error: ledgerErr } = await admin.rpc("post_ledger_entry", {
+      _user_id: r.user_id,
+      _bucket: "direct_pay",
+      _entry_type: "expiry",
+      _amount: remaining,
+      _idempotency_key: `dp_expiry:${r.id}`,
+      _pet_id: petByMembership.get(r.membership_id) ?? null,
+      _membership_id: r.membership_id ?? null,
+      _ticket_id: null,
+      _obligation_id: null,
+      _accrual_id: r.id,
+      _external_ref: null,
+      _description: "Direct Pay expired (rolling window)",
+      _metadata: { community_reserve: reserve, help_now: helpNow, admin: adminCut },
+    });
+    if (ledgerErr) console.error("ledger expiry failed:", r.id, ledgerErr);
+
     totalReserve += reserve;
     processed += 1;
   }
+
 
   if (totalReserve > 0) {
     const { data: cr } = await admin.from("community_reserve").select("id, balance").limit(1).single();
