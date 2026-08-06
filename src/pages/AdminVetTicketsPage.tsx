@@ -361,8 +361,11 @@ function AdminTicketCard({
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [approving, setApproving] = useState(false);
-  const pending = ["submitted", "under_review", "awaiting_secondary_review"].includes(ticket.status);
-  const canReject = ["submitted", "under_review", "awaiting_secondary_review", "approved"].includes(ticket.status);
+  const [infoMessage, setInfoMessage] = useState("");
+  const [infoBusy, setInfoBusy] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
+  const pending = ["submitted", "under_review", "awaiting_secondary_review", "needs_info"].includes(ticket.status);
+  const canReject = ["submitted", "under_review", "awaiting_secondary_review", "needs_info", "approved"].includes(ticket.status);
   const assignedClinic = clinicMap.find((c) => c.id === ticket.vet_profile_id);
   const blockers = (ticket as any).auto_approval_blockers as string[] | null;
 
@@ -377,6 +380,22 @@ function AdminTicketCard({
     finally { setBusy(false); }
   };
 
+  const sendInfoRequest = async () => {
+    if (infoMessage.trim().length < 5) {
+      toast({ title: "Please describe what is missing", variant: "destructive" });
+      return;
+    }
+    setInfoBusy(true);
+    try {
+      await requestTicketInfo(ticket.id, infoMessage.trim());
+      toast({ title: "Info requested", description: "The submitter has been asked to respond." });
+      setInfoMessage("");
+      setInfoOpen(false);
+      onChanged();
+    } catch (e: any) { toast({ title: "Request failed", description: e.message, variant: "destructive" }); }
+    finally { setInfoBusy(false); }
+  };
+
   const approve = async () => {
     setApproving(true);
     try {
@@ -387,6 +406,7 @@ function AdminTicketCard({
     } catch (e: any) { toast({ title: "Approve failed", description: e.message, variant: "destructive" }); }
     finally { setApproving(false); }
   };
+
 
   const openFile = async (path: string) => {
     try { window.open(await getTicketFileSignedUrl(path), "_blank"); }
