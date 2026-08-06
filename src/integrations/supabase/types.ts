@@ -2798,6 +2798,15 @@ export type Database = {
           type: Database["public"]["Enums"]["referrer_type"]
         }[]
       }
+      reverse_ticket_settlement: {
+        Args: {
+          _amount: number
+          _external_ref: string
+          _reason: string
+          _ticket_id: string
+        }
+        Returns: undefined
+      }
       set_status_context: {
         Args: { _changer: string; _source: string }
         Returns: undefined
