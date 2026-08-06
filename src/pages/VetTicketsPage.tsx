@@ -511,6 +511,39 @@ function TicketCard({ ticket, onChanged }: { ticket: VetTicket; onChanged: () =>
           </div>
         )}
 
+        {ticket.status === "needs_info" && (
+          <div className="rounded-md border border-amber-500/50 bg-amber-500/5 p-3 space-y-3">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 mt-0.5 text-amber-600 dark:text-amber-400 shrink-0" />
+              <div>
+                <p className="text-sm font-medium">Action required</p>
+                <p className="text-xs text-muted-foreground">
+                  {ticket.info_request_message || "Our review team needs more information before this ticket can move forward."}
+                </p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Upload a document (optional)</Label>
+              <Input
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={(e) => setInfoFile(e.target.files?.[0] ?? null)}
+              />
+              <Label className="text-xs">Your reply</Label>
+              <Textarea
+                rows={3}
+                value={infoReply}
+                onChange={(e) => setInfoReply(e.target.value)}
+                placeholder="Explain or describe what you're sending."
+              />
+              <Button size="sm" onClick={sendInfoResponse} disabled={sendingInfo || (!infoReply.trim() && !infoFile)}>
+                {sendingInfo && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+                Send response
+              </Button>
+            </div>
+          </div>
+        )}
+
 
         {ticket.status === "rejected" && ticket.rejection_reason && (
           <div className="space-y-2">
