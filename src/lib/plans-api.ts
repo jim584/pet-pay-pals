@@ -54,21 +54,57 @@ export async function fetchMyMembership(userId: string): Promise<(Membership & {
   return data as any;
 }
 
+export type PetBalance = {
+  pet_id: string | null;
+  petName: string;
+  available: number;
+  accrued: number;
+  held: number;
+  spent: number;
+  expired: number;
+};
+
+async function petNameMap(petIds: string[]): Promise<Map<string, string>> {
+  const ids = petIds.filter(Boolean);
+  if (!ids.length) return new Map();
+  const { data } = await supabase.from("pets").select("id, name").in("id", ids);
+  return new Map((data ?? []).map((p: any) => [p.id, p.name as string]));
+}
+
+/**
+ * Direct Pay summary, derived from the append-only ledger (single source of truth).
+ * `byPet` breaks the balance down per pet, since benefits are pet-bound.
+ */
 export async function fetchMyDpSummary(userId: string) {
-  const { data, error } = await supabase
-    .from("direct_pay_accruals")
-    .select("amount, remaining_amount, expires_at, expired")
-    .eq("user_id", userId)
-    .eq("expired", false);
+  const [{ data: ledger, error }, accruals] = await Promise.all([
+    supabase.from("v_pet_dp_balance").select("*").eq("user_id", userId),
+    supabase
+      .from("direct_pay_accruals")
+      .select("remaining_amount, expires_at, expired")
+      .eq("user_id", userId)
+      .eq("expired", false),
+  ]);
   if (error) throw error;
-  const available = (data ?? []).reduce((s, r: any) => s + Number(r.remaining_amount), 0);
-  const soon = (data ?? []).filter((r: any) => {
+  const rows = (ledger ?? []) as any[];
+  const names = await petNameMap(rows.map((r) => r.pet_id));
+  const byPet: PetBalance[] = rows.map((r) => ({
+    pet_id: r.pet_id ?? null,
+    petName: (r.pet_id && names.get(r.pet_id)) || "Unassigned",
+    available: Number(r.available ?? 0),
+    accrued: Number(r.accrued ?? 0),
+    held: Number(r.held ?? 0),
+    spent: Number(r.spent ?? 0),
+    expired: Number(r.expired ?? 0),
+  }));
+  const available = byPet.reduce((s, p) => s + p.available, 0);
+  const soon = (accruals.data ?? []).filter((r: any) => {
     if (!r.expires_at) return false;
     const days = (new Date(r.expires_at).getTime() - Date.now()) / 86400000;
     return days <= 60;
   }).reduce((s, r: any) => s + Number(r.remaining_amount), 0);
-  return { available, expiringSoon: soon };
+  return { available, expiringSoon: soon, byPet };
 }
+
 
 export type ReserveSummary = {
   balance: number;
