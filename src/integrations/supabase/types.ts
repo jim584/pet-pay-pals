@@ -1129,7 +1129,7 @@ export type Database = {
           id: string
           is_fear_free_member: boolean
           last_paid_month: string | null
-          pet_id: string | null
+          pet_id: string
           plan_id: string
           rejection_reason: string | null
           requires_admin_approval: boolean
@@ -1151,7 +1151,7 @@ export type Database = {
           id?: string
           is_fear_free_member?: boolean
           last_paid_month?: string | null
-          pet_id?: string | null
+          pet_id: string
           plan_id: string
           rejection_reason?: string | null
           requires_admin_approval?: boolean
@@ -1173,7 +1173,7 @@ export type Database = {
           id?: string
           is_fear_free_member?: boolean
           last_paid_month?: string | null
-          pet_id?: string | null
+          pet_id?: string
           plan_id?: string
           rejection_reason?: string | null
           requires_admin_approval?: boolean
@@ -2647,6 +2647,12 @@ export type Database = {
       }
     }
     Views: {
+      v_community_reserve_balance: {
+        Row: {
+          balance: number | null
+        }
+        Relationships: []
+      }
       v_ledger_balances: {
         Row: {
           accrued: number | null
