@@ -16,17 +16,17 @@ import {
 import { toast } from "@/hooks/use-toast";
 import {
   listMyTickets, listTicketsForVet, submitVetTicket, uploadTicketFile, startMemberRemainderCheckout,
-  getTicketFileSignedUrl, computeTicketCoverage, type VetTicket, type CoverageBreakdown,
+  getTicketFileSignedUrl, computeTicketCoverage, respondTicketInfo, type VetTicket, type CoverageBreakdown,
 } from "@/lib/vet-tickets-api";
 import { fetchVetProfile } from "@/lib/vet-api";
-import { Loader2, Plus, FileText, ExternalLink, ShieldCheck, Info } from "lucide-react";
+import { Loader2, Plus, FileText, ExternalLink, ShieldCheck, Info, AlertCircle } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { TicketMessagesDialog } from "@/components/vet-tickets/TicketMessagesDialog";
 import { openCheckoutUrl } from "@/lib/open-checkout";
 import { ReconsiderationButton } from "@/components/vet/ReconsiderationButton";
 
 const STATUS_VARIANT: Record<string, string> = {
-  submitted: "secondary", under_review: "secondary",
+  submitted: "secondary", under_review: "secondary", needs_info: "outline",
   approved: "default", funded: "default", card_issued: "default", settled: "default",
   rejected: "destructive", expired: "destructive", cancelled: "destructive",
 };
