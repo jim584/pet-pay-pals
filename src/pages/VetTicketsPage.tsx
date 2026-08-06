@@ -213,6 +213,7 @@ function NewTicketDialog({ pets, clinics, onCreated }: {
   const [notes, setNotes] = useState("");
   const [estimateFile, setEstimateFile] = useState<File | null>(null);
   const [attestationFile, setAttestationFile] = useState<File | null>(null);
+  const [attestationConfirmed, setAttestationConfirmed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const selectedClinic = clinics.find((c) => c.id === clinicId);
@@ -225,11 +226,18 @@ function NewTicketDialog({ pets, clinics, onCreated }: {
       toast({ title: "Missing info", description: "Pet, clinic, and amount are required.", variant: "destructive" });
       return;
     }
+    if (!estimateFile) {
+      toast({ title: "Estimate required", description: "Attach the itemised estimate or invoice from your clinic.", variant: "destructive" });
+      return;
+    }
+    if (!attestationConfirmed) {
+      toast({ title: "Attestation required", description: "Please confirm the declaration before submitting.", variant: "destructive" });
+      return;
+    }
     setSubmitting(true);
     try {
-      let estimateUrl: string | null = null;
       let attestationUrl: string | null = null;
-      if (estimateFile) estimateUrl = await uploadTicketFile(user.id, estimateFile, "estimate");
+      const estimateUrl = await uploadTicketFile(user.id, estimateFile, "estimate");
       if (attestationFile) attestationUrl = await uploadTicketFile(user.id, attestationFile, "attestation");
       const res = await submitVetTicket({
         pet_id: petId,
@@ -238,20 +246,20 @@ function NewTicketDialog({ pets, clinics, onCreated }: {
         estimate_amount: Number(estimateAmount),
         estimate_url: estimateUrl, attestation_url: attestationUrl,
         notes: notes || null,
+        attestation_confirmed: true,
       });
       toast({
-        title: res.auto_approved ? "Ticket auto-approved" : "Ticket submitted",
+        title: res.auto_approved ? "Ticket approved" : "Ticket submitted for review",
         description: res.auto_approved
-          ? "Your attestation met the small-ticket auto-approval rules. Check your ticket for next steps."
-          : effectiveVetProfileId
-            ? "Sent to your clinic and our admin team for review."
-            : "Sent to our admin team for review (clinic isn't on Help A Pet yet).",
+          ? "Your request met every eligibility rule and was approved. Check your ticket for next steps."
+          : "Your request has been received and is being reviewed by our team.",
       });
       onCreated();
     } catch (e: any) {
       toast({ title: "Couldn't submit", description: e.message, variant: "destructive" });
     } finally { setSubmitting(false); }
   };
+
 
   return (
     <DialogContent className="max-h-[85vh] overflow-y-auto">
