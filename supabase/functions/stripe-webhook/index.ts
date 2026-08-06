@@ -708,6 +708,46 @@ Deno.serve(async (req) => {
 
 // ===== Helpers =====
 
+/** Post an append-only ledger entry. Never throws — ledger failures are logged, not fatal. */
+async function postLedger(admin: any, args: {
+  user_id: string;
+  bucket: "direct_pay" | "member_reserve" | "community_reserve" | "bnpl";
+  entry_type: string;
+  amount: number;
+  idempotency_key: string;
+  pet_id?: string | null;
+  membership_id?: string | null;
+  ticket_id?: string | null;
+  obligation_id?: string | null;
+  accrual_id?: string | null;
+  external_ref?: string | null;
+  description?: string | null;
+  metadata?: Record<string, unknown>;
+}) {
+  try {
+    const { error } = await admin.rpc("post_ledger_entry", {
+      _user_id: args.user_id,
+      _bucket: args.bucket,
+      _entry_type: args.entry_type,
+      _amount: args.amount,
+      _idempotency_key: args.idempotency_key,
+      _pet_id: args.pet_id ?? null,
+      _membership_id: args.membership_id ?? null,
+      _ticket_id: args.ticket_id ?? null,
+      _obligation_id: args.obligation_id ?? null,
+      _accrual_id: args.accrual_id ?? null,
+      _external_ref: args.external_ref ?? null,
+      _description: args.description ?? null,
+      _metadata: args.metadata ?? {},
+    });
+    if (error) console.error("post_ledger_entry failed:", args.idempotency_key, error);
+  } catch (e) {
+    console.error("post_ledger_entry threw:", args.idempotency_key, e);
+  }
+}
+
+
+
 async function upsertPaymentByInvoice(admin: any, invoiceId: string, row: Record<string, unknown>) {
   const { data: existing } = await admin
     .from("payment_history")
