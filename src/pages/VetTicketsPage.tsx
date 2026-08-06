@@ -71,7 +71,7 @@ function OwnerVetTicketsView() {
         <div>
           <h1 className="text-2xl font-bold">Vet Tickets</h1>
           <p className="text-sm text-muted-foreground">Submit a vet bill for coverage from your plan. Use any clinic you like — Fear Free certified, your local vet, or a national chain like Banfield.</p>
-          <p className="text-xs text-muted-foreground mt-1">Tickets <strong>under $500</strong> with the vet attestation attached are <strong>approved automatically</strong>. Larger tickets or those missing an attestation go to admin review.</p>
+          <p className="text-xs text-muted-foreground mt-1">Every request is checked against our eligibility rules. Requests that meet all of them are approved straight away; anything else is reviewed by our team.</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
