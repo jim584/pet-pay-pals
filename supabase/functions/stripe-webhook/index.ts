@@ -377,7 +377,7 @@ Deno.serve(async (req) => {
             const expiresAt = plan.dp_window_months
               ? new Date(accrualMonth.getFullYear(), accrualMonth.getMonth() + plan.dp_window_months, 1)
               : null;
-            await admin.from("direct_pay_accruals").insert({
+            const { data: accrualRow } = await admin.from("direct_pay_accruals").insert({
               membership_id: m.id,
               user_id: m.user_id,
               accrual_month: accrualMonth.toISOString().slice(0, 10),
@@ -385,6 +385,19 @@ Deno.serve(async (req) => {
               remaining_amount: monthlyDP,
               expires_at: expiresAt ? expiresAt.toISOString() : null,
               stripe_invoice_id: inv.id,
+            }).select("id").single();
+
+            await postLedger(admin, {
+              user_id: m.user_id,
+              pet_id: m.pet_id ?? null,
+              membership_id: m.id,
+              bucket: "direct_pay",
+              entry_type: "accrual",
+              amount: monthlyDP,
+              accrual_id: accrualRow?.id ?? null,
+              external_ref: inv.id,
+              idempotency_key: `dp_accrual:${inv.id}:${i}`,
+              description: "Direct Pay accrual from membership invoice",
             });
           }
         }
@@ -401,16 +414,30 @@ Deno.serve(async (req) => {
           if (monthlyReserve > 0) {
             for (let i = 0; i < monthsCovered; i++) {
               const accrualMonth = new Date(nowR.getFullYear(), nowR.getMonth() + i, 1);
-              await admin.from("member_reserve_accruals").insert({
+              const { data: reserveRow } = await admin.from("member_reserve_accruals").insert({
                 membership_id: m.id,
                 user_id: m.user_id,
                 accrual_month: accrualMonth.toISOString().slice(0, 10),
                 amount: monthlyReserve,
                 remaining_amount: monthlyReserve,
                 stripe_invoice_id: inv.id,
+              }).select("id").single();
+
+              await postLedger(admin, {
+                user_id: m.user_id,
+                pet_id: m.pet_id ?? null,
+                membership_id: m.id,
+                bucket: "member_reserve",
+                entry_type: "accrual",
+                amount: monthlyReserve,
+                accrual_id: reserveRow?.id ?? null,
+                external_ref: inv.id,
+                idempotency_key: `reserve_accrual:${inv.id}:${i}`,
+                description: "Member Reserve accrual from membership invoice",
               });
             }
           }
+
 
           // Continuous-paid-months counter + reserve eligibility (12 consecutive months).
           // Detect a gap since last paid month: if the previous paid month is not the
