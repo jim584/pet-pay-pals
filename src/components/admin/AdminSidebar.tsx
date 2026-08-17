@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Stethoscope, FileCheck, Wallet, CreditCard, Shield, LogOut, Home, CalendarClock, Megaphone, FileText, MessageSquareWarning, MapPin, Database, ShoppingBag } from "lucide-react";
+import { LayoutDashboard, Users, Stethoscope, FileCheck, Wallet, CreditCard, Shield, LogOut, Home, CalendarClock, Megaphone, FileText, MessageSquareWarning, MapPin, Database, ShoppingBag, ArrowRightLeft } from "lucide-react";
 import logoDark from "@/assets/logo-dark.png";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
@@ -30,6 +30,7 @@ const adminNav = [
   { title: "Referrals", url: "/admin/referrals", icon: Megaphone },
   { title: "Reconsiderations", url: "/admin/reconsiderations", icon: MessageSquareWarning },
   { title: "Campaign invoices", url: "/admin/campaign-invoices", icon: FileText },
+  { title: "Donation redirections", url: "/admin/redirections", icon: ArrowRightLeft },
   { title: "Vetted Catalogue", url: "/admin/vetted-catalog", icon: ShoppingBag },
   { title: "Content", url: "/admin/content", icon: FileText },
 ];
