@@ -4,10 +4,10 @@
  * member. They are redirected to other Help a Pet Now cases that already hold
  * the required verified documentation.
  *
- * The official Help a Pet Now priority hierarchy is defined separately
- * (Requirement 14). Until it exists, `orderByPriority` below is the single
- * placeholder — oldest verified case first. Replace ONLY that function when the
- * real hierarchy lands; nothing else in the redirection flow depends on order.
+ * Ordering of receiving cases is delegated to the Help a Pet Now ranking
+ * authority in `./help-now-priority.ts` (Requirement 14). The official
+ * hierarchy is added there and nowhere else; this file only decides which
+ * cases qualify to receive funds, never their order.
  */
 
 import { rankHelpNowCases } from "./help-now-priority.ts";
