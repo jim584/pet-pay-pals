@@ -325,6 +325,15 @@ export interface AdminVetRow {
   fear_free_checked_at: string | null;
   fear_free_source: string | null;
   fear_free_reason: string | null;
+  // Account verification (manual review of the live identity photo)
+  account_status: "pending_verification" | "verified" | "rejected";
+  first_name: string | null;
+  last_name: string | null;
+  merchant_id: string | null;
+  identity_photo_path: string | null;
+  identity_photo_captured_at: string | null;
+  identity_reviewed_at: string | null;
+  account_rejection_reason: string | null;
 }
 
 export interface AdminVetService {
@@ -494,6 +503,27 @@ export async function setVetApproval(vetProfileId: string, approved: boolean) {
     .update({ is_approved: approved })
     .eq("id", vetProfileId);
   if (error) throw error;
+}
+
+/** Approve or reject a vet account after reviewing the live identity photo. */
+export async function setVetAccountStatus(
+  vetProfileId: string,
+  status: "pending_verification" | "verified" | "rejected",
+  reason?: string | null,
+) {
+  const { error } = await supabase
+    .from("vet_profiles")
+    .update({ account_status: status, account_rejection_reason: reason ?? null } as never)
+    .eq("id", vetProfileId);
+  if (error) throw error;
+}
+
+export async function getVetIdentitySignedUrl(path: string): Promise<string | null> {
+  const { data, error } = await supabase.storage
+    .from("vet-identity")
+    .createSignedUrl(path, 60 * 10);
+  if (error) return null;
+  return data.signedUrl;
 }
 
 export async function setVetLicenseVerified(vetProfileId: string, verified: boolean) {
