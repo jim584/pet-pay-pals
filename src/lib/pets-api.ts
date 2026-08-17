@@ -14,6 +14,8 @@ export interface Pet {
   notes: string | null;
   vet_of_record_id: string | null;
   vet_of_record_set_at: string | null;
+  // Reserved for future Vetted affiliate tracking. Do not use yet.
+  vet_profile_id: string | null;
   created_at: string;
   updated_at: string;
 }
