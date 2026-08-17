@@ -132,12 +132,13 @@ export function CampaignComposer({ ticketId }: { ticketId: string }) {
       </div>
 
       {published ? (
-        <div className="space-y-1">
+        <div className="space-y-2">
           <Progress value={pct} />
           <p className="text-xs text-muted-foreground">
             {fmt(campaign.raised_amount)} raised of {fmt(campaign.goal_amount)} —{" "}
             {fmt(Math.max(0, Number(campaign.goal_amount) - Number(campaign.raised_amount)))} still needed
           </p>
+          <CampaignInvoicePanel campaign={campaign} onChange={setCampaign} />
         </div>
       ) : (
         <div className="space-y-2">
