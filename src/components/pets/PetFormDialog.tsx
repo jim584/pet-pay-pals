@@ -10,6 +10,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/components/ui/sonner";
 import { createPet, updatePet, Pet, calculateAge } from "@/lib/pets-api";
 import { fetchApprovedVetsForPicker, type VetPickerOption } from "@/lib/vet-api";
+import { getLicenseRecord, type VetLicenseRecord } from "@/lib/vet-licenses-api";
+import { LicensedVetPicker } from "@/components/pets/LicensedVetPicker";
 import { supabase } from "@/integrations/supabase/client";
 import { isValidImageFile, ACCEPTED_IMAGE_TYPES } from "@/lib/utils";
 import { Camera, PawPrint, X, CalendarIcon, BadgeCheck, AlertCircle } from "lucide-react";
