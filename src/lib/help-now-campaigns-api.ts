@@ -18,6 +18,10 @@ export type HelpNowCampaign = {
   invoice_reviewed_at: string | null;
   invoice_rejection_reason: string | null;
   clock_paused_at: string | null;
+  verified_amount: number | null;
+  verified_amount_source: string | null;
+  funding_offsets: Record<string, number | string> | null;
+  over_raised_flagged_at: string | null;
   title: string | null;
   story: string | null;
   photo_urls: string[];
@@ -54,9 +58,30 @@ export function campaignDaysRemaining(c: HelpNowCampaign | null | undefined): nu
   return Math.max(0, Math.ceil(ms / 86400000));
 }
 
+/** True once an admin has accepted an actual invoice: no 60-day deadline applies. */
+export function campaignIsInvoiceBased(c: HelpNowCampaign | null | undefined): boolean {
+  return c?.document_basis === "invoice";
+}
+
+/**
+ * How much this campaign may still raise. The goal is the verified eligible
+ * veterinary amount (net of Direct Pay, BNPL and Reserve), so this is the hard
+ * ceiling on further community funding.
+ */
+export function campaignRemainingEligible(c: HelpNowCampaign | null | undefined): number {
+  if (!c) return 0;
+  const remaining = Number(c.goal_amount ?? 0) - Number(c.raised_amount ?? 0);
+  return remaining > 0 ? Math.round(remaining * 100) / 100 : 0;
+}
+
 export function canDonateToCampaign(c: HelpNowCampaign | null | undefined): boolean {
   const status = campaignEffectiveStatus(c);
-  return status === "published" || status === "funded";
+  if (status !== "published") return false;
+  return campaignRemainingEligible(c) > 0;
+}
+
+export function campaignIsOverRaised(c: HelpNowCampaign | null | undefined): boolean {
+  return !!c?.over_raised_flagged_at;
 }
 
 export function campaignReadyToPublish(c: HelpNowCampaign | null | undefined): boolean {
@@ -124,10 +149,17 @@ export async function submitCampaignInvoice(campaignId: string, invoiceUrl: stri
 }
 
 export async function reviewCampaignInvoice(
-  campaignId: string, decision: "accept" | "reject", reason?: string,
+  campaignId: string,
+  decision: "accept" | "reject",
+  opts?: { reason?: string; verifiedAmount?: number },
 ): Promise<HelpNowCampaign> {
   const { data, error } = await supabase.functions.invoke("review-campaign-invoice", {
-    body: { campaign_id: campaignId, decision, reason },
+    body: {
+      campaign_id: campaignId,
+      decision,
+      reason: opts?.reason,
+      verified_amount: opts?.verifiedAmount,
+    },
   });
   if (error) throw error;
   if (data?.error) throw new Error(data.error);
