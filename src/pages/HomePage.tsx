@@ -162,6 +162,10 @@ export default function HomePage() {
             </div>
           </div>
 
+          <div className="mb-4">
+            <HelpNowCampaigns />
+          </div>
+
           <PublicFeed search={search} category={category} />
         </main>
 
