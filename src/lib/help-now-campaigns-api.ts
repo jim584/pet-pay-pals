@@ -11,6 +11,13 @@ export type HelpNowCampaign = {
   raised_amount: number;
   status: HelpNowCampaignStatus;
   verification_status: string;
+  document_basis: "estimate" | "invoice";
+  invoice_url: string | null;
+  invoice_status: "none" | "submitted" | "accepted" | "rejected";
+  invoice_submitted_at: string | null;
+  invoice_reviewed_at: string | null;
+  invoice_rejection_reason: string | null;
+  clock_paused_at: string | null;
   title: string | null;
   story: string | null;
   photo_urls: string[];
@@ -21,6 +28,36 @@ export type HelpNowCampaign = {
 };
 
 export const MIN_STORY_LENGTH = 40;
+export const ESTIMATE_WINDOW_DAYS = 60;
+
+/**
+ * Live expiry check that runs alongside the nightly sweep, so a past-due campaign
+ * reads as expired the moment it is loaded. The clock only runs while the campaign
+ * is still estimate-backed and no invoice is sitting in review.
+ */
+export function campaignClockRunning(c: HelpNowCampaign | null | undefined): boolean {
+  if (!c) return false;
+  return c.document_basis === "estimate" && !c.clock_paused_at && !!c.expires_at;
+}
+
+export function campaignEffectiveStatus(c: HelpNowCampaign | null | undefined): HelpNowCampaignStatus | null {
+  if (!c) return null;
+  if (c.status === "published" && campaignClockRunning(c) && new Date(c.expires_at!) < new Date()) {
+    return "expired";
+  }
+  return c.status;
+}
+
+export function campaignDaysRemaining(c: HelpNowCampaign | null | undefined): number | null {
+  if (!c?.expires_at || c.document_basis !== "estimate") return null;
+  const ms = new Date(c.expires_at).getTime() - Date.now();
+  return Math.max(0, Math.ceil(ms / 86400000));
+}
+
+export function canDonateToCampaign(c: HelpNowCampaign | null | undefined): boolean {
+  const status = campaignEffectiveStatus(c);
+  return status === "published" || status === "funded";
+}
 
 export function campaignReadyToPublish(c: HelpNowCampaign | null | undefined): boolean {
   if (!c) return false;
@@ -60,6 +97,45 @@ export async function uploadCampaignPhoto(userId: string, file: File): Promise<s
   if (error) throw error;
   const { data } = supabase.storage.from("pet-photos").getPublicUrl(path);
   return data.publicUrl;
+}
+
+export async function uploadCampaignInvoice(userId: string, file: File): Promise<string> {
+  const ext = file.name.split(".").pop() || "pdf";
+  const path = `help-now-invoices/${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const { error } = await supabase.storage.from("vet-tickets").upload(path, file);
+  if (error) throw error;
+  const { data } = await supabase.storage.from("vet-tickets").createSignedUrl(path, 60 * 60 * 24 * 365);
+  return data?.signedUrl ?? path;
+}
+
+export async function submitCampaignInvoice(campaignId: string, invoiceUrl: string): Promise<HelpNowCampaign> {
+  const { data, error } = await supabase.functions.invoke("submit-campaign-invoice", {
+    body: { campaign_id: campaignId, invoice_url: invoiceUrl },
+  });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return data.campaign as HelpNowCampaign;
+}
+
+export async function reviewCampaignInvoice(
+  campaignId: string, decision: "accept" | "reject", reason?: string,
+): Promise<HelpNowCampaign> {
+  const { data, error } = await supabase.functions.invoke("review-campaign-invoice", {
+    body: { campaign_id: campaignId, decision, reason },
+  });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return data.campaign as HelpNowCampaign;
+}
+
+export async function listCampaignsAwaitingInvoiceReview(): Promise<PublicCampaign[]> {
+  const { data, error } = await supabase
+    .from("help_now_campaigns")
+    .select("*, pet:pets(id, name, photo_url)")
+    .eq("invoice_status", "submitted")
+    .order("invoice_submitted_at", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as unknown as PublicCampaign[];
 }
 
 export type PublicCampaign = HelpNowCampaign & {
