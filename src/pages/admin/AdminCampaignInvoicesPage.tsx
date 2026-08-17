@@ -11,7 +11,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { AlertTriangle, FileText, Loader2 } from "lucide-react";
+import { AlertTriangle, FileText, Loader2, Receipt } from "lucide-react";
 import {
   listCampaignsAwaitingInvoiceReview, listOverRaisedCampaigns, reviewCampaignInvoice,
   getCampaignInvoiceSignedUrl, coverageOffsetTotal,
