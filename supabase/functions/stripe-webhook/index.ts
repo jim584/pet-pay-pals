@@ -1,5 +1,22 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import Stripe from "https://esm.sh/stripe@18.5.0?target=denonext";
+import { recomputeDisbursementEligibility } from "../_shared/disbursement.ts";
+
+/**
+ * Requirement 12: a settled (or reversed) direct payment to the veterinarian
+ * changes whether the ticket's campaign may be disbursed, so recompute it.
+ */
+// deno-lint-ignore no-explicit-any
+async function syncTicketDisbursement(admin: any, ticketId: string) {
+  try {
+    const { data: campaign } = await admin
+      .from("help_now_campaigns").select("id").eq("ticket_id", ticketId).maybeSingle();
+    if (campaign?.id) await recomputeDisbursementEligibility(admin, campaign.id);
+  } catch (e) {
+    console.error("syncTicketDisbursement failed:", e);
+  }
+}
+
 
 // Public webhook endpoint — no JWT verification.
 Deno.serve(async (req) => {
