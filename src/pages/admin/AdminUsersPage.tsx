@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Search, ShieldCheck, Stethoscope, User, X } from "lucide-react";
+import { FileSearch, Loader2, Search, ShieldCheck, Stethoscope, User, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { fetchAdminUsers, adminAssignRole, adminRemoveRole, type AdminUserRow, type AppRole } from "@/lib/admin-api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,6 +13,7 @@ const ROLE_META: Record<AppRole, { label: string; icon: any; variant: any }> = {
   admin: { label: "Admin", icon: ShieldCheck, variant: "default" },
   vet: { label: "Vet", icon: Stethoscope, variant: "secondary" },
   pet_owner: { label: "Pet owner", icon: User, variant: "outline" },
+  content_editor: { label: "Content editor", icon: FileSearch, variant: "secondary" },
 };
 
 export default function AdminUsersPage() {

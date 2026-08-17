@@ -1047,6 +1047,66 @@ export type Database = {
           },
         ]
       }
+      furensic_entries: {
+        Row: {
+          body: string | null
+          cover_image_url: string | null
+          created_at: string
+          created_by: string | null
+          duration_label: string | null
+          embed_url: string | null
+          id: string
+          is_published: boolean
+          kind: string
+          media_provider: string | null
+          media_url: string | null
+          published_at: string
+          sort_order: number
+          summary: string | null
+          tags: string[]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          duration_label?: string | null
+          embed_url?: string | null
+          id?: string
+          is_published?: boolean
+          kind?: string
+          media_provider?: string | null
+          media_url?: string | null
+          published_at?: string
+          sort_order?: number
+          summary?: string | null
+          tags?: string[]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          duration_label?: string | null
+          embed_url?: string | null
+          id?: string
+          is_published?: boolean
+          kind?: string
+          media_provider?: string | null
+          media_url?: string | null
+          published_at?: string
+          sort_order?: number
+          summary?: string | null
+          tags?: string[]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       health_records: {
         Row: {
           created_at: string

@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Stethoscope, FileCheck, Wallet, CreditCard, Shield, LogOut, Home, CalendarClock, Megaphone, FileText, MessageSquareWarning, MapPin, Database, ShoppingBag, ArrowRightLeft, ListOrdered } from "lucide-react";
+import { LayoutDashboard, Users, Stethoscope, FileCheck, Wallet, CreditCard, Shield, LogOut, Home, CalendarClock, Megaphone, FileText, MessageSquareWarning, MapPin, Database, ShoppingBag, ArrowRightLeft, ListOrdered, FileSearch } from "lucide-react";
 import logoDark from "@/assets/logo-dark.png";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
@@ -34,6 +34,7 @@ const adminNav = [
   { title: "Campaign priority", url: "/admin/campaign-priority", icon: ListOrdered },
   { title: "Vetted Catalogue", url: "/admin/vetted-catalog", icon: ShoppingBag },
   { title: "Content", url: "/admin/content", icon: FileText },
+  { title: "Furensic Files", url: "/admin/furensic-files", icon: FileSearch },
 ];
 
 export function AdminSidebar() {

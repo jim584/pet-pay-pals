@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export type AppRole = "pet_owner" | "vet" | "admin";
+export type AppRole = "pet_owner" | "vet" | "admin" | "content_editor";
 
 export interface AdminKpis {
   totalUsers: number;

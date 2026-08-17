@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 const secondaryItems = [
   { label: "Help A Pet Forever™", icon: Infinity, to: "/help-forever", color: "text-primary" },
-  { label: "Furensic Files™", icon: FileSearch, to: "/four-feet-under", color: "text-muted-foreground" },
+  { label: "Furensic Files™", icon: FileSearch, to: "/furensic-files", color: "text-muted-foreground" },
   { label: "Vetted™", icon: Stethoscope, to: "/vetted", color: "text-accent" },
 ];
 
