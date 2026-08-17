@@ -32,8 +32,9 @@ Deno.serve(async (req) => {
     const {
       pet_id, vet_profile_id, clinic_name, estimate_amount,
       estimate_url, attestation_url, notes, procedure_description,
-      attestation_confirmed,
+      attestation_confirmed, attestation_id,
     } = body || {};
+
 
     const amount = Number(estimate_amount);
     if (!pet_id || !clinic_name || !amount || amount <= 0) {
