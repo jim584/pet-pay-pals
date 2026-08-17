@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { recomputeUpdateCadence } from "../_shared/campaign-updates.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -54,7 +55,29 @@ Deno.serve(async (req) => {
       .eq("id", campaign_id).select().single();
     if (error) throw error;
 
-    return json({ ok: true, campaign: updated });
+    // Requirement 15: publishing records the member's initial social-proof post
+    // (their story + pet photo) so the case always starts with public context.
+    const { data: existingInitial } = await admin
+      .from("campaign_updates").select("id").eq("campaign_id", campaign_id).eq("kind", "initial").maybeSingle();
+    if (!existingInitial) {
+      await admin.from("campaign_updates").insert({
+        campaign_id,
+        ticket_id: campaign.ticket_id,
+        pet_id: campaign.pet_id,
+        author_id: campaign.owner_id,
+        kind: "initial",
+        body: story,
+        photo_urls: photos,
+        is_required_update: true,
+        public_verification_url: campaign.public_verification_url ?? null,
+      });
+    }
+    const cadence = await recomputeUpdateCadence(admin, campaign_id);
+
+    const { data: refreshed } = await admin
+      .from("help_now_campaigns").select("*").eq("id", campaign_id).maybeSingle();
+
+    return json({ ok: true, campaign: refreshed ?? updated, cadence });
   } catch (e) {
     console.error("publish-help-now-campaign error:", e);
     return json({ error: (e as Error).message }, 500);

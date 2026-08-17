@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { recomputeUpdateCadence } from "../_shared/campaign-updates.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -72,7 +73,13 @@ Deno.serve(async (req) => {
       .eq("id", campaignId).select().single();
     if (error) throw error;
 
-    return json({ ok: true, campaign: updated });
+    // Requirement 15: submitting the invoice makes a treatment update due, which
+    // holds further disbursement until the member posts it.
+    await recomputeUpdateCadence(admin, campaignId);
+    const { data: refreshed } = await admin
+      .from("help_now_campaigns").select("*").eq("id", campaignId).maybeSingle();
+
+    return json({ ok: true, campaign: refreshed ?? updated });
   } catch (e) {
     console.error("submit-campaign-invoice error:", e);
     return json({ error: (e as Error).message }, 500);
