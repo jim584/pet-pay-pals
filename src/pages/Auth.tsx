@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/components/ui/sonner";
-import { ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, PawPrint, Stethoscope } from "lucide-react";
+import { VetSignupForm } from "@/components/vet/VetSignupForm";
 import logoColor from "@/assets/logo-color.png";
 import { resolveReferralCode, attachReferralOnSignup } from "@/lib/referrals-api";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,6 +16,7 @@ const REF_KEY = "pending_referral_code";
 
 export default function Auth() {
   const [isSignUp, setIsSignUp] = useState(false);
+  const [accountType, setAccountType] = useState<"member" | "vet">("member");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -40,6 +42,9 @@ export default function Auth() {
   
   useEffect(() => {
     if (loading || !user || roleLoading) return;
+    // The vet signup flow continues in-page (identity photo) after the account
+    // is created, so don't redirect out from under it.
+    if (isSignUp && accountType === "vet") return;
     const code = localStorage.getItem(REF_KEY);
     if (code) {
       attachReferralOnSignup(user.id, code).finally(() => localStorage.removeItem(REF_KEY));
@@ -49,7 +54,7 @@ export default function Auth() {
     if (role === "admin") navigate("/admin", { replace: true });
     else if (role) navigate(safeRedirect ?? "/", { replace: true });
     else navigate("/select-role", { replace: true });
-  }, [user, role, loading, roleLoading, navigate, params]);
+  }, [user, role, loading, roleLoading, navigate, params, isSignUp, accountType]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,6 +99,28 @@ export default function Auth() {
           )}
         </CardHeader>
         <CardContent>
+          {isSignUp && (
+            <div className="mb-5 grid grid-cols-2 gap-2 rounded-lg bg-muted p-1">
+              {(["member", "vet"] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setAccountType(t)}
+                  className={`flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                    accountType === t
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {t === "member" ? <PawPrint className="h-4 w-4" /> : <Stethoscope className="h-4 w-4" />}
+                  {t === "member" ? "Member" : "Veterinarian"}
+                </button>
+              ))}
+            </div>
+          )}
+          {isSignUp && accountType === "vet" ? (
+            <VetSignupForm />
+          ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             {isSignUp && (
               <div className="space-y-2">
@@ -146,6 +173,7 @@ export default function Auth() {
               {submitting ? "Please wait..." : isSignUp ? "Create Account" : "Sign In"}
             </Button>
           </form>
+          )}
           <div className="mt-6 text-center text-sm text-muted-foreground">
             {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
             <button

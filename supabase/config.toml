@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.submit-attestation]
 verify_jwt = false
+
+[functions.submit-vet-identity]
+verify_jwt = false

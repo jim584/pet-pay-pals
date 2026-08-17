@@ -2324,6 +2324,44 @@ export type Database = {
           },
         ]
       }
+      vet_identity_tokens: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          token_hash: string
+          used_at: string | null
+          user_id: string
+          vet_profile_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          token_hash: string
+          used_at?: string | null
+          user_id: string
+          vet_profile_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          token_hash?: string
+          used_at?: string | null
+          user_id?: string
+          vet_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vet_identity_tokens_vet_profile_id_fkey"
+            columns: ["vet_profile_id"]
+            isOneToOne: false
+            referencedRelation: "vet_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vet_license_import_runs: {
         Row: {
           created_at: string
@@ -2606,6 +2644,8 @@ export type Database = {
       }
       vet_profiles: {
         Row: {
+          account_rejection_reason: string | null
+          account_status: Database["public"]["Enums"]["vet_account_status"]
           bio: string | null
           clinic_name: string
           created_at: string
@@ -2619,9 +2659,16 @@ export type Database = {
           fear_free_verification_status: Database["public"]["Enums"]["vet_verification_status"]
           fear_free_verified_at: string | null
           fear_free_verified_by: string | null
+          first_name: string | null
           id: string
+          identity_photo_captured_at: string | null
+          identity_photo_path: string | null
+          identity_reviewed_at: string | null
+          identity_verified_by: string | null
           is_approved: boolean
           is_license_verified: boolean
+          last_name: string | null
+          license_db_match: Json | null
           license_document_url: string | null
           license_full_legal_name: string | null
           license_number: string | null
@@ -2629,6 +2676,7 @@ export type Database = {
           license_verified_at: string | null
           license_verified_by: string | null
           location: string | null
+          merchant_id: string | null
           phone: string | null
           specializations: string[] | null
           updated_at: string
@@ -2642,6 +2690,8 @@ export type Database = {
           website: string | null
         }
         Insert: {
+          account_rejection_reason?: string | null
+          account_status?: Database["public"]["Enums"]["vet_account_status"]
           bio?: string | null
           clinic_name?: string
           created_at?: string
@@ -2655,9 +2705,16 @@ export type Database = {
           fear_free_verification_status?: Database["public"]["Enums"]["vet_verification_status"]
           fear_free_verified_at?: string | null
           fear_free_verified_by?: string | null
+          first_name?: string | null
           id?: string
+          identity_photo_captured_at?: string | null
+          identity_photo_path?: string | null
+          identity_reviewed_at?: string | null
+          identity_verified_by?: string | null
           is_approved?: boolean
           is_license_verified?: boolean
+          last_name?: string | null
+          license_db_match?: Json | null
           license_document_url?: string | null
           license_full_legal_name?: string | null
           license_number?: string | null
@@ -2665,6 +2722,7 @@ export type Database = {
           license_verified_at?: string | null
           license_verified_by?: string | null
           location?: string | null
+          merchant_id?: string | null
           phone?: string | null
           specializations?: string[] | null
           updated_at?: string
@@ -2678,6 +2736,8 @@ export type Database = {
           website?: string | null
         }
         Update: {
+          account_rejection_reason?: string | null
+          account_status?: Database["public"]["Enums"]["vet_account_status"]
           bio?: string | null
           clinic_name?: string
           created_at?: string
@@ -2691,9 +2751,16 @@ export type Database = {
           fear_free_verification_status?: Database["public"]["Enums"]["vet_verification_status"]
           fear_free_verified_at?: string | null
           fear_free_verified_by?: string | null
+          first_name?: string | null
           id?: string
+          identity_photo_captured_at?: string | null
+          identity_photo_path?: string | null
+          identity_reviewed_at?: string | null
+          identity_verified_by?: string | null
           is_approved?: boolean
           is_license_verified?: boolean
+          last_name?: string | null
+          license_db_match?: Json | null
           license_document_url?: string | null
           license_full_legal_name?: string | null
           license_number?: string | null
@@ -2701,6 +2768,7 @@ export type Database = {
           license_verified_at?: string | null
           license_verified_by?: string | null
           location?: string | null
+          merchant_id?: string | null
           phone?: string | null
           specializations?: string[] | null
           updated_at?: string
@@ -3164,6 +3232,11 @@ export type Database = {
         Args: { _pet_id: string; _user_id: string }
         Returns: boolean
       }
+      is_verified_vet: { Args: { _user_id: string }; Returns: boolean }
+      is_verified_vet_profile: {
+        Args: { _user_id: string; _vet_profile_id: string }
+        Returns: boolean
+      }
       is_vet_profile_owner: {
         Args: { _user_id: string; _vet_profile_id: string }
         Returns: boolean
@@ -3313,6 +3386,7 @@ export type Database = {
         | "withdrawal"
         | "vet_payment"
         | "refund"
+      vet_account_status: "pending_verification" | "verified" | "rejected"
       vet_payout_method: "manual_ach" | "issued_card" | "direct_charge"
       vet_payout_status:
         | "pending"
@@ -3484,6 +3558,7 @@ export const Constants = {
         "vet_payment",
         "refund",
       ],
+      vet_account_status: ["pending_verification", "verified", "rejected"],
       vet_payout_method: ["manual_ach", "issued_card", "direct_charge"],
       vet_payout_status: [
         "pending",

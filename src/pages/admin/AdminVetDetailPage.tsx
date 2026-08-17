@@ -11,11 +11,13 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Check, Loader2, Mail, MapPin, Phone, Globe, Trash2, FileCheck, ShieldCheck, FileText, ExternalLink } from "lucide-react";
+import { ArrowLeft, BadgeCheck, Check, Loader2, Mail, MapPin, Phone, Globe, Trash2, FileCheck, ShieldCheck, FileText, ExternalLink } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import {
   fetchAdminVetDetail,
   setVetApproval,
+  setVetAccountStatus,
+  getVetIdentitySignedUrl,
   setVetLicenseVerified,
   setVetFearFreeVerified,
   getVetCredentialSignedUrl,
@@ -53,6 +55,8 @@ export default function AdminVetDetailPage() {
   const [deleteService, setDeleteService] = useState<AdminVetService | null>(null);
   const [deleteAppt, setDeleteAppt] = useState<AdminVetAppointment | null>(null);
   const [attempts, setAttempts] = useState<VetVerificationAttempt[]>([]);
+  const [identityUrl, setIdentityUrl] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
 
   const loadAll = async () => {
     if (!vetProfileId) return;
@@ -68,6 +72,7 @@ export default function AdminVetDetailPage() {
       setServices(s);
       setAppointments(a);
       setAttempts(at);
+      setIdentityUrl(v?.identity_photo_path ? await getVetIdentitySignedUrl(v.identity_photo_path) : null);
     } catch (e: any) {
       toast({ title: "Failed to load vet", description: e.message, variant: "destructive" });
     } finally {
@@ -113,6 +118,27 @@ export default function AdminVetDetailPage() {
       toast({ title: vet.is_approved ? "Approval revoked" : "Vet approved" });
       const fresh = await fetchAdminVetDetail(vet.id);
       setVet(fresh);
+    } catch (e: any) {
+      toast({ title: "Failed", description: e.message, variant: "destructive" });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const changeAccountStatus = async (
+    status: "pending_verification" | "verified" | "rejected",
+  ) => {
+    if (!vet) return;
+    if (status === "rejected" && !rejectReason.trim()) {
+      toast({ title: "Add a reason", description: "Tell the vet why the account was not approved.", variant: "destructive" });
+      return;
+    }
+    setBusy("account");
+    try {
+      await setVetAccountStatus(vet.id, status, status === "rejected" ? rejectReason.trim() : null);
+      toast({ title: status === "verified" ? "Account verified" : status === "rejected" ? "Account rejected" : "Account set back to pending" });
+      setRejectReason("");
+      await loadAll();
     } catch (e: any) {
       toast({ title: "Failed", description: e.message, variant: "destructive" });
     } finally {
@@ -269,6 +295,98 @@ export default function AdminVetDetailPage() {
               <span className="text-sm">Approved</span>
               <Switch checked={vet.is_approved} onCheckedChange={toggleApproval} disabled={busy === "approval"} />
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BadgeCheck className="h-4 w-4" /> Account verification
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge
+              variant={
+                vet.account_status === "verified"
+                  ? "default"
+                  : vet.account_status === "rejected"
+                  ? "destructive"
+                  : "secondary"
+              }
+            >
+              {vet.account_status === "verified"
+                ? "Verified"
+                : vet.account_status === "rejected"
+                ? "Rejected"
+                : "Pending verification"}
+            </Badge>
+            {vet.identity_reviewed_at && (
+              <span className="text-xs text-muted-foreground">
+                reviewed {new Date(vet.identity_reviewed_at).toLocaleString()}
+              </span>
+            )}
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1 text-sm">
+              <p><span className="text-muted-foreground">Name on file: </span>
+                {[vet.first_name, vet.last_name].filter(Boolean).join(" ") || "—"}</p>
+              <p><span className="text-muted-foreground">License: </span>
+                {vet.license_number ? `${vet.license_number}${vet.license_state ? ` · ${vet.license_state}` : ""}` : "—"}</p>
+              <p><span className="text-muted-foreground">Merchant ID: </span>{vet.merchant_id || "—"}</p>
+              <p><span className="text-muted-foreground">Photo taken: </span>
+                {vet.identity_photo_captured_at ? new Date(vet.identity_photo_captured_at).toLocaleString() : "Not submitted"}</p>
+            </div>
+            <div className="rounded-lg border overflow-hidden bg-muted aspect-[4/3] flex items-center justify-center">
+              {identityUrl ? (
+                <img src={identityUrl} alt="Veterinarian identity photo" className="h-full w-full object-cover" />
+              ) : (
+                <span className="text-xs text-muted-foreground p-4 text-center">No identity photo submitted yet</span>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <input
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              placeholder="Reason (required when rejecting)"
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+            />
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                disabled={busy === "account" || vet.account_status === "verified" || !vet.identity_photo_path}
+                onClick={() => changeAccountStatus("verified")}
+              >
+                <Check className="h-3 w-3 mr-1" /> Approve account
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                disabled={busy === "account" || vet.account_status === "rejected"}
+                onClick={() => changeAccountStatus("rejected")}
+              >
+                Reject
+              </Button>
+              {vet.account_status !== "pending_verification" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={busy === "account"}
+                  onClick={() => changeAccountStatus("pending_verification")}
+                >
+                  Back to pending
+                </Button>
+              )}
+            </div>
+            {!vet.identity_photo_path && (
+              <p className="text-xs text-muted-foreground">
+                Approval is blocked until the vet submits a live identity photo.
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>

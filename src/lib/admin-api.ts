@@ -325,6 +325,15 @@ export interface AdminVetRow {
   fear_free_checked_at: string | null;
   fear_free_source: string | null;
   fear_free_reason: string | null;
+  // Account verification (manual review of the live identity photo)
+  account_status: "pending_verification" | "verified" | "rejected";
+  first_name: string | null;
+  last_name: string | null;
+  merchant_id: string | null;
+  identity_photo_path: string | null;
+  identity_photo_captured_at: string | null;
+  identity_reviewed_at: string | null;
+  account_rejection_reason: string | null;
 }
 
 export interface AdminVetService {
@@ -418,6 +427,14 @@ export async function fetchAdminVets(filter: VetApprovalFilter = "all", search?:
     fear_free_checked_at: v.fear_free_checked_at ?? null,
     fear_free_source: v.fear_free_source ?? null,
     fear_free_reason: v.fear_free_reason ?? null,
+    account_status: v.account_status ?? "pending_verification",
+    first_name: v.first_name ?? null,
+    last_name: v.last_name ?? null,
+    merchant_id: v.merchant_id ?? null,
+    identity_photo_path: v.identity_photo_path ?? null,
+    identity_photo_captured_at: v.identity_photo_captured_at ?? null,
+    identity_reviewed_at: v.identity_reviewed_at ?? null,
+    account_rejection_reason: v.account_rejection_reason ?? null,
   })) as AdminVetRow[];
 
   if (search?.trim()) {
@@ -454,6 +471,14 @@ export async function fetchAdminVetDetail(vetProfileId: string): Promise<AdminVe
   }
 
   return {
+    account_status: v.account_status ?? "pending_verification",
+    first_name: v.first_name ?? null,
+    last_name: v.last_name ?? null,
+    merchant_id: v.merchant_id ?? null,
+    identity_photo_path: v.identity_photo_path ?? null,
+    identity_photo_captured_at: v.identity_photo_captured_at ?? null,
+    identity_reviewed_at: v.identity_reviewed_at ?? null,
+    account_rejection_reason: v.account_rejection_reason ?? null,
     id: v.id,
     user_id: v.user_id,
     clinic_name: v.clinic_name,
@@ -494,6 +519,27 @@ export async function setVetApproval(vetProfileId: string, approved: boolean) {
     .update({ is_approved: approved })
     .eq("id", vetProfileId);
   if (error) throw error;
+}
+
+/** Approve or reject a vet account after reviewing the live identity photo. */
+export async function setVetAccountStatus(
+  vetProfileId: string,
+  status: "pending_verification" | "verified" | "rejected",
+  reason?: string | null,
+) {
+  const { error } = await supabase
+    .from("vet_profiles")
+    .update({ account_status: status, account_rejection_reason: reason ?? null } as never)
+    .eq("id", vetProfileId);
+  if (error) throw error;
+}
+
+export async function getVetIdentitySignedUrl(path: string): Promise<string | null> {
+  const { data, error } = await supabase.storage
+    .from("vet-identity")
+    .createSignedUrl(path, 60 * 10);
+  if (error) return null;
+  return data.signedUrl;
 }
 
 export async function setVetLicenseVerified(vetProfileId: string, verified: boolean) {
