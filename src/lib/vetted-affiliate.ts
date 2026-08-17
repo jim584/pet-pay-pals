@@ -3,6 +3,19 @@
 // This file documents the intended future attribution model. It is NOT
 // implemented yet and contains no active runtime logic.
 //
+// Separation from the existing Help a Pet Membership Referral/Bounty Program:
+//   The membership referral/bounty program (tables: referrers, referrals,
+//   referral_bounties, referrer_payouts, referral_program_settings,
+//   shelter_referral_milestones, shelter_milestone_contributions) rewards
+//   veterinarians, influencers, shelters, and partners for referring people to
+//   sign up for Help a Pet memberships.
+//
+//   The future Vetted affiliate program is a SEPARATE concept. It will attribute
+//   purchases of Vetted-approved products to a member's veterinarian of record.
+//   It MUST NOT reuse, merge with, or depend on the membership referral/bounty
+//   tables, links, codes, bounty logic, or payout flows. The two programs may
+//   coexist, but they remain independent systems with independent data models.
+//
 // Intended future flow:
 //   1. A member has one or more Pets.
 //   2. A Pet has a direct veterinarian-of-record link via `pets.vet_profile_id`
