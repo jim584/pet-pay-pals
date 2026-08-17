@@ -358,6 +358,40 @@ export default function AdminCampaignInvoicesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Proof of payment: reject or flag */}
+      <Dialog open={!!proofDecision} onOpenChange={(o) => !o && setProofDecision(null)}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {proofDecision?.decision === "flag" ? "Flag this submission" : "Reject this proof of payment"}
+            </DialogTitle>
+            <DialogDescription>
+              {proofDecision?.decision === "flag"
+                ? "Use this when the invoice and receipt don't appear to cover the same veterinary expense. The campaign stays ineligible until it's resolved."
+                : "The member will see your reason and can upload a corrected receipt. No funds are released."}
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            rows={4}
+            value={proofReason}
+            onChange={(e) => setProofReason(e.target.value)}
+            placeholder="Explain what doesn't line up."
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setProofDecision(null)}>Cancel</Button>
+            <Button
+              variant={proofDecision?.decision === "flag" ? "default" : "destructive"}
+              disabled={!proofReason.trim() || busy}
+              onClick={submitProofDecision}
+            >
+              {busy && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+              {proofDecision?.decision === "flag" ? "Flag for review" : "Reject proof"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }
