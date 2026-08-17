@@ -22,6 +22,8 @@ export type CoverageBreakdown = {
   reserve_opted_in?: boolean;
   reserve_blocked_reason?: string | null;
   member_remainder: number;
+  reserve_enabled?: boolean;
+  help_now_needed?: number;
   computed_at?: string;
 };
 
