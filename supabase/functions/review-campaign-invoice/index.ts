@@ -1,4 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { recomputeDisbursementEligibility } from "../_shared/disbursement.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -114,7 +116,26 @@ Deno.serve(async (req) => {
       .update(patch).eq("id", campaignId).select().single();
     if (error) throw error;
 
-    return json({ ok: true, campaign: updated });
+    if (decision === "accept") {
+      // Record the accepted invoice as its own verification document, and note
+      // that acceptance alone does not authorise disbursement (Requirement 12).
+      await admin.from("campaign_disbursement_documents").insert({
+        campaign_id: campaign.id,
+        ticket_id: campaign.ticket_id,
+        uploaded_by: campaign.owner_id,
+        doc_type: "invoice",
+        storage_path: campaign.invoice_url,
+        review_status: "verified",
+        reviewed_by: userId,
+        reviewed_at: now.toISOString(),
+      });
+    }
+    await recomputeDisbursementEligibility(admin, campaignId);
+    const { data: fresh } = await admin
+      .from("help_now_campaigns").select("*").eq("id", campaignId).maybeSingle();
+
+    return json({ ok: true, campaign: fresh ?? updated });
+
   } catch (e) {
     console.error("review-campaign-invoice error:", e);
     return json({ error: (e as Error).message }, 500);

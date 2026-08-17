@@ -1,5 +1,22 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import Stripe from "https://esm.sh/stripe@18.5.0?target=denonext";
+import { recomputeDisbursementEligibility } from "../_shared/disbursement.ts";
+
+/**
+ * Requirement 12: a settled (or reversed) direct payment to the veterinarian
+ * changes whether the ticket's campaign may be disbursed, so recompute it.
+ */
+// deno-lint-ignore no-explicit-any
+async function syncTicketDisbursement(admin: any, ticketId: string) {
+  try {
+    const { data: campaign } = await admin
+      .from("help_now_campaigns").select("id").eq("ticket_id", ticketId).maybeSingle();
+    if (campaign?.id) await recomputeDisbursementEligibility(admin, campaign.id);
+  } catch (e) {
+    console.error("syncTicketDisbursement failed:", e);
+  }
+}
+
 
 // Public webhook endpoint — no JWT verification.
 Deno.serve(async (req) => {
@@ -733,6 +750,7 @@ Deno.serve(async (req) => {
             await admin.from("vet_payouts")
               .update({ status: "reversed", notes: `Refunded ${amountUsd} (${tx.id})` })
               .eq("ticket_id", ticketId).eq("status", "settled");
+            await syncTicketDisbursement(admin, ticketId);
             break;
           }
 
@@ -742,6 +760,8 @@ Deno.serve(async (req) => {
             _settled_amount: amountUsd,
             _authorization_id: (tx.authorization as string) || tx.id,
           });
+          await syncTicketDisbursement(admin, ticketId);
+
           // Freeze card so no further auths succeed on this ticket
           if (tx.card) {
             const cardId = typeof tx.card === "string" ? tx.card : tx.card.id;
@@ -798,6 +818,8 @@ Deno.serve(async (req) => {
             _authorization_id: d.id,
           });
         }
+        await syncTicketDisbursement(admin, ticketId);
+
         break;
       }
 

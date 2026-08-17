@@ -11,12 +11,15 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { AlertTriangle, FileText, Loader2 } from "lucide-react";
+import { AlertTriangle, FileText, Loader2, Receipt } from "lucide-react";
 import {
   listCampaignsAwaitingInvoiceReview, listOverRaisedCampaigns, reviewCampaignInvoice,
   getCampaignInvoiceSignedUrl, coverageOffsetTotal,
+  listCampaignsAwaitingProofReview, reviewCampaignProof,
   type PublicCampaign, type ReviewCampaign,
 } from "@/lib/help-now-campaigns-api";
+import { DisbursementReadinessBadge } from "@/components/help-now/DisbursementReadinessBadge";
+
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(Number(n ?? 0));
@@ -31,17 +34,27 @@ export default function AdminCampaignInvoicesPage() {
     queryKey: ["adminCampaignsOverRaised"],
     queryFn: listOverRaisedCampaigns,
   });
+  const { data: proofQueue } = useQuery({
+    queryKey: ["adminCampaignProofs"],
+    queryFn: listCampaignsAwaitingProofReview,
+  });
 
   const [accepting, setAccepting] = useState<ReviewCampaign | null>(null);
   const [verifiedAmount, setVerifiedAmount] = useState("");
   const [rejecting, setRejecting] = useState<PublicCampaign | null>(null);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
+  // Proof-of-payment review: reject and flag both require a reason.
+  const [proofDecision, setProofDecision] =
+    useState<{ campaign: ReviewCampaign; decision: "reject" | "flag" } | null>(null);
+  const [proofReason, setProofReason] = useState("");
 
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ["adminCampaignInvoices"] });
     qc.invalidateQueries({ queryKey: ["adminCampaignsOverRaised"] });
+    qc.invalidateQueries({ queryKey: ["adminCampaignProofs"] });
   };
+
 
   const openInvoice = async (path: string) => {
     try {
@@ -94,6 +107,42 @@ export default function AdminCampaignInvoicesPage() {
       setBusy(false);
     }
   };
+
+  const verifyProof = async (c: ReviewCampaign) => {
+    setBusy(true);
+    try {
+      await reviewCampaignProof(c.id, "verify");
+      toast({
+        title: "Proof of payment verified",
+        description: "This campaign is now eligible to proceed through the reimbursement process.",
+      });
+      refresh();
+    } catch (e: any) {
+      toast({ title: "Couldn't verify", description: e.message, variant: "destructive" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const submitProofDecision = async () => {
+    if (!proofDecision) return;
+    setBusy(true);
+    try {
+      await reviewCampaignProof(proofDecision.campaign.id, proofDecision.decision, proofReason.trim());
+      toast({
+        title: proofDecision.decision === "flag" ? "Flagged for review" : "Proof rejected",
+        description: "The campaign stays ineligible for disbursement.",
+      });
+      setProofDecision(null);
+      setProofReason("");
+      refresh();
+    } catch (e: any) {
+      toast({ title: "Couldn't save", description: e.message, variant: "destructive" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
 
   return (
     <div className="space-y-4">
@@ -149,6 +198,62 @@ export default function AdminCampaignInvoicesPage() {
           </Card>
         ))
       )}
+
+      {/* Requirement 12 — proof of payment review */}
+      <div>
+        <h2 className="text-lg font-semibold">Proof of payment awaiting review</h2>
+        <p className="text-sm text-muted-foreground">
+          An accepted invoice alone never authorises a member payout. Verify that the receipt covers
+          the same veterinary expense as the invoice; if it doesn't line up, flag it instead of approving.
+        </p>
+      </div>
+      {!proofQueue?.length ? (
+        <Card><CardContent className="p-6 text-sm text-muted-foreground">No proof of payment waiting.</CardContent></Card>
+      ) : (
+        proofQueue.map((c) => (
+          <Card key={c.id}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center justify-between gap-2">
+                <span>{c.title ?? `Help ${c.pet?.name ?? "this pet"}`}</span>
+                <DisbursementReadinessBadge campaign={c} />
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <p className="text-muted-foreground">
+                Verified invoice total {fmt(Number(c.verified_amount ?? 0))} · Raised {fmt(c.raised_amount)}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {c.invoice_url && (
+                  <Button size="sm" variant="outline" onClick={() => openInvoice(c.invoice_url!)}>
+                    <FileText className="h-4 w-4 mr-1" /> View invoice
+                  </Button>
+                )}
+                {c.proof_of_payment_url && (
+                  <Button size="sm" variant="outline" onClick={() => openInvoice(c.proof_of_payment_url!)}>
+                    <Receipt className="h-4 w-4 mr-1" /> View proof of payment
+                  </Button>
+                )}
+                <Button size="sm" disabled={busy} onClick={() => verifyProof(c)}>Verify</Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => { setProofDecision({ campaign: c, decision: "flag" }); setProofReason(""); }}
+                >
+                  Flag mismatch
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => { setProofDecision({ campaign: c, decision: "reject" }); setProofReason(""); }}
+                >
+                  Reject
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))
+      )}
+
 
       {!!overRaised?.length && (
         <Card className="border-destructive/40">
@@ -253,6 +358,40 @@ export default function AdminCampaignInvoicesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Proof of payment: reject or flag */}
+      <Dialog open={!!proofDecision} onOpenChange={(o) => !o && setProofDecision(null)}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {proofDecision?.decision === "flag" ? "Flag this submission" : "Reject this proof of payment"}
+            </DialogTitle>
+            <DialogDescription>
+              {proofDecision?.decision === "flag"
+                ? "Use this when the invoice and receipt don't appear to cover the same veterinary expense. The campaign stays ineligible until it's resolved."
+                : "The member will see your reason and can upload a corrected receipt. No funds are released."}
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            rows={4}
+            value={proofReason}
+            onChange={(e) => setProofReason(e.target.value)}
+            placeholder="Explain what doesn't line up."
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setProofDecision(null)}>Cancel</Button>
+            <Button
+              variant={proofDecision?.decision === "flag" ? "default" : "destructive"}
+              disabled={!proofReason.trim() || busy}
+              onClick={submitProofDecision}
+            >
+              {busy && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+              {proofDecision?.decision === "flag" ? "Flag for review" : "Reject proof"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }

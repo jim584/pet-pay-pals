@@ -543,6 +543,69 @@ export type Database = {
         }
         Relationships: []
       }
+      campaign_disbursement_documents: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          doc_type: string
+          id: string
+          notes: string | null
+          reason: string | null
+          review_status: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          storage_path: string
+          ticket_id: string
+          updated_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          doc_type: string
+          id?: string
+          notes?: string | null
+          reason?: string | null
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          storage_path: string
+          ticket_id: string
+          updated_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          doc_type?: string
+          id?: string
+          notes?: string | null
+          reason?: string | null
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          storage_path?: string
+          ticket_id?: string
+          updated_at?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_disbursement_documents_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "help_now_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_disbursement_documents_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "vet_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comment_likes: {
         Row: {
           comment_id: string
@@ -803,6 +866,9 @@ export type Database = {
         Row: {
           clock_paused_at: string | null
           created_at: string
+          disbursement_block_reason: string | null
+          disbursement_eligible_at: string | null
+          disbursement_path: string
           document_basis: string
           expires_at: string | null
           funding_offsets: Json
@@ -818,6 +884,12 @@ export type Database = {
           owner_id: string
           pet_id: string
           photo_urls: string[]
+          proof_of_payment_status: string
+          proof_of_payment_url: string | null
+          proof_rejection_reason: string | null
+          proof_reviewed_at: string | null
+          proof_reviewed_by: string | null
+          proof_submitted_at: string | null
           published_at: string | null
           raised_amount: number
           status: Database["public"]["Enums"]["help_now_campaign_status"]
@@ -832,6 +904,9 @@ export type Database = {
         Insert: {
           clock_paused_at?: string | null
           created_at?: string
+          disbursement_block_reason?: string | null
+          disbursement_eligible_at?: string | null
+          disbursement_path?: string
           document_basis?: string
           expires_at?: string | null
           funding_offsets?: Json
@@ -847,6 +922,12 @@ export type Database = {
           owner_id: string
           pet_id: string
           photo_urls?: string[]
+          proof_of_payment_status?: string
+          proof_of_payment_url?: string | null
+          proof_rejection_reason?: string | null
+          proof_reviewed_at?: string | null
+          proof_reviewed_by?: string | null
+          proof_submitted_at?: string | null
           published_at?: string | null
           raised_amount?: number
           status?: Database["public"]["Enums"]["help_now_campaign_status"]
@@ -861,6 +942,9 @@ export type Database = {
         Update: {
           clock_paused_at?: string | null
           created_at?: string
+          disbursement_block_reason?: string | null
+          disbursement_eligible_at?: string | null
+          disbursement_path?: string
           document_basis?: string
           expires_at?: string | null
           funding_offsets?: Json
@@ -876,6 +960,12 @@ export type Database = {
           owner_id?: string
           pet_id?: string
           photo_urls?: string[]
+          proof_of_payment_status?: string
+          proof_of_payment_url?: string | null
+          proof_rejection_reason?: string | null
+          proof_reviewed_at?: string | null
+          proof_reviewed_by?: string | null
+          proof_submitted_at?: string | null
           published_at?: string | null
           raised_amount?: number
           status?: Database["public"]["Enums"]["help_now_campaign_status"]
