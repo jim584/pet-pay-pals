@@ -94,6 +94,88 @@ export function campaignIsOverRaised(c: HelpNowCampaign | null | undefined): boo
   return !!c?.over_raised_flagged_at;
 }
 
+/* ---------------------------------------------------------------------------
+ * Requirement 12 — invoice + proof of payment before disbursement.
+ * An accepted invoice alone never authorises releasing funds to the member.
+ * ------------------------------------------------------------------------- */
+
+export type DisbursementState =
+  | { eligible: true; path: "direct_vet" | "member_reimbursement"; label: string; detail: string }
+  | { eligible: false; path: "unset"; label: string; detail: string };
+
+export function campaignDisbursementState(c: HelpNowCampaign | null | undefined): DisbursementState {
+  if (c?.disbursement_eligible_at && c.disbursement_path === "direct_vet") {
+    return {
+      eligible: true, path: "direct_vet",
+      label: "Eligible via direct vet payment",
+      detail: "Help a Pet paid the veterinarian directly for this verified expense.",
+    };
+  }
+  if (c?.disbursement_eligible_at && c.disbursement_path === "member_reimbursement") {
+    return {
+      eligible: true, path: "member_reimbursement",
+      label: "Eligible via verified reimbursement",
+      detail: "The invoice and proof that it was paid have both been verified.",
+    };
+  }
+  return {
+    eligible: false, path: "unset",
+    label: "Not eligible for disbursement",
+    detail: c?.disbursement_block_reason
+      ?? "A verified veterinary invoice plus proof of payment (or a direct payment to the vet) is required.",
+  };
+}
+
+/** True when the member still needs to supply proof they paid the vet bill. */
+export function campaignProofRequired(c: HelpNowCampaign | null | undefined): boolean {
+  if (!c) return false;
+  if (c.disbursement_path === "direct_vet" && c.disbursement_eligible_at) return false;
+  return c.document_basis === "invoice"
+    && c.invoice_status === "accepted"
+    && c.proof_of_payment_status !== "verified";
+}
+
+export async function uploadCampaignProof(userId: string, file: File): Promise<string> {
+  const ext = file.name.split(".").pop() || "pdf";
+  const path = `${userId}/${Date.now()}-proof-of-payment.${ext}`;
+  const { error } = await supabase.storage.from("vet-tickets").upload(path, file, { upsert: false });
+  if (error) throw error;
+  return path;
+}
+
+export async function submitCampaignProof(
+  campaignId: string, proofUrl: string, notes?: string,
+): Promise<HelpNowCampaign> {
+  const { data, error } = await supabase.functions.invoke("submit-campaign-proof", {
+    body: { campaign_id: campaignId, proof_url: proofUrl, notes },
+  });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return data.campaign as HelpNowCampaign;
+}
+
+export async function reviewCampaignProof(
+  campaignId: string, decision: "verify" | "reject" | "flag", reason?: string,
+): Promise<HelpNowCampaign> {
+  const { data, error } = await supabase.functions.invoke("review-campaign-proof", {
+    body: { campaign_id: campaignId, decision, reason },
+  });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return data.campaign as HelpNowCampaign;
+}
+
+export async function listCampaignsAwaitingProofReview(): Promise<ReviewCampaign[]> {
+  const { data, error } = await supabase
+    .from("help_now_campaigns")
+    .select("*, pet:pets(id, name, photo_url), ticket:vet_tickets(id, coverage_breakdown)")
+    .eq("proof_of_payment_status", "submitted")
+    .order("proof_submitted_at", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as unknown as ReviewCampaign[];
+}
+
+
 export function campaignReadyToPublish(c: HelpNowCampaign | null | undefined): boolean {
   if (!c) return false;
   return (c.story ?? "").trim().length >= MIN_STORY_LENGTH && (c.photo_urls ?? []).length > 0;
