@@ -101,11 +101,17 @@ export async function uploadCampaignPhoto(userId: string, file: File): Promise<s
 
 export async function uploadCampaignInvoice(userId: string, file: File): Promise<string> {
   const ext = file.name.split(".").pop() || "pdf";
-  const path = `help-now-invoices/${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-  const { error } = await supabase.storage.from("vet-tickets").upload(path, file);
+  // Private bucket; storage policies scope writes to a folder named after the user.
+  const path = `${userId}/${Date.now()}-campaign-invoice.${ext}`;
+  const { error } = await supabase.storage.from("vet-tickets").upload(path, file, { upsert: false });
   if (error) throw error;
-  const { data } = await supabase.storage.from("vet-tickets").createSignedUrl(path, 60 * 60 * 24 * 365);
-  return data?.signedUrl ?? path;
+  return path;
+}
+
+export async function getCampaignInvoiceSignedUrl(path: string): Promise<string> {
+  const { data, error } = await supabase.storage.from("vet-tickets").createSignedUrl(path, 60 * 30);
+  if (error) throw error;
+  return data.signedUrl;
 }
 
 export async function submitCampaignInvoice(campaignId: string, invoiceUrl: string): Promise<HelpNowCampaign> {
