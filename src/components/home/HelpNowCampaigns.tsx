@@ -3,8 +3,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { HeartHandshake, ShieldCheck, Clock } from "lucide-react";
-import { listPublishedCampaigns } from "@/lib/help-now-campaigns-api";
+import { Button } from "@/components/ui/button";
+import { HeartHandshake, ShieldCheck, Heart } from "lucide-react";
+import { listPublishedCampaigns, campaignEffectiveStatus, canDonateToCampaign } from "@/lib/help-now-campaigns-api";
+import { CampaignExpiryBadge } from "@/components/help-now/CampaignExpiryBadge";
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })
@@ -29,7 +31,8 @@ export function HelpNowCampaigns() {
         const remaining = Math.max(0, Number(c.goal_amount) - Number(c.raised_amount));
         const pct = Number(c.goal_amount) > 0
           ? Math.min(100, (Number(c.raised_amount) / Number(c.goal_amount)) * 100) : 0;
-        const expired = c.expires_at ? new Date(c.expires_at) < new Date() : false;
+        const status = campaignEffectiveStatus(c) ?? c.status;
+        const canDonate = canDonateToCampaign(c);
         return (
           <Card key={c.id} className="overflow-hidden">
             {c.photo_urls?.[0] && (
@@ -47,7 +50,9 @@ export function HelpNowCampaigns() {
                   <p className="text-xs text-muted-foreground line-clamp-2">{c.story}</p>
                 </div>
                 <div className="flex flex-col items-end gap-1">
-                  <Badge variant={c.status === "funded" ? "default" : "secondary"}>{c.status}</Badge>
+                  <Badge variant={status === "expired" ? "destructive" : status === "funded" ? "default" : "secondary"}>
+                    {status}
+                  </Badge>
                   <Badge variant="outline" className="text-xs flex items-center gap-1">
                     <ShieldCheck className="h-3 w-3" /> {c.verification_status}
                   </Badge>
@@ -58,12 +63,13 @@ export function HelpNowCampaigns() {
                 <span>{fmt(c.raised_amount)} raised of {fmt(c.goal_amount)}</span>
                 <span>{fmt(remaining)} still needed</span>
               </div>
-              {c.expires_at && (
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  {expired ? "Expired" : `Ends ${new Date(c.expires_at).toLocaleDateString()}`}
-                </p>
-              )}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <CampaignExpiryBadge campaign={c} />
+                <Button size="sm" disabled={!canDonate}>
+                  <Heart className="h-4 w-4 mr-1" />
+                  {canDonate ? "Donate" : "Donations closed"}
+                </Button>
+              </div>
             </CardContent>
           </Card>
         );
