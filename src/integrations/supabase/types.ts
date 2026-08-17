@@ -2990,40 +2990,178 @@ export type Database = {
       }
       vetted_products: {
         Row: {
+          admin_hidden: boolean
+          approval_status: string
+          approved: boolean
+          approved_at: string | null
+          brand: string | null
           category: string
           created_at: string
+          currency: string | null
+          delisted_at: string | null
           description: string | null
           external_url: string
           id: string
           image_url: string | null
-          listed_by: string
+          listed_by: string | null
           name: string
+          price_amount: number | null
           price_text: string | null
+          raw_payload: Json
+          sku: string | null
+          source: string
+          source_product_id: string | null
           store_name: string | null
+          synced_at: string | null
+          tags: string[]
+          updated_at: string
         }
         Insert: {
+          admin_hidden?: boolean
+          approval_status?: string
+          approved?: boolean
+          approved_at?: string | null
+          brand?: string | null
           category?: string
           created_at?: string
+          currency?: string | null
+          delisted_at?: string | null
           description?: string | null
           external_url: string
           id?: string
           image_url?: string | null
-          listed_by: string
+          listed_by?: string | null
           name: string
+          price_amount?: number | null
           price_text?: string | null
+          raw_payload?: Json
+          sku?: string | null
+          source?: string
+          source_product_id?: string | null
           store_name?: string | null
+          synced_at?: string | null
+          tags?: string[]
+          updated_at?: string
         }
         Update: {
+          admin_hidden?: boolean
+          approval_status?: string
+          approved?: boolean
+          approved_at?: string | null
+          brand?: string | null
           category?: string
           created_at?: string
+          currency?: string | null
+          delisted_at?: string | null
           description?: string | null
           external_url?: string
           id?: string
           image_url?: string | null
-          listed_by?: string
+          listed_by?: string | null
           name?: string
+          price_amount?: number | null
           price_text?: string | null
+          raw_payload?: Json
+          sku?: string | null
+          source?: string
+          source_product_id?: string | null
           store_name?: string | null
+          synced_at?: string | null
+          tags?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      vetted_sync_config: {
+        Row: {
+          adapter: string
+          auth_header_name: string | null
+          created_at: string
+          enabled: boolean
+          feed_url: string | null
+          id: string
+          last_success_at: string | null
+          notes: string | null
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          adapter?: string
+          auth_header_name?: string | null
+          created_at?: string
+          enabled?: boolean
+          feed_url?: string | null
+          id?: string
+          last_success_at?: string | null
+          notes?: string | null
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          adapter?: string
+          auth_header_name?: string | null
+          created_at?: string
+          enabled?: boolean
+          feed_url?: string | null
+          id?: string
+          last_success_at?: string | null
+          notes?: string | null
+          source?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      vetted_sync_runs: {
+        Row: {
+          created_at: string
+          created_count: number
+          delisted_count: number
+          errors: Json
+          filename: string | null
+          finished_at: string | null
+          id: string
+          mode: string
+          run_by: string | null
+          skipped_count: number
+          source: string
+          started_at: string
+          status: string
+          total_count: number
+          updated_count: number
+        }
+        Insert: {
+          created_at?: string
+          created_count?: number
+          delisted_count?: number
+          errors?: Json
+          filename?: string | null
+          finished_at?: string | null
+          id?: string
+          mode?: string
+          run_by?: string | null
+          skipped_count?: number
+          source: string
+          started_at?: string
+          status?: string
+          total_count?: number
+          updated_count?: number
+        }
+        Update: {
+          created_at?: string
+          created_count?: number
+          delisted_count?: number
+          errors?: Json
+          filename?: string | null
+          finished_at?: string | null
+          id?: string
+          mode?: string
+          run_by?: string | null
+          skipped_count?: number
+          source?: string
+          started_at?: string
+          status?: string
+          total_count?: number
+          updated_count?: number
         }
         Relationships: []
       }

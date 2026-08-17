@@ -2,7 +2,7 @@ import type { VettedProduct } from "@/lib/vetted-api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Store } from "lucide-react";
+import { BadgeCheck, ExternalLink, Store } from "lucide-react";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 
 interface ProductCardProps {
@@ -26,6 +26,9 @@ export function ProductCard({ product }: ProductCardProps) {
         )}
       </AspectRatio>
       <CardContent className="p-3 space-y-2">
+        <Badge variant="outline" className="gap-1 text-[10px] px-1.5 py-0 border-primary/40 text-primary">
+          <BadgeCheck className="h-3 w-3" /> Vetted-approved
+        </Badge>
         <div className="flex items-start justify-between gap-2">
           <h3 className="font-semibold text-sm text-foreground line-clamp-2 leading-tight">
             {product.name}
@@ -36,6 +39,10 @@ export function ProductCard({ product }: ProductCardProps) {
             </span>
           )}
         </div>
+
+        {product.brand && (
+          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{product.brand}</p>
+        )}
 
         {product.description && (
           <p className="text-xs text-muted-foreground line-clamp-2">
