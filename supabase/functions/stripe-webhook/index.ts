@@ -750,6 +750,7 @@ Deno.serve(async (req) => {
             await admin.from("vet_payouts")
               .update({ status: "reversed", notes: `Refunded ${amountUsd} (${tx.id})` })
               .eq("ticket_id", ticketId).eq("status", "settled");
+            await syncTicketDisbursement(admin, ticketId);
             break;
           }
 
@@ -759,6 +760,8 @@ Deno.serve(async (req) => {
             _settled_amount: amountUsd,
             _authorization_id: (tx.authorization as string) || tx.id,
           });
+          await syncTicketDisbursement(admin, ticketId);
+
           // Freeze card so no further auths succeed on this ticket
           if (tx.card) {
             const cardId = typeof tx.card === "string" ? tx.card : tx.card.id;
