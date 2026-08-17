@@ -23,6 +23,7 @@ import { Loader2, Plus, FileText, ExternalLink, ShieldCheck, Info, AlertCircle }
 import { Switch } from "@/components/ui/switch";
 import { TicketMessagesDialog } from "@/components/vet-tickets/TicketMessagesDialog";
 import { openCheckoutUrl } from "@/lib/open-checkout";
+import { CampaignComposer } from "@/components/help-now/CampaignComposer";
 import { ReconsiderationButton } from "@/components/vet/ReconsiderationButton";
 import { AttestationForm } from "@/components/vet-tickets/AttestationForm";
 import { emptyAttestation, type AttestationValues } from "@/lib/attestation-schema";
@@ -621,13 +622,23 @@ function TicketCard({ ticket, onChanged }: { ticket: VetTicket; onChanged: () =>
           <div className="rounded-md border p-3 bg-muted/30 grid grid-cols-2 gap-x-4 gap-y-1">
             <span className="text-muted-foreground">Direct Pay</span><span>{fmt(b.dp_use)}</span>
             <span className="text-muted-foreground">BNPL</span><span>{fmt(b.bnpl_use)}</span>
-            <span className="text-muted-foreground">Reserve pool</span><span>{fmt(b.reserve_use)}</span>
+            {b.reserve_enabled !== false && (
+              <>
+                <span className="text-muted-foreground">Reserve pool</span><span>{fmt(b.reserve_use)}</span>
+              </>
+            )}
+            {Number(b.help_now_needed ?? 0) > 0 && (
+              <>
+                <span className="text-muted-foreground">Help A Pet Now campaign</span>
+                <span>{fmt(Number(b.help_now_needed))}</span>
+              </>
+            )}
             <span className="text-muted-foreground">Your portion (paid to Help A Pet)</span><span className="font-medium">{fmt(b.member_remainder)}</span>
           </div>
         )}
 
         {/* Reserve pool opt-in toggle (pending/under-review only) */}
-        {["submitted", "under_review"].includes(ticket.status) && b && (
+        {["submitted", "under_review"].includes(ticket.status) && b && b.reserve_enabled !== false && (
           <div className="rounded-md border p-3 space-y-2">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-start gap-2">
@@ -670,6 +681,10 @@ function TicketCard({ ticket, onChanged }: { ticket: VetTicket; onChanged: () =>
               </p>
             )}
           </div>
+        )}
+
+        {Number(b?.help_now_needed ?? 0) > 0 && !["cancelled", "rejected", "expired"].includes(ticket.status) && (
+          <CampaignComposer ticketId={ticket.id} />
         )}
 
         {ticket.status === "needs_info" && (

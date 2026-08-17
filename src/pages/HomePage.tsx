@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CompassMenu } from "@/components/home/CompassMenu";
 import { PublicFeed } from "@/components/home/PublicFeed";
+import { HelpNowCampaigns } from "@/components/home/HelpNowCampaigns";
 import { SuggestedPets } from "@/components/home/SuggestedPets";
 import { MobileSuggestedPets } from "@/components/home/MobileSuggestedPets";
 import { User, Search } from "lucide-react";
@@ -160,6 +161,10 @@ export default function HomePage() {
                 </Button>
               ))}
             </div>
+          </div>
+
+          <div className="mb-4">
+            <HelpNowCampaigns />
           </div>
 
           <PublicFeed search={search} category={category} />

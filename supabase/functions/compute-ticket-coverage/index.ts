@@ -170,12 +170,17 @@ Deno.serve(async (req) => {
     const bnplUse = Math.min(remainingAfterDp, bnplCapacity);
     remainingAfterDp -= bnplUse;
 
+    // Platform flag: Reserve Pool is completely skipped while disabled.
+    const { data: flagRow } = await admin.from("platform_settings")
+      .select("value").eq("key", "reserve_pool_enabled").maybeSingle();
+    const reserveEnabled = flagRow?.value === true || flagRow?.value === "true";
+
     // Member Reserve: optional, opt-in only, used as fallback after DP+BNPL.
     let reserveAvailable = 0;
     let reserveEligible = false;
     let reserveUse = 0;
-    let reserveBlockedReason: string | null = null;
-    if (membership) {
+    let reserveBlockedReason: string | null = reserveEnabled ? null : "reserve_disabled";
+    if (reserveEnabled && membership) {
       reserveEligible = !!membership.reserve_eligible_since;
       const { data: rAccruals } = await admin
         .from("member_reserve_accruals")
@@ -190,6 +195,9 @@ Deno.serve(async (req) => {
     }
 
     const memberRemainder = Math.max(0, estimate - dpUse - bnplUse - reserveUse);
+
+    // Help a Pet Now: any eligible amount still uncovered after the hierarchy above.
+    const helpNowNeeded = round2(Math.max(0, estimate - dpUse - bnplUse - reserveUse));
 
     const breakdown = {
       estimate, plan_tier: tier, plan_year_cap: planCap, plan_year_cap_remaining: yearCapRemaining,
@@ -206,10 +214,41 @@ Deno.serve(async (req) => {
       reserve_opted_in: !!use_reserve,
       reserve_blocked_reason: reserveBlockedReason,
       member_remainder: round2(memberRemainder),
+      reserve_enabled: reserveEnabled,
+      help_now_needed: helpNowNeeded,
       computed_at: new Date().toISOString(),
     };
 
-    return new Response(JSON.stringify({ breakdown }), {
+    // Keep a draft Help a Pet Now campaign in sync with the uncovered amount.
+    let campaign: any = null;
+    {
+      const { data: existing } = await admin
+        .from("help_now_campaigns").select("*").eq("ticket_id", ticket_id).maybeSingle();
+
+      if (helpNowNeeded > 0) {
+        if (!existing) {
+          const { data: created } = await admin.from("help_now_campaigns").insert({
+            ticket_id, pet_id: ticket.pet_id, owner_id: ticket.owner_id,
+            goal_amount: helpNowNeeded, status: "draft",
+          }).select().maybeSingle();
+          campaign = created;
+        } else {
+          if (existing.status === "draft" && Number(existing.goal_amount) !== helpNowNeeded) {
+            const { data: updated } = await admin.from("help_now_campaigns")
+              .update({ goal_amount: helpNowNeeded }).eq("id", existing.id).select().maybeSingle();
+            campaign = updated ?? existing;
+          } else {
+            campaign = existing;
+          }
+        }
+      } else if (existing && existing.status === "draft") {
+        await admin.from("help_now_campaigns").delete().eq("id", existing.id);
+      } else {
+        campaign = existing ?? null;
+      }
+    }
+
+    return new Response(JSON.stringify({ breakdown, campaign }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

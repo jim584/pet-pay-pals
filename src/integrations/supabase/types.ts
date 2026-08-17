@@ -799,6 +799,75 @@ export type Database = {
           },
         ]
       }
+      help_now_campaigns: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          goal_amount: number
+          id: string
+          owner_id: string
+          pet_id: string
+          photo_urls: string[]
+          published_at: string | null
+          raised_amount: number
+          status: Database["public"]["Enums"]["help_now_campaign_status"]
+          story: string | null
+          ticket_id: string
+          title: string | null
+          updated_at: string
+          verification_status: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          goal_amount?: number
+          id?: string
+          owner_id: string
+          pet_id: string
+          photo_urls?: string[]
+          published_at?: string | null
+          raised_amount?: number
+          status?: Database["public"]["Enums"]["help_now_campaign_status"]
+          story?: string | null
+          ticket_id: string
+          title?: string | null
+          updated_at?: string
+          verification_status?: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          goal_amount?: number
+          id?: string
+          owner_id?: string
+          pet_id?: string
+          photo_urls?: string[]
+          published_at?: string | null
+          raised_amount?: number
+          status?: Database["public"]["Enums"]["help_now_campaign_status"]
+          story?: string | null
+          ticket_id?: string
+          title?: string | null
+          updated_at?: string
+          verification_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "help_now_campaigns_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: false
+            referencedRelation: "pets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "help_now_campaigns_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: true
+            referencedRelation: "vet_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       issued_cards: {
         Row: {
           created_at: string
@@ -1486,6 +1555,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      platform_settings: {
+        Row: {
+          created_at: string
+          description: string | null
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          key: string
+          updated_at?: string
+          value?: Json
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -3533,6 +3626,12 @@ export type Database = {
         | "paid_off"
         | "defaulted"
         | "cancelled"
+      help_now_campaign_status:
+        | "draft"
+        | "published"
+        | "funded"
+        | "expired"
+        | "cancelled"
       referrer_type: "vet" | "shelter" | "influencer" | "partner"
       transaction_type:
         | "donation_received"
@@ -3702,6 +3801,13 @@ export const Constants = {
         "active",
         "paid_off",
         "defaulted",
+        "cancelled",
+      ],
+      help_now_campaign_status: [
+        "draft",
+        "published",
+        "funded",
+        "expired",
         "cancelled",
       ],
       referrer_type: ["vet", "shelter", "influencer", "partner"],

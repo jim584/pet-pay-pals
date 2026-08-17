@@ -164,8 +164,27 @@ Deno.serve(async (req) => {
       .gte("created_at", since30d);
     if ((dup ?? 0) > 0) blockers.push("possible_duplicate_claim");
 
+    // Coverage is computed for every ticket so the funding hierarchy (Direct Pay →
+    // BNPL → Reserve when enabled) and any Help a Pet Now campaign goal exist even
+    // when the ticket routes to human review.
+    const computeCoverage = async (): Promise<any> => {
+      try {
+        const res = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/compute-ticket-coverage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": authHeader },
+          body: JSON.stringify({ ticket_id: ticket.id, use_reserve: false }),
+        });
+        const j = await res.json().catch(() => ({}));
+        return j?.breakdown ?? null;
+      } catch (e) {
+        console.error("coverage compute failed:", e);
+        return null;
+      }
+    };
+
     // ---- Adjudicate ----
     if (blockers.length > 0) {
+      await computeCoverage();
       await admin.from("vet_tickets").update({
         status: "under_review",
         auto_approval_blockers: blockers,
@@ -181,18 +200,7 @@ Deno.serve(async (req) => {
 
     // All objective rules passed — compute coverage. A failure here is NOT
     // an approval; it routes to review.
-    let breakdown: any = null;
-    try {
-      const coverageRes = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/compute-ticket-coverage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": authHeader },
-        body: JSON.stringify({ ticket_id: ticket.id, use_reserve: false }),
-      });
-      const coverageJson = await coverageRes.json().catch(() => ({}));
-      breakdown = coverageJson?.breakdown ?? null;
-    } catch (e) {
-      console.error("coverage compute failed:", e);
-    }
+    const breakdown: any = await computeCoverage();
 
     if (!breakdown) {
       await admin.from("vet_tickets").update({

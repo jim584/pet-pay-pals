@@ -20,6 +20,8 @@ import {
   type AdminReserveAccrualRow, type AdminReserveConsumptionRow,
 } from "@/lib/admin-api";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { isReservePoolEnabled, setReservePoolEnabled } from "@/lib/help-now-campaigns-api";
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(Number(n ?? 0));
@@ -37,6 +39,8 @@ export default function AdminReservePage() {
   const [memberAccruals, setMemberAccruals] = useState<AdminReserveAccrualRow[]>([]);
   const [memberConsumptions, setMemberConsumptions] = useState<AdminReserveConsumptionRow[]>([]);
   const [memberSearch, setMemberSearch] = useState("");
+  const [reserveEnabled, setReserveEnabled] = useState(false);
+  const [togglingReserve, setTogglingReserve] = useState(false);
   const [filter, setFilter] = useState<"all" | "active" | "expired">("active");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -68,6 +72,10 @@ export default function AdminReservePage() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter, memberSearch]);
+
+  useEffect(() => {
+    isReservePoolEnabled().then(setReserveEnabled).catch(() => {});
+  }, []);
 
   const handleRefresh = () => { setRefreshing(true); load(); };
 
@@ -115,6 +123,41 @@ export default function AdminReservePage() {
           </Button>
         </div>
       </div>
+
+      {/* Reserve Pool availability */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Reserve Pool availability</CardTitle>
+        </CardHeader>
+        <CardContent className="flex items-start justify-between gap-4">
+          <p className="text-sm text-muted-foreground max-w-2xl">
+            While this is off, the Reserve Pool is completely skipped in the vet ticket funding
+            hierarchy (Direct Pay → payment plans → Help A Pet Now campaign) and hidden from
+            members. Turn it on when the initial suspension period ends.
+          </p>
+          <div className="flex items-center gap-2 shrink-0">
+            <Badge variant={reserveEnabled ? "default" : "outline"}>
+              {reserveEnabled ? "Enabled" : "Disabled"}
+            </Badge>
+            <Switch
+              checked={reserveEnabled}
+              disabled={togglingReserve}
+              onCheckedChange={async (next) => {
+                setTogglingReserve(true);
+                try {
+                  await setReservePoolEnabled(next);
+                  setReserveEnabled(next);
+                  toast({ title: next ? "Reserve Pool enabled" : "Reserve Pool disabled" });
+                } catch (e: any) {
+                  toast({ title: "Couldn't update setting", description: e.message, variant: "destructive" });
+                } finally {
+                  setTogglingReserve(false);
+                }
+              }}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       {/* KPIs */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
