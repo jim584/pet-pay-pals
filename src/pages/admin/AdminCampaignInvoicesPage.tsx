@@ -34,17 +34,27 @@ export default function AdminCampaignInvoicesPage() {
     queryKey: ["adminCampaignsOverRaised"],
     queryFn: listOverRaisedCampaigns,
   });
+  const { data: proofQueue } = useQuery({
+    queryKey: ["adminCampaignProofs"],
+    queryFn: listCampaignsAwaitingProofReview,
+  });
 
   const [accepting, setAccepting] = useState<ReviewCampaign | null>(null);
   const [verifiedAmount, setVerifiedAmount] = useState("");
   const [rejecting, setRejecting] = useState<PublicCampaign | null>(null);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
+  // Proof-of-payment review: reject and flag both require a reason.
+  const [proofDecision, setProofDecision] =
+    useState<{ campaign: ReviewCampaign; decision: "reject" | "flag" } | null>(null);
+  const [proofReason, setProofReason] = useState("");
 
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ["adminCampaignInvoices"] });
     qc.invalidateQueries({ queryKey: ["adminCampaignsOverRaised"] });
+    qc.invalidateQueries({ queryKey: ["adminCampaignProofs"] });
   };
+
 
   const openInvoice = async (path: string) => {
     try {
