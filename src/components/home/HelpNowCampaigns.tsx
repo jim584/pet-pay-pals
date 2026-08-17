@@ -4,12 +4,13 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { HeartHandshake, ShieldCheck, Heart } from "lucide-react";
+import { HeartHandshake, ShieldCheck } from "lucide-react";
 import {
   listPublishedCampaigns, campaignEffectiveStatus, canDonateToCampaign,
   campaignRemainingEligible, campaignIsInvoiceBased,
 } from "@/lib/help-now-campaigns-api";
 import { CampaignExpiryBadge } from "@/components/help-now/CampaignExpiryBadge";
+import { DonateDialog } from "@/components/help-now/DonateDialog";
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })
@@ -75,10 +76,7 @@ export function HelpNowCampaigns() {
               </div>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <CampaignExpiryBadge campaign={c} />
-                <Button size="sm" disabled={!canDonate}>
-                  <Heart className="h-4 w-4 mr-1" />
-                  {canDonate ? "Donate" : "Donations closed"}
-                </Button>
+                <DonateDialog campaign={c} disabled={!canDonate} />
               </div>
             </CardContent>
           </Card>

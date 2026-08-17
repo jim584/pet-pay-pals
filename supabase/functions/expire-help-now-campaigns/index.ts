@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { openPendingRedirection } from "../_shared/redirection.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -54,6 +55,17 @@ Deno.serve(async (req) => {
         .in("id", ids)
         .eq("status", "published");
       if (updErr) throw updErr;
+
+      // Requirement 13: donations held on an expired, unverified estimate
+      // campaign are never paid to that member. Open a pending redirection so
+      // an admin can move them to verified priority cases.
+      for (const id of ids) {
+        try {
+          await openPendingRedirection(admin, id);
+        } catch (e) {
+          console.error("failed to open redirection for campaign", id, e);
+        }
+      }
     }
 
     await admin.from("platform_settings")

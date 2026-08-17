@@ -321,3 +321,124 @@ export async function setReservePoolEnabled(enabled: boolean): Promise<void> {
     .eq("key", "reserve_pool_enabled");
   if (error) throw error;
 }
+
+/* ── Requirement 13: donations and redirection ─────────────────────────── */
+
+export type CampaignDonation = {
+  id: string;
+  campaign_id: string;
+  donor_user_id: string | null;
+  donor_name: string | null;
+  donor_email: string | null;
+  amount: number;
+  currency: string;
+  message: string | null;
+  status: string;
+  paid_at: string | null;
+  redirection_id: string | null;
+  redirected_amount: number;
+  redirected_at: string | null;
+  donor_notification_status: string;
+  donor_notified_at: string | null;
+  created_at: string;
+};
+
+export type CampaignRedirection = {
+  id: string;
+  source_campaign_id: string;
+  total_amount: number;
+  allocated_amount: number;
+  unallocated_amount: number;
+  status: "pending" | "released" | "cancelled";
+  reason: string;
+  released_at: string | null;
+  released_by: string | null;
+  created_at: string;
+  source?: { id: string; title: string | null; pet?: { name: string } | null } | null;
+};
+
+export type RedirectionAllocation = {
+  id: string;
+  redirection_id: string;
+  receiving_campaign_id: string;
+  amount: number;
+  applied_at: string | null;
+};
+
+/**
+ * Donor-facing disclosure shown before a donation is completed (Requirement 13).
+ * Keep the wording in one place so every donation surface says the same thing.
+ */
+export const REDIRECTION_DISCLOSURE =
+  "Your donation goes to this Help a Pet Now case first. If this case does not become a "
+  + "verified veterinary expense — an actual invoice plus proof of payment, or a payment made "
+  + "directly to the veterinarian — within the required timeframe, your donation will not be "
+  + "paid out as cash to the member. It will instead be redirected to another high-priority "
+  + "Help a Pet Now case that already has verified documentation, and we will tell you which "
+  + "case received it.";
+
+/** Starts a Stripe checkout for a campaign donation and returns the redirect URL. */
+export async function startCampaignDonation(input: {
+  campaign_id: string;
+  amount: number;
+  donor_name?: string;
+  donor_email?: string;
+  message?: string;
+}): Promise<string> {
+  const { data, error } = await supabase.functions.invoke("create-campaign-donation-checkout", {
+    body: input,
+  });
+  if (error) throw error;
+  if (!data?.url) throw new Error(data?.error ?? "Could not start the donation");
+  return data.url as string;
+}
+
+export async function listRedirections(status?: "pending" | "released" | "cancelled") {
+  let q = supabase
+    .from("campaign_redirections")
+    .select("*, source:help_now_campaigns!campaign_redirections_source_campaign_id_fkey(id, title, pet:pets(name))")
+    .order("created_at", { ascending: false });
+  if (status) q = q.eq("status", status);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data ?? []) as unknown as CampaignRedirection[];
+}
+
+export async function listRedirectionAllocations(redirectionId: string) {
+  const { data, error } = await supabase
+    .from("campaign_redirection_allocations")
+    .select("*")
+    .eq("redirection_id", redirectionId);
+  if (error) throw error;
+  return (data ?? []) as unknown as RedirectionAllocation[];
+}
+
+export async function listCampaignDonations(campaignId: string) {
+  const { data, error } = await supabase
+    .from("campaign_donations")
+    .select("*")
+    .eq("campaign_id", campaignId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as unknown as CampaignDonation[];
+}
+
+/** Admin: preview, release, or cancel a pending redirection. */
+export async function actOnRedirection(input: {
+  redirection_id: string;
+  action: "propose" | "release" | "cancel";
+  allocations?: { receiving_campaign_id: string; amount: number }[];
+}) {
+  const { data, error } = await supabase.functions.invoke("release-campaign-redirection", { body: input });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return data as {
+    ok: boolean;
+    total?: number;
+    allocated?: number;
+    unallocated?: number;
+    notified?: number;
+    cases?: { id: string; title: string | null; remaining: number }[];
+    allocations?: { receiving_campaign_id: string; amount: number }[];
+  };
+}
