@@ -227,9 +227,13 @@ Deno.serve(async (req) => {
 
       if (helpNowNeeded > 0) {
         if (!existing) {
+          // Estimate-backed campaigns run on a 60-day fundraising clock. The expiry
+          // is stamped once at creation and never recomputed by later coverage runs.
+          const expiresAt = new Date(Date.now() + 60 * 86400000).toISOString();
           const { data: created } = await admin.from("help_now_campaigns").insert({
             ticket_id, pet_id: ticket.pet_id, owner_id: ticket.owner_id,
             goal_amount: helpNowNeeded, status: "draft",
+            document_basis: "estimate", expires_at: expiresAt,
           }).select().maybeSingle();
           campaign = created;
         } else {
