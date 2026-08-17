@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
     .eq("state_code", state)
     .maybeSingle();
 
-  let dbResult: typeof result | null = null;
+  let dbResult: LookupResult | null = null;
   if (licSource && (licSource.record_count ?? 0) > 0) {
     const { data: rec } = await admin
       .from("vet_license_records")
