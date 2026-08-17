@@ -81,6 +81,20 @@ Deno.serve(async (req) => {
     }).select().single();
     if (error) throw error;
 
+    // Link an electronically completed attestation to this ticket, if one was signed.
+    if (attestation_id) {
+      const { data: att } = await admin.from("vet_attestations")
+        .select("id, owner_id, ticket_id, pdf_url").eq("id", attestation_id).maybeSingle();
+      if (att && att.owner_id === userId && !att.ticket_id) {
+        await admin.from("vet_attestations")
+          .update({ ticket_id: ticket.id, pet_id }).eq("id", att.id);
+        if (att.pdf_url && !attestation_url) {
+          await admin.from("vet_tickets").update({ attestation_url: att.pdf_url }).eq("id", ticket.id);
+        }
+      }
+    }
+
+
     // =====================================================================
     // Objective eligibility rules. Every failed rule is a blocker; any
     // blocker routes the ticket to human review. There is no path that
