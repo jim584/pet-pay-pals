@@ -1,70 +1,68 @@
-# Attestation, Invoice OCR and Ticket Cross-Verification
+# Vetted-Approved Products: Mirror, Not a Store
 
-## What already exists (verified in the codebase)
+## Current state (verified in the code)
 
-- Digital attestation form covering pet, clinic, veterinarian identity (legal name, license state/number, Merchant ID, processor, "No traditional MID"), records-attached checklist, service types and status, necropsy, diagnosis, prognosis, latest start time, likely result, both eligibility questions, certification text and typed signature + date. Three paths: in-clinic, emailed one-time link, upload of a signed copy. Technician-prepared / vet-signed is already the model.
-- `vet_attestations` table with all of those columns, a flattened PDF generator, and the public token page.
-- Veterinarian license database (`vet_license_records`) plus verified vet accounts (`vet_profiles`).
-- Ticket submission currently accepts exactly two files: one estimate/invoice and one attestation.
+The Vetted section today is effectively a self-maintained Help a Pet catalog: `vetted_products` rows are inserted by any signed-in user through "List a product", and each user can edit or delete their own rows. There is no link back to a Vetted source record and no approval concept. That is exactly the duplication problem to remove.
 
-## What this adds
+## What this changes
 
-### 1. Vet selection and prefill in the ticket flow
+Vetted becomes a **read-only mirror of the Vetted ecosystem's approved catalog** inside Help a Pet. Help a Pet stores a synchronized copy for browsing speed and offline resilience, but the source of truth for which products are approved stays with Vetted. No merchandise store, no independent catalog, no recreation of the Vetted website.
 
-Ticket step 1 gets a vet picker that searches verified Help a Pet vet accounts first, then the licensed-vet database. Choosing a verified account prefills the attestation with clinic name, street, city, state, ZIP, vet legal name, license state/number, Merchant ID and processor; the vet edits and signs. Phone is stored on the profile for internal use only and stays off the attestation.
+### 1. Retire member-submitted products
 
-### 2. Multi-document submission
+- Remove the "List a product" dialog and the member insert/update/delete paths.
+- Nothing in the app can create a Vetted product by hand except an admin-run import, and every imported row is marked with the source it came from.
+- Existing rows are preserved but tagged `source: 'legacy_manual'` and hidden from the public grid by default, so the live section only ever shows Vetted-approved items. You can decide later whether to delete them.
 
-A new `ticket_documents` table replaces the single-file model. Each row: ticket, category, storage path, filename, uploaded-by. Categories: itemized estimate/invoice, chart note / discharge summary, labs, imaging, specialist records, preventive-care records, behavior / emotional-wellbeing records. At least one estimate/invoice stays required; the rest are optional. Existing `estimate_url` / `attestation_url` are kept and backfilled as documents so nothing already submitted breaks.
+### 2. Mirror schema
 
-### 3. Line-item classification
+`vetted_products` gains the fields a synced catalog needs:
 
-Each attestation service type already exists; the extraction adds per-line-item classification (illness/injury, routine/preventive, elective spay-neuter, end-of-life/postmortem, cosmetic-nontherapeutic, unclassified) so mixed visits can be split by category later for eligibility and funding.
+- `source` (which system supplied the row) and `source_product_id` (the Vetted-side identifier), unique together so re-syncing updates rather than duplicates.
+- `approved` / `approval_status` and `approved_at` — only approved rows render.
+- `brand`, `currency`, `price_amount`, `sku`, `tags`, `raw_payload` (the untouched Vetted record), `synced_at`, `delisted_at`.
+- Public read is restricted to approved, non-delisted rows. Writes are admin/service-role only.
 
-### 4. Invoice/estimate extraction
+A `vetted_sync_runs` table records each import: source, mode, counts of created / updated / delisted / skipped rows, errors, and who ran it.
 
-A `parse-ticket-document` edge function runs on every uploaded estimate/invoice and pulls the PDF text layer to extract: clinic name, clinic address, service dates, line-item descriptions, per-line charges, and the document total. Results go to `document_extractions` (structured JSON + confidence + raw text).
+### 3. Pluggable ingestion — no permanent method invented
 
-Important limitation of text-layer-only extraction: scanned documents and phone photos carry no text layer. Those produce an `unreadable` extraction, which raises a "could not be read automatically — manual review" flag rather than passing silently.
+An adapter layer sits between "whatever Vetted sends" and the mirror table. One normalizer maps an incoming product record to Help a Pet's shape; each adapter only has to produce that record.
 
-### 5. Cross-verification and flags
+Shipping now (works without any decision from Vetted):
 
-After extraction and attestation signing, a checker compares:
+- **Admin file import** — upload a CSV/JSON/XLSX export of the approved catalog, preview the column mapping, then commit. Same import-run reporting pattern already used by the vet license database.
 
-| Compared | Sources |
-|---|---|
-| Clinic name | attestation vs invoice vs vet profile |
-| Clinic city/state/ZIP | attestation vs invoice |
-| Veterinarian name / license | attestation vs licensed-vet database vs invoice |
-| Merchant ID | attestation vs vet profile |
-| Amount | requested amount vs invoice total |
-| Service categories | attestation service types vs invoice line items |
-| Document set | records-attached checklist vs actually uploaded documents |
+Stubbed, disabled, and clearly marked "pending Vetted decision":
 
-Every disagreement is written to `ticket_verification_flags` (type, severity, expected value, found value). Names are compared case- and punctuation-insensitively with a fuzzy match so "ABC Animal Hospital, Inc." and "ABC Animal Hospital" agree; anything below the match bar is a flag, not a silent pass.
+- **HTTP feed adapter** — a config row holding a feed URL plus credentials, with a "Test connection" action. Nothing runs on a schedule and no endpoint is hardcoded until Vetted confirms the method.
 
-**Any open flag blocks auto-approval.** The ticket routes to admin review with the flag list shown, and an admin resolves each flag (acknowledge or reject the ticket) before it can move forward. No tolerance thresholds are invented — a mismatch is a mismatch until you define tolerances.
+Whichever method Vetted finally chooses (API pull, feed URL, push webhook, direct DB replication) plugs in as one more adapter behind the same normalizer — no rework of the storefront or schema.
 
-### 6. Public verification copy (structured card)
+### 4. Sync semantics
 
-Help a Pet generates the public copy automatically; the member never redacts anything. A public route `/verify/:token` renders a structured, view-only verification card built from extracted and attested data:
+- Products present in the incoming payload are upserted on `(source, source_product_id)`.
+- Products missing from a full-catalog sync are marked delisted rather than deleted, so history and any linked references survive.
+- Each product card shows a "Vetted-approved" badge and a "last synced" timestamp; the section header states that approval is determined by Vetted.
 
-- Shown: clinic name, city, state, ZIP, service dates, service descriptions, charges, total, service categories, and non-identifying attestation answers (diagnosis status, prognosis, urgency, eligibility answers).
-- Never included: clinic street address and contact details, member/owner identifiers, pet identifiers, veterinarian and staff identifying details, signatures, license information, Merchant ID, processor and account identifiers, and the original document files.
+### 5. Presentation
 
-Because the card is assembled from an allow-list of fields, no original document pixels or private fields can leak through a missed redaction. No download option, no print-friendly export, and the storage bucket stays private.
+The Help a Pet layout stays Help a Pet's own — existing grid, search, category tabs, "Shop Now" to the retailer. Categories are driven by whatever Vetted supplies, with unmapped values falling into "General". Empty state reads "The Vetted catalog hasn't been synced yet" instead of inviting members to add products.
 
-### 7. Admin review surface
+### 6. Admin surface
 
-The admin ticket detail page gains a verification panel: attestation summary, document list with categories, extracted invoice line items, and the flag list with resolve controls.
+A new admin page: sync status (source, last run, row counts), the file-import dialog, the disabled feed configuration, a searchable product table with approve/hide overrides for emergencies, and the run history.
+
+## Explicitly out of scope
+
+No veterinarian affiliate attribution, commissions, payouts, coupon codes, or any other affiliate mechanics. No checkout inside Help a Pet — purchases continue on the retailer's site.
 
 ## Technical notes
 
-- New tables: `ticket_documents`, `document_extractions`, `ticket_verification_flags`, plus `public_verification_token` on `vet_tickets`. All RLS-scoped to owner / assigned vet / admin, with GRANTs; the public card is served by an edge function using the token, not by direct anon table reads.
-- New edge functions: `parse-ticket-document` (text-layer extraction), `verify-ticket-consistency` (cross-checks and flag writing), `public-ticket-verification` (allow-listed public payload by token).
-- `submit-vet-ticket` gains a hard rule: unresolved flags force `under_review` and never auto-approve.
-- Frontend: vet picker + prefill in the ticket dialog, multi-category uploader, member-facing flag notice, admin verification panel, public verification page.
+- Migration: alter `vetted_products` (new columns, unique index, tightened RLS + GRANTs), create `vetted_sync_runs` and `vetted_sync_config`.
+- New edge function `import-vetted-products` handles parsing, normalization, upsert and delisting, and writes the run record; the disabled feed adapter lives in the same function behind a mode flag.
+- Frontend: `vetted-api.ts` loses the create/delete calls and filters to approved rows; `CreateProductDialog` is removed; new `AdminVettedCatalogPage` plus an import dialog.
 
-## Left for you to decide later
+## Open item for Ryan
 
-Amount tolerance percentages, which flag types could ever auto-clear, and how the verified data feeds funding lane and campaign priority. Until then everything flags and everything waits for a human.
+The plan needs Vetted to confirm the delivery method (API, feed, push, or replication) and the field list of an approved-product record. Until then the file import keeps the section populated and correct.
