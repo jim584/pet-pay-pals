@@ -1,1 +1,7 @@
 project_id = "vobbumbhncydapxweukr"
+
+[functions.attestation-by-token]
+verify_jwt = false
+
+[functions.submit-attestation]
+verify_jwt = false
