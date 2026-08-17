@@ -29,6 +29,7 @@ import HelpProtectPage from "./pages/HelpProtectPage";
 import FearFreedPage from "./pages/FearFreedPage";
 import VettedPage from "./pages/VettedPage";
 import HelpBehavePage from "./pages/HelpBehavePage";
+import FurensicFilesPage from "./pages/FurensicFilesPage";
 import HelpOvercomePage from "./pages/HelpOvercomePage";
 import TogetherPage from "./pages/TogetherPage";
 import PlansPage from "./pages/PlansPage";
@@ -54,6 +55,7 @@ import AdminCampaignPriorityPage from "./pages/admin/AdminCampaignPriorityPage";
 import AdminVerificationCoveragePage from "./pages/admin/AdminVerificationCoveragePage";
 import AdminVetLicenseDatabasePage from "./pages/admin/AdminVetLicenseDatabasePage";
 import AdminVettedCatalogPage from "./pages/admin/AdminVettedCatalogPage";
+import AdminFurensicPage from "./pages/admin/AdminFurensicPage";
 import ReferrerDashboard from "./pages/ReferrerDashboard";
 
 const queryClient = new QueryClient();
@@ -98,6 +100,7 @@ function AppRoutes() {
           <Route path="referrals" element={<AdminReferralsPage />} />
           <Route path="vetted-catalog" element={<AdminVettedCatalogPage />} />
           <Route path="content" element={<AdminContentPage />} />
+          <Route path="furensic-files" element={<AdminFurensicPage />} />
           <Route path="reconsiderations" element={<AdminReconsiderationsPage />} />
           <Route path="campaign-invoices" element={<AdminCampaignInvoicesPage />} />
           <Route path="redirections" element={<AdminRedirectionsPage />} />
@@ -107,7 +110,8 @@ function AppRoutes() {
         {/* Compass menu placeholder routes */}
         
         <Route path="/help-forever" element={<HelpForeverPage />} />
-        <Route path="/four-feet-under" element={<PlaceholderSection title="Furensic Files™" />} />
+        <Route path="/furensic-files" element={<FurensicFilesPage />} />
+        <Route path="/four-feet-under" element={<Navigate to="/furensic-files" replace />} />
         <Route path="/fearfreed" element={<FearFreedPage />} />
         <Route path="/help-overcome" element={<HelpOvercomePage />} />
         <Route path="/help-protect" element={<HelpProtectPage />} />

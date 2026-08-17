@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { label: "Now", icon: Heart, to: "/" },
   { label: "Forever", icon: Infinity, to: "/help-forever" },
-  { label: "Furensic", icon: FileSearch, to: "/four-feet-under" },
+  { label: "Furensic", icon: FileSearch, to: "/furensic-files" },
   { label: "Vetted", icon: Stethoscope, to: "/vetted" },
   { label: "Profile", icon: User, to: "/dashboard/profile", authOnly: true, guestTo: "/auth" },
 ];

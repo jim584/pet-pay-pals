@@ -34,6 +34,7 @@ const adminNav = [
   { title: "Campaign priority", url: "/admin/campaign-priority", icon: ListOrdered },
   { title: "Vetted Catalogue", url: "/admin/vetted-catalog", icon: ShoppingBag },
   { title: "Content", url: "/admin/content", icon: FileText },
+  { title: "Furensic Files", url: "/admin/furensic-files", icon: FileSearch },
 ];
 
 export function AdminSidebar() {
