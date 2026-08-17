@@ -24,6 +24,10 @@ import { Switch } from "@/components/ui/switch";
 import { TicketMessagesDialog } from "@/components/vet-tickets/TicketMessagesDialog";
 import { openCheckoutUrl } from "@/lib/open-checkout";
 import { ReconsiderationButton } from "@/components/vet/ReconsiderationButton";
+import { AttestationForm } from "@/components/vet-tickets/AttestationForm";
+import { emptyAttestation, type AttestationValues } from "@/lib/attestation-schema";
+import { submitAttestation, sendAttestationRequest } from "@/lib/attestation-api";
+
 
 const STATUS_VARIANT: Record<string, string> = {
   submitted: "secondary", under_review: "secondary", needs_info: "outline",
