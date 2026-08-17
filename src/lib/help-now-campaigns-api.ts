@@ -166,18 +166,43 @@ export async function reviewCampaignInvoice(
   return data.campaign as HelpNowCampaign;
 }
 
-export async function listCampaignsAwaitingInvoiceReview(): Promise<PublicCampaign[]> {
+export async function listCampaignsAwaitingInvoiceReview(): Promise<ReviewCampaign[]> {
+  const { data, error } = await supabase
+    .from("help_now_campaigns")
+    .select("*, pet:pets(id, name, photo_url), ticket:vet_tickets(id, coverage_breakdown)")
+    .eq("invoice_status", "submitted")
+    .order("invoice_submitted_at", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as unknown as ReviewCampaign[];
+}
+
+/** Campaigns that raised more than the accepted invoice supports — admin follow-up. */
+export async function listOverRaisedCampaigns(): Promise<PublicCampaign[]> {
   const { data, error } = await supabase
     .from("help_now_campaigns")
     .select("*, pet:pets(id, name, photo_url)")
-    .eq("invoice_status", "submitted")
-    .order("invoice_submitted_at", { ascending: true });
+    .not("over_raised_flagged_at", "is", null)
+    .order("over_raised_flagged_at", { ascending: false });
   if (error) throw error;
   return (data ?? []) as unknown as PublicCampaign[];
 }
 
+/** Direct Pay / BNPL / Reserve already applied to the ticket behind a campaign. */
+export function coverageOffsetTotal(c: ReviewCampaign | null | undefined): number {
+  const cb = (c?.ticket?.coverage_breakdown ?? {}) as Record<string, unknown>;
+  const num = (v: unknown) => {
+    const n = Number(v ?? 0);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  };
+  return Math.round((num(cb.dp_use) + num(cb.bnpl_use) + num(cb.reserve_use)) * 100) / 100;
+}
+
 export type PublicCampaign = HelpNowCampaign & {
   pet?: { id: string; name: string; photo_url: string | null } | null;
+};
+
+export type ReviewCampaign = PublicCampaign & {
+  ticket?: { id: string; coverage_breakdown: Record<string, unknown> | null } | null;
 };
 
 export async function listPublishedCampaigns(limit = 20): Promise<PublicCampaign[]> {
