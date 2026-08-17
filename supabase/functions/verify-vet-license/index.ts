@@ -58,6 +58,58 @@ Deno.serve(async (req) => {
 
   const state = vp.license_state.toUpperCase();
 
+  // ── Step 1: the imported state license database is the authoritative source.
+  // Only consulted when that state actually has data loaded; a state with no
+  // imported records falls through to the live-source path below.
+  const { data: licSource } = await admin
+    .from("vet_license_sources")
+    .select("state_name, authority, source_url, record_count, last_success_at")
+    .eq("state_code", state)
+    .maybeSingle();
+
+  let dbResult: typeof result | null = null;
+  if (licSource && (licSource.record_count ?? 0) > 0) {
+    const { data: rec } = await admin
+      .from("vet_license_records")
+      .select("full_name, normalized_name, license_number, is_active, license_status, city, address_state, last_synced_at")
+      .eq("state", state)
+      .eq("license_number", vp.license_number.toUpperCase().trim())
+      .maybeSingle();
+
+    const src = `license_db:${state}`;
+    const srcUrl = licSource.source_url ?? null;
+    if (!rec || !rec.is_active) {
+      dbResult = {
+        status: "no_match" as const,
+        source: src,
+        source_url: srcUrl,
+        reason: rec
+          ? `License ${vp.license_number} is not listed as active in the ${licSource.authority} data (synced ${licSource.last_success_at ?? "unknown"}).`
+          : `License ${vp.license_number} was not found in the imported ${licSource.authority} active-licensee data.`,
+        http_status: null,
+        raw: { decision: { reason_code: rec ? "db_inactive" : "db_no_match", state, synced_at: licSource.last_success_at } },
+      };
+    } else if (namesMatch(rec.full_name, vp.license_full_legal_name)) {
+      dbResult = {
+        status: "match" as const,
+        source: src,
+        source_url: srcUrl,
+        reason: undefined,
+        http_status: null,
+        raw: { decision: { reason_code: "db_match", state, licensee: rec.full_name, synced_at: licSource.last_success_at } },
+      };
+    } else {
+      dbResult = {
+        status: "ambiguous" as const,
+        source: src,
+        source_url: srcUrl,
+        reason: `License ${vp.license_number} is active in ${state} but is registered to a different name — admin review required.`,
+        http_status: null,
+        raw: { decision: { reason_code: "db_name_mismatch", state, licensee: rec.full_name } },
+      };
+    }
+  }
+
   // Feature flag: allow admins to disable an individual state adapter without
   // touching code. Disabled → pending_review with the admin's reason (never
   // unverified), so the "source unavailable → don't reject" invariant holds.
@@ -68,7 +120,9 @@ Deno.serve(async (req) => {
     .maybeSingle();
 
   let result;
-  if (flag && flag.enabled === false) {
+  if (dbResult) {
+    result = dbResult;
+  } else if (flag && flag.enabled === false) {
     result = {
       status: "not_supported" as const,
       source: `state:${state}`,
