@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Stethoscope, FileCheck, Wallet, CreditCard, Shield, LogOut, Home, CalendarClock, Megaphone, FileText, MessageSquareWarning, MapPin, Database, ShoppingBag, ArrowRightLeft, ListOrdered } from "lucide-react";
+import { LayoutDashboard, Users, Stethoscope, FileCheck, Wallet, CreditCard, Shield, LogOut, Home, CalendarClock, Megaphone, FileText, MessageSquareWarning, MapPin, Database, ShoppingBag, ArrowRightLeft, ListOrdered, FileSearch } from "lucide-react";
 import logoDark from "@/assets/logo-dark.png";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
