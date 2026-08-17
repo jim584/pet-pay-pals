@@ -185,6 +185,16 @@ Deno.serve(async (req) => {
     license_verified_at: vp_status === "verified" ? new Date().toISOString() : null,
   }).eq("id", vp.id);
 
+  // When the match came from the imported state data, link the license record to
+  // this platform profile so member-side vet search resolves to their account.
+  if (dbResult && dbResult.status === "match") {
+    await admin.from("vet_license_records")
+      .update({ vet_profile_id: vp.id })
+      .eq("state", state)
+      .eq("license_number", vp.license_number.toUpperCase().trim());
+  }
+
+
   return json({
     status: vp_status,
     lookup_status: result.status,
