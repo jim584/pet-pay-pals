@@ -805,6 +805,7 @@ export type Database = {
           created_at: string
           document_basis: string
           expires_at: string | null
+          funding_offsets: Json
           goal_amount: number
           id: string
           invoice_rejection_reason: string | null
@@ -813,6 +814,7 @@ export type Database = {
           invoice_status: string
           invoice_submitted_at: string | null
           invoice_url: string | null
+          over_raised_flagged_at: string | null
           owner_id: string
           pet_id: string
           photo_urls: string[]
@@ -824,12 +826,15 @@ export type Database = {
           title: string | null
           updated_at: string
           verification_status: string
+          verified_amount: number | null
+          verified_amount_source: string | null
         }
         Insert: {
           clock_paused_at?: string | null
           created_at?: string
           document_basis?: string
           expires_at?: string | null
+          funding_offsets?: Json
           goal_amount?: number
           id?: string
           invoice_rejection_reason?: string | null
@@ -838,6 +843,7 @@ export type Database = {
           invoice_status?: string
           invoice_submitted_at?: string | null
           invoice_url?: string | null
+          over_raised_flagged_at?: string | null
           owner_id: string
           pet_id: string
           photo_urls?: string[]
@@ -849,12 +855,15 @@ export type Database = {
           title?: string | null
           updated_at?: string
           verification_status?: string
+          verified_amount?: number | null
+          verified_amount_source?: string | null
         }
         Update: {
           clock_paused_at?: string | null
           created_at?: string
           document_basis?: string
           expires_at?: string | null
+          funding_offsets?: Json
           goal_amount?: number
           id?: string
           invoice_rejection_reason?: string | null
@@ -863,6 +872,7 @@ export type Database = {
           invoice_status?: string
           invoice_submitted_at?: string | null
           invoice_url?: string | null
+          over_raised_flagged_at?: string | null
           owner_id?: string
           pet_id?: string
           photo_urls?: string[]
@@ -874,6 +884,8 @@ export type Database = {
           title?: string | null
           updated_at?: string
           verification_status?: string
+          verified_amount?: number | null
+          verified_amount_source?: string | null
         }
         Relationships: [
           {
