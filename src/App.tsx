@@ -30,6 +30,7 @@ import FearFreedPage from "./pages/FearFreedPage";
 import VettedPage from "./pages/VettedPage";
 import HelpBehavePage from "./pages/HelpBehavePage";
 import HelpOvercomePage from "./pages/HelpOvercomePage";
+import TogetherPage from "./pages/TogetherPage";
 import PlansPage from "./pages/PlansPage";
 import VetTicketsPage from "./pages/VetTicketsPage";
 import AdminVetTicketsPage from "./pages/AdminVetTicketsPage";
@@ -100,12 +101,13 @@ function AppRoutes() {
         {/* Compass menu placeholder routes */}
         
         <Route path="/help-forever" element={<HelpForeverPage />} />
-        <Route path="/four-feet-under" element={<PlaceholderSection title="Four Feet Under™" />} />
+        <Route path="/four-feet-under" element={<PlaceholderSection title="Furensic Files™" />} />
         <Route path="/fearfreed" element={<FearFreedPage />} />
         <Route path="/help-overcome" element={<HelpOvercomePage />} />
         <Route path="/help-protect" element={<HelpProtectPage />} />
         <Route path="/help-behave" element={<HelpBehavePage />} />
         <Route path="/vetted" element={<VettedPage />} />
+        <Route path="/together" element={<TogetherPage />} />
         <Route path="/plans" element={<PlansPage />} />
         <Route path="/referrer" element={<ReferrerDashboard />} />
         <Route path="*" element={<NotFound />} />

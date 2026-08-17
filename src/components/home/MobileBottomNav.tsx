@@ -1,13 +1,13 @@
 import { Link, useLocation } from "react-router-dom";
-import { Heart, Home, Compass, User, PawPrint } from "lucide-react";
+import { Heart, Infinity, FileSearch, Stethoscope, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { label: "Home", icon: Home, to: "/" },
-  { label: "Explore", icon: Compass, to: "/help-now" },
-  { label: "Help", icon: Heart, to: "/help-forever" },
-  { label: "Pets", icon: PawPrint, to: "/dashboard/pets" },
+  { label: "Now", icon: Heart, to: "/" },
+  { label: "Forever", icon: Infinity, to: "/help-forever" },
+  { label: "Furensic", icon: FileSearch, to: "/four-feet-under" },
+  { label: "Vetted", icon: Stethoscope, to: "/vetted" },
   { label: "Profile", icon: User, to: "/dashboard/profile", authOnly: true, guestTo: "/auth" },
 ];
 
