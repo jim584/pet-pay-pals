@@ -301,7 +301,6 @@ function NewTicketDialog({ pets, clinics, onCreated }: {
       const estimateUrl = await uploadTicketFile(user.id, estimateFile, "estimate");
       if (!attestationUrl && attestationFile) attestationUrl = await uploadTicketFile(user.id, attestationFile, "attestation");
       const res = await submitVetTicket({
-
         pet_id: petId,
         clinic_name: effectiveClinicName,
         vet_profile_id: effectiveVetProfileId,
@@ -309,7 +308,9 @@ function NewTicketDialog({ pets, clinics, onCreated }: {
         estimate_url: estimateUrl, attestation_url: attestationUrl,
         notes: notes || null,
         attestation_confirmed: true,
+        attestation_id: attestationId,
       });
+
       toast({
         title: res.auto_approved ? "Ticket approved" : "Ticket submitted for review",
         description: res.auto_approved
