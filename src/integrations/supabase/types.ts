@@ -606,6 +606,179 @@ export type Database = {
           },
         ]
       }
+      campaign_donations: {
+        Row: {
+          amount: number
+          campaign_id: string
+          created_at: string
+          currency: string
+          donor_email: string | null
+          donor_name: string | null
+          donor_notification_status: string
+          donor_notified_at: string | null
+          donor_user_id: string | null
+          id: string
+          message: string | null
+          paid_at: string | null
+          redirected_amount: number
+          redirected_at: string | null
+          redirection_id: string | null
+          status: string
+          stripe_checkout_session_id: string | null
+          stripe_payment_intent_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          campaign_id: string
+          created_at?: string
+          currency?: string
+          donor_email?: string | null
+          donor_name?: string | null
+          donor_notification_status?: string
+          donor_notified_at?: string | null
+          donor_user_id?: string | null
+          id?: string
+          message?: string | null
+          paid_at?: string | null
+          redirected_amount?: number
+          redirected_at?: string | null
+          redirection_id?: string | null
+          status?: string
+          stripe_checkout_session_id?: string | null
+          stripe_payment_intent_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          campaign_id?: string
+          created_at?: string
+          currency?: string
+          donor_email?: string | null
+          donor_name?: string | null
+          donor_notification_status?: string
+          donor_notified_at?: string | null
+          donor_user_id?: string | null
+          id?: string
+          message?: string | null
+          paid_at?: string | null
+          redirected_amount?: number
+          redirected_at?: string | null
+          redirection_id?: string | null
+          status?: string
+          stripe_checkout_session_id?: string | null
+          stripe_payment_intent_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_donations_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "help_now_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_donations_redirection_fk"
+            columns: ["redirection_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_redirections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_redirection_allocations: {
+        Row: {
+          amount: number
+          applied_at: string | null
+          created_at: string
+          id: string
+          receiving_campaign_id: string
+          redirection_id: string
+        }
+        Insert: {
+          amount: number
+          applied_at?: string | null
+          created_at?: string
+          id?: string
+          receiving_campaign_id: string
+          redirection_id: string
+        }
+        Update: {
+          amount?: number
+          applied_at?: string | null
+          created_at?: string
+          id?: string
+          receiving_campaign_id?: string
+          redirection_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_redirection_allocations_receiving_campaign_id_fkey"
+            columns: ["receiving_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "help_now_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_redirection_allocations_redirection_id_fkey"
+            columns: ["redirection_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_redirections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_redirections: {
+        Row: {
+          allocated_amount: number
+          created_at: string
+          id: string
+          reason: string
+          released_at: string | null
+          released_by: string | null
+          source_campaign_id: string
+          status: string
+          total_amount: number
+          unallocated_amount: number
+          updated_at: string
+        }
+        Insert: {
+          allocated_amount?: number
+          created_at?: string
+          id?: string
+          reason?: string
+          released_at?: string | null
+          released_by?: string | null
+          source_campaign_id: string
+          status?: string
+          total_amount: number
+          unallocated_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          allocated_amount?: number
+          created_at?: string
+          id?: string
+          reason?: string
+          released_at?: string | null
+          released_by?: string | null
+          source_campaign_id?: string
+          status?: string
+          total_amount?: number
+          unallocated_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_redirections_source_campaign_id_fkey"
+            columns: ["source_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "help_now_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comment_likes: {
         Row: {
           comment_id: string
