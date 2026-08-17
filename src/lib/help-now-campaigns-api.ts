@@ -36,6 +36,14 @@ export type HelpNowCampaign = {
   proof_rejection_reason: string | null;
   disbursement_eligible_at: string | null;
   disbursement_block_reason: string | null;
+  initial_update_at: string | null;
+  treatment_update_at: string | null;
+  last_required_update_at: string | null;
+  next_update_due_at: string | null;
+  update_overdue: boolean;
+  disbursement_paused_for_update: boolean;
+  update_reminder_sent_at: string | null;
+  public_verification_url: string | null;
   title: string | null;
   story: string | null;
   photo_urls: string[];
