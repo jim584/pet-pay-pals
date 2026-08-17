@@ -2,14 +2,15 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { fetchVettedProducts } from "@/lib/vetted-api";
+import { fetchVettedProducts, fetchLastCatalogSync } from "@/lib/vetted-api";
 import { ProductCard } from "@/components/vetted/ProductCard";
-import { CreateProductDialog } from "@/components/vetted/CreateProductDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Search, ShoppingBag, Store } from "lucide-react";
+import { ArrowLeft, Search, ShoppingBag, Store, BadgeCheck } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { useQuery } from "@tanstack/react-query";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const CATEGORY_TABS = [
@@ -46,6 +47,11 @@ export default function VettedPage() {
 
   const products = data?.pages.flat() ?? [];
 
+  const { data: lastSynced } = useQuery({
+    queryKey: ["vetted-last-sync"],
+    queryFn: fetchLastCatalogSync,
+  });
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -60,7 +66,7 @@ export default function VettedPage() {
               <span className="text-lg font-bold font-display text-foreground">Vetted™</span>
             </div>
           </div>
-          {user && <CreateProductDialog />}
+          <Badge variant="secondary" className="gap-1 text-xs"><BadgeCheck className="h-3 w-3" /> Vetted-approved</Badge>
         </div>
       </header>
 
@@ -71,9 +77,16 @@ export default function VettedPage() {
             Trusted Pet Products
           </h1>
           <p className="text-muted-foreground mt-1 text-sm max-w-lg mx-auto">
-            Browse curated pet products from top retailers. Click "Shop Now" to purchase directly from the seller.
+            Every product here has been approved through Vetted™. Help a Pet displays the Vetted catalogue &mdash; approval is
+            determined by Vetted, not by Help a Pet. Tap "Shop Now" to buy directly from the retailer.
           </p>
         </div>
+
+        {lastSynced && (
+          <p className="text-xs text-muted-foreground text-center -mt-3 mb-4">
+            Catalogue last synced from Vetted on {new Date(lastSynced).toLocaleDateString()}
+          </p>
+        )}
 
         {/* Search */}
         <div className="relative mb-4">
@@ -117,9 +130,9 @@ export default function VettedPage() {
         {!isLoading && products.length === 0 && (
           <div className="text-center py-16">
             <Store className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
-            <h2 className="text-lg font-semibold text-foreground">No products yet</h2>
+            <h2 className="text-lg font-semibold text-foreground">The Vetted catalogue hasn't been synced yet</h2>
             <p className="text-muted-foreground text-sm mt-1">
-              {user ? "Be the first to list a product!" : "Check back soon for curated pet products."}
+              Approved products appear here as soon as the catalogue is received from Vetted.
             </p>
           </div>
         )}
