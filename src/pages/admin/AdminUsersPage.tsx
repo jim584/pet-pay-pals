@@ -13,6 +13,7 @@ const ROLE_META: Record<AppRole, { label: string; icon: any; variant: any }> = {
   admin: { label: "Admin", icon: ShieldCheck, variant: "default" },
   vet: { label: "Vet", icon: Stethoscope, variant: "secondary" },
   pet_owner: { label: "Pet owner", icon: User, variant: "outline" },
+  content_editor: { label: "Content editor", icon: FileSearch, variant: "secondary" },
 };
 
 export default function AdminUsersPage() {
