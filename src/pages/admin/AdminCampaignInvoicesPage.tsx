@@ -199,6 +199,62 @@ export default function AdminCampaignInvoicesPage() {
         ))
       )}
 
+      {/* Requirement 12 — proof of payment review */}
+      <div>
+        <h2 className="text-lg font-semibold">Proof of payment awaiting review</h2>
+        <p className="text-sm text-muted-foreground">
+          An accepted invoice alone never authorises a member payout. Verify that the receipt covers
+          the same veterinary expense as the invoice; if it doesn't line up, flag it instead of approving.
+        </p>
+      </div>
+      {!proofQueue?.length ? (
+        <Card><CardContent className="p-6 text-sm text-muted-foreground">No proof of payment waiting.</CardContent></Card>
+      ) : (
+        proofQueue.map((c) => (
+          <Card key={c.id}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center justify-between gap-2">
+                <span>{c.title ?? `Help ${c.pet?.name ?? "this pet"}`}</span>
+                <DisbursementReadinessBadge campaign={c} />
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <p className="text-muted-foreground">
+                Verified invoice total {fmt(Number(c.verified_amount ?? 0))} · Raised {fmt(c.raised_amount)}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {c.invoice_url && (
+                  <Button size="sm" variant="outline" onClick={() => openInvoice(c.invoice_url!)}>
+                    <FileText className="h-4 w-4 mr-1" /> View invoice
+                  </Button>
+                )}
+                {c.proof_of_payment_url && (
+                  <Button size="sm" variant="outline" onClick={() => openInvoice(c.proof_of_payment_url!)}>
+                    <Receipt className="h-4 w-4 mr-1" /> View proof of payment
+                  </Button>
+                )}
+                <Button size="sm" disabled={busy} onClick={() => verifyProof(c)}>Verify</Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => { setProofDecision({ campaign: c, decision: "flag" }); setProofReason(""); }}
+                >
+                  Flag mismatch
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => { setProofDecision({ campaign: c, decision: "reject" }); setProofReason(""); }}
+                >
+                  Reject
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))
+      )}
+
+
       {!!overRaised?.length && (
         <Card className="border-destructive/40">
           <CardHeader className="pb-2">
