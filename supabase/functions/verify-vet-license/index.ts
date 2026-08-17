@@ -4,7 +4,7 @@
 // with a reason, never `unverified`, so an admin can adjudicate.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
-import { BOARDS, lookupByState, STATE_CODES, SUPPORTED_STATES } from "./states/index.ts";
+import { BOARDS, lookupByState, namesMatch, STATE_CODES, SUPPORTED_STATES, type LookupResult } from "./states/index.ts";
 
 interface Body { vet_profile_id: string; triggered_by?: string }
 
