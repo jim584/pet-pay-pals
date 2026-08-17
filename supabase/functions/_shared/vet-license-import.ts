@@ -129,13 +129,6 @@ export async function runImport(
       const syncedAt = new Date().toISOString();
       const numbers = [...kept.keys()];
 
-      const { data: existing } = await admin
-        .from("vet_license_records")
-        .select("license_number")
-        .eq("state", state)
-        .in("license_number", numbers.slice(0, 0)); // placeholder, replaced below
-      void existing;
-
       // Count pre-existing rows for this state so insert/update split is accurate.
       const { data: priorRows } = await admin
         .from("vet_license_records")
