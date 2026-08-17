@@ -180,3 +180,14 @@ export function stalenessDays(source: VetLicenseSource): number | null {
   if (!source.last_success_at) return null;
   return Math.floor((Date.now() - new Date(source.last_success_at).getTime()) / 86_400_000);
 }
+
+/** Fetch a single license record by id (used to hydrate a pet's vet of record). */
+export async function getLicenseRecord(id: string) {
+  const { data, error } = await supabase
+    .from("vet_license_records")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as unknown as VetLicenseRecord) ?? null;
+}
