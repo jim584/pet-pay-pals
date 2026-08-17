@@ -9,6 +9,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import SelectRole from "./pages/SelectRole";
+import AttestationPublicPage from "./pages/AttestationPublicPage";
+
 import DashboardLayout from "./pages/DashboardLayout";
 import DashboardIndex from "./pages/DashboardIndex";
 import PetsPage from "./pages/PetsPage";
