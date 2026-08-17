@@ -52,10 +52,18 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
     vet_of_record_id: pet?.vet_of_record_id ?? "",
   });
   const [vetOptions, setVetOptions] = useState<VetPickerOption[]>([]);
+  const [licenseVet, setLicenseVet] = useState<VetLicenseRecord | null>(null);
 
   useEffect(() => {
     fetchApprovedVetsForPicker().then(setVetOptions).catch(() => setVetOptions([]));
   }, []);
+
+  useEffect(() => {
+    const id = (pet as { vet_of_record_license_id?: string | null } | undefined)?.vet_of_record_license_id;
+    if (!open) return;
+    if (!id) { setLicenseVet(null); return; }
+    getLicenseRecord(id).then(setLicenseVet).catch(() => setLicenseVet(null));
+  }, [open, pet]);
 
   // Crop state
   const [cropOpen, setCropOpen] = useState(false);
