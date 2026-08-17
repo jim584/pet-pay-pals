@@ -10,6 +10,8 @@
  * real hierarchy lands; nothing else in the redirection flow depends on order.
  */
 
+import { rankHelpNowCases } from "./help-now-priority.ts";
+
 // deno-lint-ignore no-explicit-any
 type Admin = any;
 
@@ -22,6 +24,12 @@ export type EligibleCase = {
   goal_amount: number;
   raised_amount: number;
   remaining: number;
+  priority_rank: number | null;
+  priority_source: string;
+  status?: string | null;
+  invoice_status?: string | null;
+  proof_of_payment_status?: string | null;
+  disbursement_eligible_at?: string | null;
 };
 
 export type ProposedAllocation = {
@@ -37,15 +45,11 @@ const num = (v: unknown) => {
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
 /**
- * INTERIM PRIORITY ORDER — oldest verified case first.
- * Swap this out for the official Help a Pet Now hierarchy when it is defined.
+ * Ordering is delegated to the single Help a Pet Now ranking authority
+ * (Requirement 14). Do not add ranking criteria here.
  */
 export function orderByPriority(cases: EligibleCase[]): EligibleCase[] {
-  return [...cases].sort((a, b) => {
-    const at = new Date(a.published_at ?? a.created_at).getTime();
-    const bt = new Date(b.published_at ?? b.created_at).getTime();
-    return at - bt;
-  });
+  return rankHelpNowCases(cases, "redirection");
 }
 
 /**
@@ -59,7 +63,7 @@ export async function listEligibleReceivingCases(
 ): Promise<EligibleCase[]> {
   const { data, error } = await admin
     .from("help_now_campaigns")
-    .select("id, pet_id, title, published_at, created_at, goal_amount, raised_amount")
+    .select("id, pet_id, title, published_at, created_at, goal_amount, raised_amount, priority_rank, priority_source, status, invoice_status, proof_of_payment_status, disbursement_eligible_at")
     .eq("status", "published")
     .eq("document_basis", "invoice")
     .eq("invoice_status", "accepted")
@@ -78,6 +82,12 @@ export async function listEligibleReceivingCases(
       goal_amount: num(c.goal_amount),
       raised_amount: num(c.raised_amount),
       remaining: round2(Math.max(0, num(c.goal_amount) - num(c.raised_amount))),
+      priority_rank: c.priority_rank ?? null,
+      priority_source: c.priority_source ?? "unset",
+      status: c.status,
+      invoice_status: c.invoice_status,
+      proof_of_payment_status: c.proof_of_payment_status,
+      disbursement_eligible_at: c.disbursement_eligible_at,
     }))
     .filter((c: EligibleCase) => c.remaining > 0);
 
