@@ -24,6 +24,10 @@ import { Switch } from "@/components/ui/switch";
 import { TicketMessagesDialog } from "@/components/vet-tickets/TicketMessagesDialog";
 import { openCheckoutUrl } from "@/lib/open-checkout";
 import { ReconsiderationButton } from "@/components/vet/ReconsiderationButton";
+import { AttestationForm } from "@/components/vet-tickets/AttestationForm";
+import { emptyAttestation, type AttestationValues } from "@/lib/attestation-schema";
+import { submitAttestation, sendAttestationRequest } from "@/lib/attestation-api";
+
 
 const STATUS_VARIANT: Record<string, string> = {
   submitted: "secondary", under_review: "secondary", needs_info: "outline",
@@ -215,10 +219,67 @@ function NewTicketDialog({ pets, clinics, onCreated }: {
   const [attestationFile, setAttestationFile] = useState<File | null>(null);
   const [attestationConfirmed, setAttestationConfirmed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [attestationMode, setAttestationMode] = useState<"in_clinic" | "email" | "upload">("in_clinic");
+  const [attestationOpen, setAttestationOpen] = useState(false);
+  const [attestationValues, setAttestationValues] = useState<AttestationValues>(emptyAttestation());
+  const [attestationId, setAttestationId] = useState<string | null>(null);
+  const [attestationPdfPath, setAttestationPdfPath] = useState<string | null>(null);
+  const [signing, setSigning] = useState(false);
+  const [clinicEmail, setClinicEmail] = useState("");
+  const [sendingLink, setSendingLink] = useState(false);
+  const [sentLink, setSentLink] = useState<string | null>(null);
+
 
   const selectedClinic = clinics.find((c) => c.id === clinicId);
   const effectiveClinicName = clinicMode === "registered" ? selectedClinic?.clinic_name ?? "" : clinicNameOther.trim();
   const effectiveVetProfileId = clinicMode === "registered" ? clinicId || null : null;
+
+  const signAttestation = async () => {
+    setSigning(true);
+    try {
+      const res = await submitAttestation({
+        values: attestationValues,
+        pet_id: petId || null,
+        vet_profile_id: effectiveVetProfileId,
+        attestation_id: attestationId,
+      });
+      setAttestationId(res.attestation_id);
+      setAttestationPdfPath(res.pdf_url);
+      setAttestationOpen(false);
+      toast({ title: "Attestation signed", description: "The completed form is attached to this ticket." });
+    } catch (e: any) {
+      toast({ title: "Couldn't sign the attestation", description: e.message, variant: "destructive" });
+    } finally { setSigning(false); }
+  };
+
+  const sendClinicLink = async () => {
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(clinicEmail.trim())) {
+      toast({ title: "Enter a valid clinic email", variant: "destructive" });
+      return;
+    }
+    setSendingLink(true);
+    try {
+      const res = await sendAttestationRequest({
+        clinic_email: clinicEmail.trim(),
+        pet_id: petId || null,
+        vet_profile_id: effectiveVetProfileId,
+        prefill: {
+          pet_name: pets.find((p) => p.id === petId)?.name ?? "",
+          clinic_name: effectiveClinicName,
+        },
+      });
+      setAttestationId(res.attestation_id);
+      setSentLink(res.link);
+      toast({
+        title: res.emailed ? "Link sent to the clinic" : "Link created",
+        description: res.emailed
+          ? "The clinic can complete and sign the attestation from that email."
+          : "Email delivery is off, so share the link below with the clinic.",
+      });
+    } catch (e: any) {
+      toast({ title: "Couldn't send the link", description: e.message, variant: "destructive" });
+    } finally { setSendingLink(false); }
+  };
 
   const submit = async () => {
     if (!user) return;
@@ -236,9 +297,9 @@ function NewTicketDialog({ pets, clinics, onCreated }: {
     }
     setSubmitting(true);
     try {
-      let attestationUrl: string | null = null;
+      let attestationUrl: string | null = attestationPdfPath;
       const estimateUrl = await uploadTicketFile(user.id, estimateFile, "estimate");
-      if (attestationFile) attestationUrl = await uploadTicketFile(user.id, attestationFile, "attestation");
+      if (!attestationUrl && attestationFile) attestationUrl = await uploadTicketFile(user.id, attestationFile, "attestation");
       const res = await submitVetTicket({
         pet_id: petId,
         clinic_name: effectiveClinicName,
@@ -247,7 +308,9 @@ function NewTicketDialog({ pets, clinics, onCreated }: {
         estimate_url: estimateUrl, attestation_url: attestationUrl,
         notes: notes || null,
         attestation_confirmed: true,
+        attestation_id: attestationId,
       });
+
       toast({
         title: res.auto_approved ? "Ticket approved" : "Ticket submitted for review",
         description: res.auto_approved
@@ -319,10 +382,108 @@ function NewTicketDialog({ pets, clinics, onCreated }: {
           <Input type="file" accept=".pdf,image/*" onChange={(e) => setEstimateFile(e.target.files?.[0] ?? null)} />
           <p className="text-xs text-muted-foreground mt-1">Required. Attach the itemised document from your clinic.</p>
         </div>
-        <div>
-          <Label>Veterinarian attestation form (optional upload)</Label>
-          <Input type="file" accept=".pdf,image/*" onChange={(e) => setAttestationFile(e.target.files?.[0] ?? null)} />
+        <div className="space-y-3 rounded-lg border border-border p-3">
+          <div>
+            <Label>Veterinarian attestation</Label>
+            <p className="text-xs text-muted-foreground mt-1">
+              Choose how your veterinarian will complete the attestation form.
+            </p>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {([
+              { key: "in_clinic", label: "Complete at the clinic", hint: "Hand your phone to the vet" },
+              { key: "email", label: "Email the clinic", hint: "Send a secure one-time link" },
+              { key: "upload", label: "Upload a signed copy", hint: "Printed or scanned PDF" },
+            ] as const).map((m) => (
+              <button
+                key={m.key}
+                type="button"
+                onClick={() => setAttestationMode(m.key)}
+                className={`rounded-md border p-2.5 text-left text-xs transition-colors ${
+                  attestationMode === m.key ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
+                }`}
+              >
+                <span className="block font-medium">{m.label}</span>
+                <span className="block text-muted-foreground">{m.hint}</span>
+              </button>
+            ))}
+          </div>
+
+          {attestationMode === "in_clinic" && (
+            <div className="space-y-2">
+              {attestationPdfPath ? (
+                <p className="text-xs text-primary flex items-center gap-1">
+                  <ShieldCheck className="h-3.5 w-3.5" /> Attestation signed and attached.
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Hand your phone to the veterinarian or technician. They complete the form and sign
+                  by typing their full legal name and the date.
+                </p>
+              )}
+              <Dialog open={attestationOpen} onOpenChange={setAttestationOpen}>
+                <DialogTrigger asChild>
+                  <Button type="button" variant="outline" size="sm">
+                    <FileText className="h-4 w-4 mr-1" />
+                    {attestationPdfPath ? "Review or redo the form" : "Open the attestation form"}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+                  <DialogHeader><DialogTitle>Veterinarian attestation</DialogTitle></DialogHeader>
+                  <AttestationForm value={attestationValues} onChange={setAttestationValues} />
+                  <DialogFooter>
+                    <Button onClick={signAttestation} disabled={signing}>
+                      {signing && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+                      Sign and attach
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+          )}
+
+          {attestationMode === "email" && (
+            <div className="space-y-2">
+              <Label className="text-sm">Clinic email address</Label>
+              <div className="flex gap-2">
+                <Input type="email" value={clinicEmail} placeholder="records@clinic.com"
+                       onChange={(e) => setClinicEmail(e.target.value)} />
+                <Button type="button" variant="outline" onClick={sendClinicLink} disabled={sendingLink}>
+                  {sendingLink && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}Send
+                </Button>
+              </div>
+              {sentLink && (
+                <p className="text-xs text-muted-foreground break-all">
+                  Secure link (valid once, expires in 14 days): <span className="font-mono">{sentLink}</span>
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                You can submit the ticket now and the signed attestation will be attached to your
+                record as soon as the clinic completes it.
+              </p>
+            </div>
+          )}
+
+          {attestationMode === "upload" && (
+            <div className="space-y-2">
+              <Input type="file" accept=".pdf,image/*" onChange={(e) => setAttestationFile(e.target.files?.[0] ?? null)} />
+              <p className="text-xs text-muted-foreground">
+                Upload the flattened PDF of the completed and signed form. Typed answers scan far
+                better than handwriting.
+              </p>
+              <a
+                href="/veterinarian-attestation-form.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-primary underline"
+              >
+                <ExternalLink className="h-3.5 w-3.5" /> Download the blank form to print
+              </a>
+
+            </div>
+          )}
         </div>
+
         <div>
           <Label>Notes (optional)</Label>
           <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />

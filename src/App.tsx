@@ -9,6 +9,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import SelectRole from "./pages/SelectRole";
+import AttestationPublicPage from "./pages/AttestationPublicPage";
+
 import DashboardLayout from "./pages/DashboardLayout";
 import DashboardIndex from "./pages/DashboardIndex";
 import PetsPage from "./pages/PetsPage";
@@ -58,6 +60,8 @@ function AppRoutes() {
         <Route path="/" element={<Index />} />
         <Route path="/auth" element={<Auth />} />
         <Route path="/select-role" element={<SelectRole />} />
+        <Route path="/attestation/:token" element={<AttestationPublicPage />} />
+
         <Route path="/dashboard" element={<DashboardLayout />}>
           <Route index element={<DashboardIndex />} />
           <Route path="pets" element={<PetsPage />} />
