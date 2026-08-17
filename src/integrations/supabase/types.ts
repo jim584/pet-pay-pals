@@ -135,6 +135,47 @@ export type Database = {
           },
         ]
       }
+      attestation_link_tokens: {
+        Row: {
+          attestation_id: string
+          clinic_email: string
+          created_at: string
+          created_by: string
+          expires_at: string
+          id: string
+          token_hash: string
+          used_at: string | null
+        }
+        Insert: {
+          attestation_id: string
+          clinic_email: string
+          created_at?: string
+          created_by: string
+          expires_at: string
+          id?: string
+          token_hash: string
+          used_at?: string | null
+        }
+        Update: {
+          attestation_id?: string
+          clinic_email?: string
+          created_at?: string
+          created_by?: string
+          expires_at?: string
+          id?: string
+          token_hash?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attestation_link_tokens_attestation_id_fkey"
+            columns: ["attestation_id"]
+            isOneToOne: false
+            referencedRelation: "vet_attestations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       behave_images: {
         Row: {
           category: string
@@ -2139,6 +2180,139 @@ export type Database = {
           updated_by?: string | null
         }
         Relationships: []
+      }
+      vet_attestations: {
+        Row: {
+          answers: Json
+          breed: string | null
+          certified: boolean
+          clinic_city: string | null
+          clinic_name: string | null
+          clinic_state: string | null
+          clinic_street: string | null
+          clinic_zip: string | null
+          completed_at: string | null
+          created_at: string
+          date_of_death: string | null
+          id: string
+          license_number: string | null
+          license_state: string | null
+          merchant_id: string | null
+          method: string
+          no_traditional_mid: boolean
+          owner_id: string
+          pdf_url: string | null
+          pet_age_or_dob: string | null
+          pet_id: string | null
+          pet_name: string | null
+          pet_status: string | null
+          pet_type: string | null
+          pet_type_other: string | null
+          primary_breed: string | null
+          processor: string | null
+          signature_typed_name: string | null
+          signed_date: string | null
+          status: string
+          ticket_id: string | null
+          updated_at: string
+          vet_legal_name: string | null
+          vet_profile_id: string | null
+        }
+        Insert: {
+          answers?: Json
+          breed?: string | null
+          certified?: boolean
+          clinic_city?: string | null
+          clinic_name?: string | null
+          clinic_state?: string | null
+          clinic_street?: string | null
+          clinic_zip?: string | null
+          completed_at?: string | null
+          created_at?: string
+          date_of_death?: string | null
+          id?: string
+          license_number?: string | null
+          license_state?: string | null
+          merchant_id?: string | null
+          method?: string
+          no_traditional_mid?: boolean
+          owner_id: string
+          pdf_url?: string | null
+          pet_age_or_dob?: string | null
+          pet_id?: string | null
+          pet_name?: string | null
+          pet_status?: string | null
+          pet_type?: string | null
+          pet_type_other?: string | null
+          primary_breed?: string | null
+          processor?: string | null
+          signature_typed_name?: string | null
+          signed_date?: string | null
+          status?: string
+          ticket_id?: string | null
+          updated_at?: string
+          vet_legal_name?: string | null
+          vet_profile_id?: string | null
+        }
+        Update: {
+          answers?: Json
+          breed?: string | null
+          certified?: boolean
+          clinic_city?: string | null
+          clinic_name?: string | null
+          clinic_state?: string | null
+          clinic_street?: string | null
+          clinic_zip?: string | null
+          completed_at?: string | null
+          created_at?: string
+          date_of_death?: string | null
+          id?: string
+          license_number?: string | null
+          license_state?: string | null
+          merchant_id?: string | null
+          method?: string
+          no_traditional_mid?: boolean
+          owner_id?: string
+          pdf_url?: string | null
+          pet_age_or_dob?: string | null
+          pet_id?: string | null
+          pet_name?: string | null
+          pet_status?: string | null
+          pet_type?: string | null
+          pet_type_other?: string | null
+          primary_breed?: string | null
+          processor?: string | null
+          signature_typed_name?: string | null
+          signed_date?: string | null
+          status?: string
+          ticket_id?: string | null
+          updated_at?: string
+          vet_legal_name?: string | null
+          vet_profile_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vet_attestations_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: false
+            referencedRelation: "pets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vet_attestations_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "vet_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vet_attestations_vet_profile_id_fkey"
+            columns: ["vet_profile_id"]
+            isOneToOne: false
+            referencedRelation: "vet_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vet_payouts: {
         Row: {
