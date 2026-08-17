@@ -73,6 +73,10 @@ export default function AdminReservePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter, memberSearch]);
 
+  useEffect(() => {
+    isReservePoolEnabled().then(setReserveEnabled).catch(() => {});
+  }, []);
+
   const handleRefresh = () => { setRefreshing(true); load(); };
 
   const handleRunJob = async () => {
