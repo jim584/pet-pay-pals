@@ -427,6 +427,14 @@ export async function fetchAdminVets(filter: VetApprovalFilter = "all", search?:
     fear_free_checked_at: v.fear_free_checked_at ?? null,
     fear_free_source: v.fear_free_source ?? null,
     fear_free_reason: v.fear_free_reason ?? null,
+    account_status: v.account_status ?? "pending_verification",
+    first_name: v.first_name ?? null,
+    last_name: v.last_name ?? null,
+    merchant_id: v.merchant_id ?? null,
+    identity_photo_path: v.identity_photo_path ?? null,
+    identity_photo_captured_at: v.identity_photo_captured_at ?? null,
+    identity_reviewed_at: v.identity_reviewed_at ?? null,
+    account_rejection_reason: v.account_rejection_reason ?? null,
   })) as AdminVetRow[];
 
   if (search?.trim()) {
