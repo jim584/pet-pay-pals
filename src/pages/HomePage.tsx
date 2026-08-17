@@ -105,7 +105,16 @@ export default function HomePage() {
 
         {/* Center Feed */}
         <main className={`flex-1 min-w-0 ${isMobile ? 'px-2 py-3 pb-20' : 'border-x px-6 py-6'}`}>
+          <div className="mb-4">
+            <h1 className="font-heading text-xl sm:text-2xl font-bold text-foreground">
+              Help A Pet Now™
+            </h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              The community feed — pets who need help right now
+            </p>
+          </div>
           {!user && (
+
             <div className="mb-4 sm:mb-6 rounded-lg bg-primary/5 border border-primary/20 p-3 sm:p-4 text-center">
               <p className="text-sm text-foreground font-medium">
                 🐾 Sign up to follow your favorite pets, like posts, and join the community!
