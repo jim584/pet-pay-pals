@@ -18,6 +18,7 @@ const CATEGORY_TABS = [
   { value: "toys", label: "🧸 Toys" },
   { value: "health", label: "💊 Health" },
   { value: "accessories", label: "🎀 Accessories" },
+  { value: "general", label: "General" },
 ];
 
 export default function VettedPage() {
