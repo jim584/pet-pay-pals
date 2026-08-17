@@ -22,6 +22,15 @@ export type HelpNowCampaign = {
   verified_amount_source: string | null;
   funding_offsets: Record<string, number | string> | null;
   over_raised_flagged_at: string | null;
+  disbursement_path: "unset" | "direct_vet" | "member_reimbursement";
+  proof_of_payment_status: "none" | "submitted" | "verified" | "rejected" | "flagged";
+  proof_of_payment_url: string | null;
+  proof_submitted_at: string | null;
+  proof_reviewed_at: string | null;
+  proof_reviewed_by: string | null;
+  proof_rejection_reason: string | null;
+  disbursement_eligible_at: string | null;
+  disbursement_block_reason: string | null;
   title: string | null;
   story: string | null;
   photo_urls: string[];
@@ -30,6 +39,7 @@ export type HelpNowCampaign = {
   created_at: string;
   updated_at: string;
 };
+
 
 export const MIN_STORY_LENGTH = 40;
 export const ESTIMATE_WINDOW_DAYS = 60;
