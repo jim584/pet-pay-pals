@@ -36,11 +36,16 @@ Deno.serve(async (req) => {
     const campaignId = String(body?.campaign_id ?? "");
     const decision = String(body?.decision ?? "");
     const reason = body?.reason ? String(body.reason).trim() : null;
+    const verifiedAmount = body?.verified_amount === undefined || body?.verified_amount === null
+      ? null : Number(body.verified_amount);
     if (!campaignId) return json({ error: "campaign_id required" }, 400);
     if (decision !== "accept" && decision !== "reject") {
       return json({ error: "decision must be 'accept' or 'reject'" }, 400);
     }
     if (decision === "reject" && !reason) return json({ error: "A rejection reason is required" }, 400);
+    if (decision === "accept" && (verifiedAmount === null || !Number.isFinite(verifiedAmount) || verifiedAmount <= 0)) {
+      return json({ error: "A verified invoice amount greater than zero is required" }, 400);
+    }
 
     const { data: campaign } = await admin
       .from("help_now_campaigns").select("*").eq("id", campaignId).maybeSingle();
@@ -57,12 +62,44 @@ Deno.serve(async (req) => {
     };
 
     if (decision === "accept") {
-      // Accepted invoice ends the estimate-only rules entirely.
+      // Accepted invoice ends the estimate-only rules entirely: no 60-day clock,
+      // and the goal becomes the verified vet expense minus what other funding
+      // sources already covered, so the member is never reimbursed twice.
+      const { data: ticket } = await admin
+        .from("vet_tickets").select("coverage_breakdown").eq("id", campaign.ticket_id).maybeSingle();
+      const cb = (ticket?.coverage_breakdown ?? {}) as Record<string, unknown>;
+      const num = (v: unknown) => {
+        const n = Number(v ?? 0);
+        return Number.isFinite(n) && n > 0 ? n : 0;
+      };
+      const offsets = {
+        dp_use: num(cb.dp_use),
+        bnpl_use: num(cb.bnpl_use),
+        reserve_use: num(cb.reserve_use),
+      };
+      const offsetTotal = offsets.dp_use + offsets.bnpl_use + offsets.reserve_use;
+      const goal = Math.round(Math.max(0, verifiedAmount! - offsetTotal) * 100) / 100;
+      const raised = Number(campaign.raised_amount ?? 0);
+
       patch.invoice_status = "accepted";
       patch.document_basis = "invoice";
       patch.verification_status = "verified";
       patch.expires_at = null;
       patch.invoice_rejection_reason = null;
+      patch.verified_amount = verifiedAmount;
+      patch.verified_amount_source = "admin_entered";
+      patch.funding_offsets = { ...offsets, offset_total: offsetTotal, snapshot_at: now.toISOString() };
+      patch.goal_amount = goal;
+
+      if (raised >= goal) {
+        // Already at or beyond the verified expense: close to new funding and
+        // flag the surplus for admin follow-up instead of auto-refunding.
+        patch.status = "funded";
+        if (raised > goal) patch.over_raised_flagged_at = now.toISOString();
+        // The cap trigger rejects raised > goal, so keep the goal at raised and
+        // record the true verified ceiling separately in verified_amount.
+        if (raised > goal) patch.goal_amount = raised;
+      }
     } else {
       // Rejected: resume the clock, crediting back the days spent in review.
       patch.invoice_status = "rejected";

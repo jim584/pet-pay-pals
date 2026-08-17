@@ -225,7 +225,11 @@ Deno.serve(async (req) => {
       const { data: existing } = await admin
         .from("help_now_campaigns").select("*").eq("ticket_id", ticket_id).maybeSingle();
 
-      if (helpNowNeeded > 0) {
+      if (existing && existing.document_basis === "invoice") {
+        // Invoice-based campaigns are frozen against later coverage runs: the
+        // verified goal and the removed expiry must never be recomputed.
+        campaign = existing;
+      } else if (helpNowNeeded > 0) {
         if (!existing) {
           // Estimate-backed campaigns run on a 60-day fundraising clock. The expiry
           // is stamped once at creation and never recomputed by later coverage runs.
