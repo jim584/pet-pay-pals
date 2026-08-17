@@ -234,6 +234,53 @@ function NewTicketDialog({ pets, clinics, onCreated }: {
   const effectiveClinicName = clinicMode === "registered" ? selectedClinic?.clinic_name ?? "" : clinicNameOther.trim();
   const effectiveVetProfileId = clinicMode === "registered" ? clinicId || null : null;
 
+  const signAttestation = async () => {
+    setSigning(true);
+    try {
+      const res = await submitAttestation({
+        values: attestationValues,
+        pet_id: petId || null,
+        vet_profile_id: effectiveVetProfileId,
+        attestation_id: attestationId,
+      });
+      setAttestationId(res.attestation_id);
+      setAttestationPdfPath(res.pdf_url);
+      setAttestationOpen(false);
+      toast({ title: "Attestation signed", description: "The completed form is attached to this ticket." });
+    } catch (e: any) {
+      toast({ title: "Couldn't sign the attestation", description: e.message, variant: "destructive" });
+    } finally { setSigning(false); }
+  };
+
+  const sendClinicLink = async () => {
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(clinicEmail.trim())) {
+      toast({ title: "Enter a valid clinic email", variant: "destructive" });
+      return;
+    }
+    setSendingLink(true);
+    try {
+      const res = await sendAttestationRequest({
+        clinic_email: clinicEmail.trim(),
+        pet_id: petId || null,
+        vet_profile_id: effectiveVetProfileId,
+        prefill: {
+          pet_name: pets.find((p) => p.id === petId)?.name ?? "",
+          clinic_name: effectiveClinicName,
+        },
+      });
+      setAttestationId(res.attestation_id);
+      setSentLink(res.link);
+      toast({
+        title: res.emailed ? "Link sent to the clinic" : "Link created",
+        description: res.emailed
+          ? "The clinic can complete and sign the attestation from that email."
+          : "Email delivery is off, so share the link below with the clinic.",
+      });
+    } catch (e: any) {
+      toast({ title: "Couldn't send the link", description: e.message, variant: "destructive" });
+    } finally { setSendingLink(false); }
+  };
+
   const submit = async () => {
     if (!user) return;
     if (!petId || !effectiveClinicName || !estimateAmount) {
@@ -250,10 +297,11 @@ function NewTicketDialog({ pets, clinics, onCreated }: {
     }
     setSubmitting(true);
     try {
-      let attestationUrl: string | null = null;
+      let attestationUrl: string | null = attestationPdfPath;
       const estimateUrl = await uploadTicketFile(user.id, estimateFile, "estimate");
-      if (attestationFile) attestationUrl = await uploadTicketFile(user.id, attestationFile, "attestation");
+      if (!attestationUrl && attestationFile) attestationUrl = await uploadTicketFile(user.id, attestationFile, "attestation");
       const res = await submitVetTicket({
+
         pet_id: petId,
         clinic_name: effectiveClinicName,
         vet_profile_id: effectiveVetProfileId,
