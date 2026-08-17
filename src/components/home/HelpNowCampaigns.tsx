@@ -11,6 +11,7 @@ import {
 } from "@/lib/help-now-campaigns-api";
 import { CampaignExpiryBadge } from "@/components/help-now/CampaignExpiryBadge";
 import { DonateDialog } from "@/components/help-now/DonateDialog";
+import { CampaignLatestUpdate } from "@/components/help-now/CampaignLatestUpdate";
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })
@@ -74,6 +75,7 @@ export function HelpNowCampaigns() {
                     : "Fully funded — closed to new donations"}
                 </span>
               </div>
+              <CampaignLatestUpdate campaignId={c.id} />
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <CampaignExpiryBadge campaign={c} />
                 <DonateDialog campaign={c} disabled={!canDonate} />
