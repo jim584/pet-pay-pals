@@ -215,6 +215,16 @@ function NewTicketDialog({ pets, clinics, onCreated }: {
   const [attestationFile, setAttestationFile] = useState<File | null>(null);
   const [attestationConfirmed, setAttestationConfirmed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [attestationMode, setAttestationMode] = useState<"in_clinic" | "email" | "upload">("in_clinic");
+  const [attestationOpen, setAttestationOpen] = useState(false);
+  const [attestationValues, setAttestationValues] = useState<AttestationValues>(emptyAttestation());
+  const [attestationId, setAttestationId] = useState<string | null>(null);
+  const [attestationPdfPath, setAttestationPdfPath] = useState<string | null>(null);
+  const [signing, setSigning] = useState(false);
+  const [clinicEmail, setClinicEmail] = useState("");
+  const [sendingLink, setSendingLink] = useState(false);
+  const [sentLink, setSentLink] = useState<string | null>(null);
+
 
   const selectedClinic = clinics.find((c) => c.id === clinicId);
   const effectiveClinicName = clinicMode === "registered" ? selectedClinic?.clinic_name ?? "" : clinicNameOther.trim();
