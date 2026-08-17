@@ -155,6 +155,56 @@ Deno.serve(async (req) => {
           break;
         }
 
+        // Help a Pet Now campaign donation — records the gift and moves the
+        // campaign's raised amount only after Stripe confirms the charge.
+        if (md.kind === "help_now_donation" && md.campaign_id && s.payment_status === "paid") {
+          const pi = typeof s.payment_intent === "string" ? s.payment_intent : s.payment_intent?.id ?? null;
+          const { data: dupDon } = await admin.from("campaign_donations")
+            .select("id").eq("stripe_checkout_session_id", s.id).maybeSingle();
+          if (dupDon) break;
+
+          const amount = (s.amount_total ?? 0) / 100;
+          const { data: camp } = await admin.from("help_now_campaigns")
+            .select("id, raised_amount, goal_amount").eq("id", md.campaign_id).maybeSingle();
+          if (!camp) break;
+
+          const { error: donInsErr } = await admin.from("campaign_donations").insert({
+            campaign_id: md.campaign_id,
+            donor_user_id: md.donor_user_id && md.donor_user_id.length > 0 ? md.donor_user_id : null,
+            donor_name: md.donor_name || null,
+            donor_email: md.donor_email || s.customer_details?.email || null,
+            amount,
+            currency: s.currency || "usd",
+            message: md.message || null,
+            status: "paid",
+            stripe_checkout_session_id: s.id,
+            stripe_payment_intent_id: pi,
+            paid_at: new Date().toISOString(),
+          });
+          if (donInsErr) throw donInsErr;
+
+          const nextRaised = Math.round((Number(camp.raised_amount ?? 0) + amount) * 100) / 100;
+          const { error: raiseErr } = await admin.from("help_now_campaigns")
+            .update({ raised_amount: nextRaised }).eq("id", md.campaign_id);
+          if (raiseErr) throw raiseErr;
+
+          if (md.donor_user_id) {
+            await admin.from("payment_history").insert({
+              user_id: md.donor_user_id,
+              kind: "donation",
+              status: "paid",
+              amount,
+              currency: s.currency || "usd",
+              description: "Help a Pet Now campaign donation",
+              stripe_payment_intent_id: pi,
+              occurred_at: new Date().toISOString(),
+            });
+          }
+          break;
+        }
+
+
+
         // Sponsorship donation payment
 
         if (md.kind === "sponsorship_donation" && md.pet_id && s.payment_status === "paid") {
