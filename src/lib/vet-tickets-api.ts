@@ -87,8 +87,9 @@ export async function submitVetTicket(args: {
   pet_id: string; clinic_name: string; estimate_amount: number;
   vet_profile_id?: string | null; estimate_url?: string | null;
   attestation_url?: string | null; notes?: string | null;
-  attestation_confirmed: boolean;
+  attestation_confirmed: boolean; attestation_id?: string | null;
 }): Promise<{ ticket: VetTicket; auto_approved: boolean; blockers: string[] }> {
+
   const { data, error } = await supabase.functions.invoke("submit-vet-ticket", { body: args });
   if (error) throw error;
   return {
