@@ -47,6 +47,7 @@ import AdminReferralsPage from "./pages/admin/AdminReferralsPage";
 import AdminContentPage from "./pages/admin/AdminContentPage";
 import AdminReconsiderationsPage from "./pages/admin/AdminReconsiderationsPage";
 import AdminVerificationCoveragePage from "./pages/admin/AdminVerificationCoveragePage";
+import AdminVetLicenseDatabasePage from "./pages/admin/AdminVetLicenseDatabasePage";
 import ReferrerDashboard from "./pages/ReferrerDashboard";
 
 const queryClient = new QueryClient();
