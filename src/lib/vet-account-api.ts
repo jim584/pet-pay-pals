@@ -60,14 +60,15 @@ export async function createVetAccount(userId: string, payload: VetSignupPayload
       license_number: payload.license_number.toUpperCase().trim(),
       license_state: payload.license_state,
       license_full_legal_name: fullName,
+      merchant_id: payload.merchant_id || null,
       specializations: [],
     } as never)
     .select()
     .single();
   if (error) throw error;
 
-  // Merchant ID and the license-match snapshot are admin-guarded columns, so
-  // they are recorded server-side by the verification function instead.
+  // Kick off the automated license check; the match snapshot is written
+  // server-side (it is an admin-guarded column).
   await supabase.functions
     .invoke("verify-vet-license", { body: { vet_profile_id: (data as { id: string }).id } })
     .catch(() => undefined);
