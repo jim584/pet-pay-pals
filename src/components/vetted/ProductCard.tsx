@@ -7,9 +7,11 @@ import { AspectRatio } from "@/components/ui/aspect-ratio";
 
 interface ProductCardProps {
   product: VettedProduct;
+  /** Optional override for the CTA link. Defaults to product.external_url. */
+  shopUrl?: string;
 }
 
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({ product, shopUrl }: ProductCardProps) {
   return (
     <Card className="overflow-hidden group hover:shadow-md transition-shadow">
       <AspectRatio ratio={1}>
@@ -58,7 +60,7 @@ export function ProductCard({ product }: ProductCardProps) {
           )}
           <Button size="sm" className="ml-auto gap-1 text-xs" asChild>
             <a
-              href={product.external_url}
+              href={shopUrl ?? product.external_url}
               target="_blank"
               rel="noopener noreferrer"
             >

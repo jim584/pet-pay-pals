@@ -37,6 +37,9 @@ export interface VetProfile {
   fear_free_checked_at: string | null;
   fear_free_source: string | null;
   fear_free_reason: string | null;
+  // Reserved for future Vetted affiliate tracking. Do not use yet.
+  vetted_affiliate_id: string | null;
+  vetted_affiliate_link: string | null;
   created_at: string;
   updated_at: string;
 }
