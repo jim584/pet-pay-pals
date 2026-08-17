@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import SelectRole from "./pages/SelectRole";
 import AttestationPublicPage from "./pages/AttestationPublicPage";
+import VetIdentityPage from "./pages/VetIdentityPage";
 
 import DashboardLayout from "./pages/DashboardLayout";
 import DashboardIndex from "./pages/DashboardIndex";
@@ -62,6 +63,7 @@ function AppRoutes() {
         <Route path="/auth" element={<Auth />} />
         <Route path="/select-role" element={<SelectRole />} />
         <Route path="/attestation/:token" element={<AttestationPublicPage />} />
+        <Route path="/vet-identity/:token" element={<VetIdentityPage />} />
 
         <Route path="/dashboard" element={<DashboardLayout />}>
           <Route index element={<DashboardIndex />} />
