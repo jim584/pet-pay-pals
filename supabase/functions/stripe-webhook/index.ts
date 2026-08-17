@@ -818,6 +818,8 @@ Deno.serve(async (req) => {
             _authorization_id: d.id,
           });
         }
+        await syncTicketDisbursement(admin, ticketId);
+
         break;
       }
 
