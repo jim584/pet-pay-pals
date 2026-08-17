@@ -4,6 +4,8 @@
 //   2. The member already paid: accepted invoice + admin-verified proof of payment.
 // An accepted invoice on its own never authorises releasing funds to the member.
 
+import { recomputeUpdateCadence } from "./campaign-updates.ts";
+
 // deno-lint-ignore no-explicit-any
 type Admin = any;
 
@@ -71,6 +73,17 @@ export async function recomputeDisbursementEligibility(
       path: "unset",
       eligible_at: null,
       block_reason: "A verified veterinary invoice is required first",
+    };
+  }
+
+  // Requirement 15: a missing required community update pauses further
+  // disbursements even when the documents themselves check out.
+  const cadence = await recomputeUpdateCadence(admin, campaignId);
+  if (cadence?.disbursement_paused_for_update) {
+    result = {
+      path: result.path,
+      eligible_at: null,
+      block_reason: cadence.pause_reason ?? "A required campaign update is missing",
     };
   }
 
