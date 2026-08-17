@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { rankHelpNowCases } from "@/lib/help-now-priority";
 
 export type HelpNowCampaignStatus = "draft" | "published" | "funded" | "expired" | "cancelled";
 
@@ -18,6 +19,10 @@ export type HelpNowCampaign = {
   invoice_reviewed_at: string | null;
   invoice_rejection_reason: string | null;
   clock_paused_at: string | null;
+  priority_rank: number | null;
+  priority_source: string;
+  priority_computed_at: string | null;
+  priority_inputs: Record<string, unknown> | null;
   verified_amount: number | null;
   verified_amount_source: string | null;
   funding_offsets: Record<string, number | string> | null;
@@ -305,7 +310,32 @@ export async function listPublishedCampaigns(limit = 20): Promise<PublicCampaign
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
-  return (data ?? []) as unknown as PublicCampaign[];
+  // Requirement 14: feed order goes through the single ranking authority so the
+  // official priority hierarchy can be dropped in without touching call sites.
+  return rankHelpNowCases((data ?? []) as unknown as PublicCampaign[], "feed");
+}
+
+/** Admin: every campaign with the fields a priority rule would read. */
+export async function listCampaignsForPriority(): Promise<PublicCampaign[]> {
+  const { data, error } = await supabase
+    .from("help_now_campaigns")
+    .select("*, pet:pets(id, name, photo_url)")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return rankHelpNowCases((data ?? []) as unknown as PublicCampaign[], "feed");
+}
+
+/** Admin: assign or clear a case's priority rank. */
+export async function setCampaignPriority(campaignId: string, rank: number | null) {
+  const { error } = await supabase
+    .from("help_now_campaigns")
+    .update({
+      priority_rank: rank,
+      priority_source: rank === null ? "unset" : "admin",
+      priority_computed_at: rank === null ? null : new Date().toISOString(),
+    })
+    .eq("id", campaignId);
+  if (error) throw error;
 }
 
 export async function isReservePoolEnabled(): Promise<boolean> {

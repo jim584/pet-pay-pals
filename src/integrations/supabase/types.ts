@@ -1057,6 +1057,10 @@ export type Database = {
           owner_id: string
           pet_id: string
           photo_urls: string[]
+          priority_computed_at: string | null
+          priority_inputs: Json
+          priority_rank: number | null
+          priority_source: string
           proof_of_payment_status: string
           proof_of_payment_url: string | null
           proof_rejection_reason: string | null
@@ -1095,6 +1099,10 @@ export type Database = {
           owner_id: string
           pet_id: string
           photo_urls?: string[]
+          priority_computed_at?: string | null
+          priority_inputs?: Json
+          priority_rank?: number | null
+          priority_source?: string
           proof_of_payment_status?: string
           proof_of_payment_url?: string | null
           proof_rejection_reason?: string | null
@@ -1133,6 +1141,10 @@ export type Database = {
           owner_id?: string
           pet_id?: string
           photo_urls?: string[]
+          priority_computed_at?: string | null
+          priority_inputs?: Json
+          priority_rank?: number | null
+          priority_source?: string
           proof_of_payment_status?: string
           proof_of_payment_url?: string | null
           proof_rejection_reason?: string | null

@@ -50,6 +50,7 @@ import AdminContentPage from "./pages/admin/AdminContentPage";
 import AdminReconsiderationsPage from "./pages/admin/AdminReconsiderationsPage";
 import AdminCampaignInvoicesPage from "./pages/admin/AdminCampaignInvoicesPage";
 import AdminRedirectionsPage from "./pages/admin/AdminRedirectionsPage";
+import AdminCampaignPriorityPage from "./pages/admin/AdminCampaignPriorityPage";
 import AdminVerificationCoveragePage from "./pages/admin/AdminVerificationCoveragePage";
 import AdminVetLicenseDatabasePage from "./pages/admin/AdminVetLicenseDatabasePage";
 import AdminVettedCatalogPage from "./pages/admin/AdminVettedCatalogPage";
@@ -100,6 +101,7 @@ function AppRoutes() {
           <Route path="reconsiderations" element={<AdminReconsiderationsPage />} />
           <Route path="campaign-invoices" element={<AdminCampaignInvoicesPage />} />
           <Route path="redirections" element={<AdminRedirectionsPage />} />
+          <Route path="campaign-priority" element={<AdminCampaignPriorityPage />} />
         </Route>
         <Route path="/vet-tickets/:id/card" element={<VetCardPage />} />
         {/* Compass menu placeholder routes */}
