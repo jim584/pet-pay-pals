@@ -15,6 +15,7 @@ import {
 } from "@/lib/help-now-campaigns-api";
 import { CampaignInvoicePanel } from "./CampaignInvoicePanel";
 import { CampaignExpiryBadge } from "./CampaignExpiryBadge";
+import { CampaignUpdatesPanel } from "./CampaignUpdatesPanel";
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(Number(n ?? 0));
@@ -144,6 +145,7 @@ export function CampaignComposer({ ticketId }: { ticketId: string }) {
             {fmt(Math.max(0, Number(campaign.goal_amount) - Number(campaign.raised_amount)))} still needed
           </p>
           <CampaignInvoicePanel campaign={campaign} onChange={setCampaign} />
+          <CampaignUpdatesPanel campaign={campaign} onChange={setCampaign} />
         </div>
       ) : (
         <div className="space-y-2">
@@ -157,7 +159,7 @@ export function CampaignComposer({ ticketId }: { ticketId: string }) {
               rows={4}
               value={story}
               onChange={(e) => setStory(e.target.value)}
-              placeholder="Tell the community what happened and what your pet needs."
+              placeholder="Tell the community what happened and what your pet needs — e.g. Rocky swallowed a string and needed surgery."
             />
             <p className="text-xs text-muted-foreground">
               {story.trim().length}/{MIN_STORY_LENGTH} characters minimum
@@ -194,7 +196,8 @@ export function CampaignComposer({ ticketId }: { ticketId: string }) {
           </div>
           {!draftReady && (
             <p className="text-xs text-muted-foreground">
-              Add your story and at least one photo to publish. Nothing goes public until you do.
+              Add your story and at least one photo to publish. Publishing posts them as your
+              case's first public update — Help a Pet Now funding always comes with social proof.
             </p>
           )}
         </div>
