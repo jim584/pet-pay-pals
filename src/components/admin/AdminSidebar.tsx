@@ -20,6 +20,7 @@ const adminNav = [
   { title: "Overview", url: "/admin", icon: LayoutDashboard, end: true },
   { title: "Users & Roles", url: "/admin/users", icon: Users },
   { title: "Vets", url: "/admin/vets", icon: Stethoscope },
+  { title: "License Database", url: "/admin/license-database", icon: Database },
   { title: "License Coverage", url: "/admin/verification-coverage", icon: MapPin },
   { title: "Vet Tickets", url: "/admin/vet-tickets", icon: FileCheck },
   { title: "Memberships", url: "/admin/memberships", icon: Shield },
