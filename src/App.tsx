@@ -82,6 +82,7 @@ function AppRoutes() {
           <Route path="vets" element={<AdminVetsPage />} />
           <Route path="vets/:vetProfileId" element={<AdminVetDetailPage />} />
           <Route path="verification-coverage" element={<AdminVerificationCoveragePage />} />
+          <Route path="license-database" element={<AdminVetLicenseDatabasePage />} />
           <Route path="vet-tickets" element={<AdminVetTicketsPage />} />
           <Route path="memberships" element={<AdminMembershipsPage />} />
           <Route path="payments" element={<AdminPaymentsPage />} />
