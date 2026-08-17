@@ -333,10 +333,99 @@ function NewTicketDialog({ pets, clinics, onCreated }: {
           <Input type="file" accept=".pdf,image/*" onChange={(e) => setEstimateFile(e.target.files?.[0] ?? null)} />
           <p className="text-xs text-muted-foreground mt-1">Required. Attach the itemised document from your clinic.</p>
         </div>
-        <div>
-          <Label>Veterinarian attestation form (optional upload)</Label>
-          <Input type="file" accept=".pdf,image/*" onChange={(e) => setAttestationFile(e.target.files?.[0] ?? null)} />
+        <div className="space-y-3 rounded-lg border border-border p-3">
+          <div>
+            <Label>Veterinarian attestation</Label>
+            <p className="text-xs text-muted-foreground mt-1">
+              Choose how your veterinarian will complete the attestation form.
+            </p>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {([
+              { key: "in_clinic", label: "Complete at the clinic", hint: "Hand your phone to the vet" },
+              { key: "email", label: "Email the clinic", hint: "Send a secure one-time link" },
+              { key: "upload", label: "Upload a signed copy", hint: "Printed or scanned PDF" },
+            ] as const).map((m) => (
+              <button
+                key={m.key}
+                type="button"
+                onClick={() => setAttestationMode(m.key)}
+                className={`rounded-md border p-2.5 text-left text-xs transition-colors ${
+                  attestationMode === m.key ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
+                }`}
+              >
+                <span className="block font-medium">{m.label}</span>
+                <span className="block text-muted-foreground">{m.hint}</span>
+              </button>
+            ))}
+          </div>
+
+          {attestationMode === "in_clinic" && (
+            <div className="space-y-2">
+              {attestationPdfPath ? (
+                <p className="text-xs text-primary flex items-center gap-1">
+                  <ShieldCheck className="h-3.5 w-3.5" /> Attestation signed and attached.
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Hand your phone to the veterinarian or technician. They complete the form and sign
+                  by typing their full legal name and the date.
+                </p>
+              )}
+              <Dialog open={attestationOpen} onOpenChange={setAttestationOpen}>
+                <DialogTrigger asChild>
+                  <Button type="button" variant="outline" size="sm">
+                    <FileText className="h-4 w-4 mr-1" />
+                    {attestationPdfPath ? "Review or redo the form" : "Open the attestation form"}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+                  <DialogHeader><DialogTitle>Veterinarian attestation</DialogTitle></DialogHeader>
+                  <AttestationForm value={attestationValues} onChange={setAttestationValues} />
+                  <DialogFooter>
+                    <Button onClick={signAttestation} disabled={signing}>
+                      {signing && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+                      Sign and attach
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+          )}
+
+          {attestationMode === "email" && (
+            <div className="space-y-2">
+              <Label className="text-sm">Clinic email address</Label>
+              <div className="flex gap-2">
+                <Input type="email" value={clinicEmail} placeholder="records@clinic.com"
+                       onChange={(e) => setClinicEmail(e.target.value)} />
+                <Button type="button" variant="outline" onClick={sendClinicLink} disabled={sendingLink}>
+                  {sendingLink && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}Send
+                </Button>
+              </div>
+              {sentLink && (
+                <p className="text-xs text-muted-foreground break-all">
+                  Secure link (valid once, expires in 14 days): <span className="font-mono">{sentLink}</span>
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                You can submit the ticket now and the signed attestation will be attached to your
+                record as soon as the clinic completes it.
+              </p>
+            </div>
+          )}
+
+          {attestationMode === "upload" && (
+            <div className="space-y-2">
+              <Input type="file" accept=".pdf,image/*" onChange={(e) => setAttestationFile(e.target.files?.[0] ?? null)} />
+              <p className="text-xs text-muted-foreground">
+                Upload the flattened PDF of the completed and signed form. Typed answers scan far
+                better than handwriting.
+              </p>
+            </div>
+          )}
         </div>
+
         <div>
           <Label>Notes (optional)</Label>
           <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
