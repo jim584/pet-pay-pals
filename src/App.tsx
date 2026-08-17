@@ -49,6 +49,7 @@ import AdminContentPage from "./pages/admin/AdminContentPage";
 import AdminReconsiderationsPage from "./pages/admin/AdminReconsiderationsPage";
 import AdminVerificationCoveragePage from "./pages/admin/AdminVerificationCoveragePage";
 import AdminVetLicenseDatabasePage from "./pages/admin/AdminVetLicenseDatabasePage";
+import AdminVettedCatalogPage from "./pages/admin/AdminVettedCatalogPage";
 import ReferrerDashboard from "./pages/ReferrerDashboard";
 
 const queryClient = new QueryClient();
@@ -91,6 +92,7 @@ function AppRoutes() {
           <Route path="payment-plans" element={<AdminPaymentPlansPage />} />
           <Route path="reserve" element={<AdminReservePage />} />
           <Route path="referrals" element={<AdminReferralsPage />} />
+          <Route path="vetted-catalog" element={<AdminVettedCatalogPage />} />
           <Route path="content" element={<AdminContentPage />} />
           <Route path="reconsiderations" element={<AdminReconsiderationsPage />} />
         </Route>
