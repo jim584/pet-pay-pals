@@ -1411,6 +1411,7 @@ export type Database = {
           species: string
           updated_at: string
           vet_of_record_id: string | null
+          vet_of_record_license_id: string | null
           vet_of_record_set_at: string | null
           weight_kg: number | null
         }
@@ -1429,6 +1430,7 @@ export type Database = {
           species?: string
           updated_at?: string
           vet_of_record_id?: string | null
+          vet_of_record_license_id?: string | null
           vet_of_record_set_at?: string | null
           weight_kg?: number | null
         }
@@ -1447,6 +1449,7 @@ export type Database = {
           species?: string
           updated_at?: string
           vet_of_record_id?: string | null
+          vet_of_record_license_id?: string | null
           vet_of_record_set_at?: string | null
           weight_kg?: number | null
         }
@@ -1463,6 +1466,13 @@ export type Database = {
             columns: ["vet_of_record_id"]
             isOneToOne: false
             referencedRelation: "vet_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pets_vet_of_record_license_id_fkey"
+            columns: ["vet_of_record_license_id"]
+            isOneToOne: false
+            referencedRelation: "vet_license_records"
             referencedColumns: ["id"]
           },
         ]
@@ -2314,6 +2324,250 @@ export type Database = {
           },
         ]
       }
+      vet_license_import_runs: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          error_samples: Json
+          file_path: string | null
+          finished_at: string | null
+          id: string
+          import_method: string
+          rows_deactivated: number
+          rows_filtered_status: number
+          rows_filtered_type: number
+          rows_inserted: number
+          rows_invalid: number
+          rows_kept: number
+          rows_read: number
+          rows_updated: number
+          started_at: string
+          state_code: string
+          status: string
+          trigger_source: string
+          triggered_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          error_samples?: Json
+          file_path?: string | null
+          finished_at?: string | null
+          id?: string
+          import_method: string
+          rows_deactivated?: number
+          rows_filtered_status?: number
+          rows_filtered_type?: number
+          rows_inserted?: number
+          rows_invalid?: number
+          rows_kept?: number
+          rows_read?: number
+          rows_updated?: number
+          started_at?: string
+          state_code: string
+          status?: string
+          trigger_source?: string
+          triggered_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          error_samples?: Json
+          file_path?: string | null
+          finished_at?: string | null
+          id?: string
+          import_method?: string
+          rows_deactivated?: number
+          rows_filtered_status?: number
+          rows_filtered_type?: number
+          rows_inserted?: number
+          rows_invalid?: number
+          rows_kept?: number
+          rows_read?: number
+          rows_updated?: number
+          started_at?: string
+          state_code?: string
+          status?: string
+          trigger_source?: string
+          triggered_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vet_license_import_runs_state_code_fkey"
+            columns: ["state_code"]
+            isOneToOne: false
+            referencedRelation: "vet_license_sources"
+            referencedColumns: ["state_code"]
+          },
+        ]
+      }
+      vet_license_records: {
+        Row: {
+          address_line1: string | null
+          address_line2: string | null
+          address_state: string | null
+          city: string | null
+          county: string | null
+          created_at: string
+          deactivated_at: string | null
+          expiration_date: string | null
+          first_name: string | null
+          full_name: string
+          id: string
+          is_active: boolean
+          issue_date: string | null
+          last_name: string | null
+          last_synced_at: string
+          license_number: string
+          license_status: string
+          license_status_raw: string | null
+          license_type: string
+          license_type_raw: string | null
+          normalized_name: string
+          phone: string | null
+          postal_code: string | null
+          raw: Json
+          source_authority: string | null
+          source_synced_at: string | null
+          source_url: string | null
+          state: string
+          updated_at: string
+          vet_profile_id: string | null
+        }
+        Insert: {
+          address_line1?: string | null
+          address_line2?: string | null
+          address_state?: string | null
+          city?: string | null
+          county?: string | null
+          created_at?: string
+          deactivated_at?: string | null
+          expiration_date?: string | null
+          first_name?: string | null
+          full_name: string
+          id?: string
+          is_active?: boolean
+          issue_date?: string | null
+          last_name?: string | null
+          last_synced_at?: string
+          license_number: string
+          license_status: string
+          license_status_raw?: string | null
+          license_type: string
+          license_type_raw?: string | null
+          normalized_name: string
+          phone?: string | null
+          postal_code?: string | null
+          raw?: Json
+          source_authority?: string | null
+          source_synced_at?: string | null
+          source_url?: string | null
+          state: string
+          updated_at?: string
+          vet_profile_id?: string | null
+        }
+        Update: {
+          address_line1?: string | null
+          address_line2?: string | null
+          address_state?: string | null
+          city?: string | null
+          county?: string | null
+          created_at?: string
+          deactivated_at?: string | null
+          expiration_date?: string | null
+          first_name?: string | null
+          full_name?: string
+          id?: string
+          is_active?: boolean
+          issue_date?: string | null
+          last_name?: string | null
+          last_synced_at?: string
+          license_number?: string
+          license_status?: string
+          license_status_raw?: string | null
+          license_type?: string
+          license_type_raw?: string | null
+          normalized_name?: string
+          phone?: string | null
+          postal_code?: string | null
+          raw?: Json
+          source_authority?: string | null
+          source_synced_at?: string | null
+          source_url?: string | null
+          state?: string
+          updated_at?: string
+          vet_profile_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vet_license_records_vet_profile_id_fkey"
+            columns: ["vet_profile_id"]
+            isOneToOne: false
+            referencedRelation: "vet_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vet_license_sources: {
+        Row: {
+          authority: string
+          auto_sync_enabled: boolean
+          created_at: string
+          file_format: string | null
+          import_method: string
+          is_full_snapshot: boolean
+          last_error: string | null
+          last_success_at: string | null
+          last_synced_at: string | null
+          mapping: Json
+          notes: string | null
+          record_count: number
+          refresh_cadence_days: number
+          source_url: string | null
+          state_code: string
+          state_name: string
+          updated_at: string
+        }
+        Insert: {
+          authority: string
+          auto_sync_enabled?: boolean
+          created_at?: string
+          file_format?: string | null
+          import_method?: string
+          is_full_snapshot?: boolean
+          last_error?: string | null
+          last_success_at?: string | null
+          last_synced_at?: string | null
+          mapping?: Json
+          notes?: string | null
+          record_count?: number
+          refresh_cadence_days?: number
+          source_url?: string | null
+          state_code: string
+          state_name: string
+          updated_at?: string
+        }
+        Update: {
+          authority?: string
+          auto_sync_enabled?: boolean
+          created_at?: string
+          file_format?: string | null
+          import_method?: string
+          is_full_snapshot?: boolean
+          last_error?: string | null
+          last_success_at?: string | null
+          last_synced_at?: string | null
+          mapping?: Json
+          notes?: string | null
+          record_count?: number
+          refresh_cadence_days?: number
+          source_url?: string | null
+          state_code?: string
+          state_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       vet_payouts: {
         Row: {
           amount: number
@@ -2987,10 +3241,53 @@ export type Database = {
         }
         Returns: undefined
       }
+      search_vet_licenses: {
+        Args: { _limit?: number; _q: string; _state?: string }
+        Returns: {
+          address_line1: string | null
+          address_line2: string | null
+          address_state: string | null
+          city: string | null
+          county: string | null
+          created_at: string
+          deactivated_at: string | null
+          expiration_date: string | null
+          first_name: string | null
+          full_name: string
+          id: string
+          is_active: boolean
+          issue_date: string | null
+          last_name: string | null
+          last_synced_at: string
+          license_number: string
+          license_status: string
+          license_status_raw: string | null
+          license_type: string
+          license_type_raw: string | null
+          normalized_name: string
+          phone: string | null
+          postal_code: string | null
+          raw: Json
+          source_authority: string | null
+          source_synced_at: string | null
+          source_url: string | null
+          state: string
+          updated_at: string
+          vet_profile_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "vet_license_records"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       set_status_context: {
         Args: { _changer: string; _source: string }
         Returns: undefined
       }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
       sync_bnpl_paused_for_user: {
         Args: { _user_id: string }
         Returns: undefined
