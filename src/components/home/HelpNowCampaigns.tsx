@@ -5,7 +5,10 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { HeartHandshake, ShieldCheck, Heart } from "lucide-react";
-import { listPublishedCampaigns, campaignEffectiveStatus, canDonateToCampaign } from "@/lib/help-now-campaigns-api";
+import {
+  listPublishedCampaigns, campaignEffectiveStatus, canDonateToCampaign,
+  campaignRemainingEligible, campaignIsInvoiceBased,
+} from "@/lib/help-now-campaigns-api";
 import { CampaignExpiryBadge } from "@/components/help-now/CampaignExpiryBadge";
 
 const fmt = (n: number) =>
@@ -28,7 +31,7 @@ export function HelpNowCampaigns() {
         <HeartHandshake className="h-4 w-4 text-primary" /> Funding cases
       </h2>
       {data.map((c) => {
-        const remaining = Math.max(0, Number(c.goal_amount) - Number(c.raised_amount));
+        const remaining = campaignRemainingEligible(c);
         const pct = Number(c.goal_amount) > 0
           ? Math.min(100, (Number(c.raised_amount) / Number(c.goal_amount)) * 100) : 0;
         const status = campaignEffectiveStatus(c) ?? c.status;
@@ -60,8 +63,15 @@ export function HelpNowCampaigns() {
               </div>
               <Progress value={pct} />
               <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-                <span>{fmt(c.raised_amount)} raised of {fmt(c.goal_amount)}</span>
-                <span>{fmt(remaining)} still needed</span>
+                <span>
+                  {fmt(c.raised_amount)} raised of {fmt(c.goal_amount)}
+                  {campaignIsInvoiceBased(c) ? " verified" : ""}
+                </span>
+                <span>
+                  {remaining > 0
+                    ? `${fmt(remaining)} still needed`
+                    : "Fully funded — closed to new donations"}
+                </span>
               </div>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <CampaignExpiryBadge campaign={c} />

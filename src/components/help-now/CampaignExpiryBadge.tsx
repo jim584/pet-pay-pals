@@ -19,6 +19,8 @@ export function CampaignExpiryBadge({
   campaign: Pick<
     HelpNowCampaign,
     "status" | "document_basis" | "expires_at" | "clock_paused_at" | "invoice_status"
+  > & Partial<
+    Pick<HelpNowCampaign, "goal_amount" | "raised_amount">
   >;
   className?: string;
 }) {
@@ -28,7 +30,7 @@ export function CampaignExpiryBadge({
   if (c.document_basis === "invoice") {
     return (
       <Badge variant="outline" className={`text-xs flex items-center gap-1 ${className ?? ""}`}>
-        <ShieldCheck className="h-3 w-3" /> Invoice on file
+        <ShieldCheck className="h-3 w-3" /> Invoice verified — no deadline
       </Badge>
     );
   }

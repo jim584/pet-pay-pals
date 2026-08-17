@@ -40,6 +40,7 @@ Deno.serve(async (req) => {
       .eq("status", "published")
       .eq("document_basis", "estimate")
       .is("clock_paused_at", null)
+      .is("clock_paused_at", null)
       .not("expires_at", "is", null)
       .lt("expires_at", new Date(now).toISOString())
       .limit(BATCH_SIZE);

@@ -10,6 +10,9 @@ import {
 } from "@/lib/help-now-campaigns-api";
 import { CampaignExpiryBadge } from "./CampaignExpiryBadge";
 
+const money = (n: number) =>
+  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(Number(n ?? 0));
+
 /**
  * Member-facing invoice hand-off for an estimate-backed campaign. Uploading pauses
  * the 60-day clock; an admin then accepts (campaign becomes invoice-backed) or
@@ -58,9 +61,18 @@ export function CampaignInvoicePanel({
       </div>
 
       {accepted ? (
-        <p className="text-xs text-muted-foreground">
-          Your invoice has been accepted. This campaign is no longer on the estimate clock.
-        </p>
+        <div className="space-y-1">
+          <p className="text-xs text-muted-foreground">
+            Your invoice has been accepted. The 60-day deadline no longer applies, and this campaign
+            can keep raising up to the verified veterinary amount
+            {campaign.verified_amount ? ` of ${money(campaign.verified_amount)}` : ""} — less anything
+            Direct Pay, a payment plan or the Reserve already covered.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Funds are not released just because an invoice was accepted. Money is disbursed only when
+            the vet is paid through Help a Pet, or with the invoice plus proof the bill was paid.
+          </p>
+        </div>
       ) : underReview ? (
         <p className="text-xs text-muted-foreground">
           We're reviewing your invoice. The days spent in review won't count against your 60-day period.
