@@ -108,6 +108,42 @@ export default function AdminCampaignInvoicesPage() {
     }
   };
 
+  const verifyProof = async (c: ReviewCampaign) => {
+    setBusy(true);
+    try {
+      await reviewCampaignProof(c.id, "verify");
+      toast({
+        title: "Proof of payment verified",
+        description: "This campaign is now eligible to proceed through the reimbursement process.",
+      });
+      refresh();
+    } catch (e: any) {
+      toast({ title: "Couldn't verify", description: e.message, variant: "destructive" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const submitProofDecision = async () => {
+    if (!proofDecision) return;
+    setBusy(true);
+    try {
+      await reviewCampaignProof(proofDecision.campaign.id, proofDecision.decision, proofReason.trim());
+      toast({
+        title: proofDecision.decision === "flag" ? "Flagged for review" : "Proof rejected",
+        description: "The campaign stays ineligible for disbursement.",
+      });
+      setProofDecision(null);
+      setProofReason("");
+      refresh();
+    } catch (e: any) {
+      toast({ title: "Couldn't save", description: e.message, variant: "destructive" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+
   return (
     <div className="space-y-4">
       <div>
