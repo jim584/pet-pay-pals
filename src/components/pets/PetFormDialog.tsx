@@ -364,6 +364,18 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
               )}
             </div>
             <div className="space-y-2">
+              <Label>Or search the state license database</Label>
+              <LicensedVetPicker
+                value={licenseVet?.id ?? null}
+                selected={licenseVet}
+                onChange={setLicenseVet}
+              />
+              <p className="text-xs text-muted-foreground">
+                Find your vet by name or license number, even if their clinic hasn't joined yet. Only active
+                standard veterinary licenses are listed.
+              </p>
+            </div>
+            <div className="space-y-2">
               <Label>Notes</Label>
               <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3} />
             </div>
