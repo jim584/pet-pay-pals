@@ -1413,6 +1413,7 @@ export type Database = {
           vet_of_record_id: string | null
           vet_of_record_license_id: string | null
           vet_of_record_set_at: string | null
+          vet_profile_id: string | null
           weight_kg: number | null
         }
         Insert: {
@@ -1432,6 +1433,7 @@ export type Database = {
           vet_of_record_id?: string | null
           vet_of_record_license_id?: string | null
           vet_of_record_set_at?: string | null
+          vet_profile_id?: string | null
           weight_kg?: number | null
         }
         Update: {
@@ -1451,6 +1453,7 @@ export type Database = {
           vet_of_record_id?: string | null
           vet_of_record_license_id?: string | null
           vet_of_record_set_at?: string | null
+          vet_profile_id?: string | null
           weight_kg?: number | null
         }
         Relationships: [
@@ -1473,6 +1476,13 @@ export type Database = {
             columns: ["vet_of_record_license_id"]
             isOneToOne: false
             referencedRelation: "vet_license_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pets_vet_profile_id_fkey"
+            columns: ["vet_profile_id"]
+            isOneToOne: false
+            referencedRelation: "vet_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2687,6 +2697,8 @@ export type Database = {
           verification_source: string | null
           verification_source_url: string | null
           verification_status: Database["public"]["Enums"]["vet_verification_status"]
+          vetted_affiliate_id: string | null
+          vetted_affiliate_link: string | null
           website: string | null
         }
         Insert: {
@@ -2733,6 +2745,8 @@ export type Database = {
           verification_source?: string | null
           verification_source_url?: string | null
           verification_status?: Database["public"]["Enums"]["vet_verification_status"]
+          vetted_affiliate_id?: string | null
+          vetted_affiliate_link?: string | null
           website?: string | null
         }
         Update: {
@@ -2779,6 +2793,8 @@ export type Database = {
           verification_source?: string | null
           verification_source_url?: string | null
           verification_status?: Database["public"]["Enums"]["vet_verification_status"]
+          vetted_affiliate_id?: string | null
+          vetted_affiliate_link?: string | null
           website?: string | null
         }
         Relationships: []
