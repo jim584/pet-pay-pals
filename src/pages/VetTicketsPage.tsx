@@ -471,6 +471,15 @@ function NewTicketDialog({ pets, clinics, onCreated }: {
                 Upload the flattened PDF of the completed and signed form. Typed answers scan far
                 better than handwriting.
               </p>
+              <a
+                href="/veterinarian-attestation-form.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-primary underline"
+              >
+                <ExternalLink className="h-3.5 w-3.5" /> Download the blank form to print
+              </a>
+
             </div>
           )}
         </div>
