@@ -779,6 +779,59 @@ export type Database = {
           },
         ]
       }
+      campaign_updates: {
+        Row: {
+          author_id: string
+          body: string
+          campaign_id: string
+          created_at: string
+          id: string
+          is_required_update: boolean
+          kind: string
+          pet_id: string | null
+          photo_urls: string[]
+          public_verification_url: string | null
+          ticket_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          body: string
+          campaign_id: string
+          created_at?: string
+          id?: string
+          is_required_update?: boolean
+          kind?: string
+          pet_id?: string | null
+          photo_urls?: string[]
+          public_verification_url?: string | null
+          ticket_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          campaign_id?: string
+          created_at?: string
+          id?: string
+          is_required_update?: boolean
+          kind?: string
+          pet_id?: string | null
+          photo_urls?: string[]
+          public_verification_url?: string | null
+          ticket_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_updates_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "help_now_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comment_likes: {
         Row: {
           comment_id: string
@@ -1042,17 +1095,21 @@ export type Database = {
           disbursement_block_reason: string | null
           disbursement_eligible_at: string | null
           disbursement_path: string
+          disbursement_paused_for_update: boolean
           document_basis: string
           expires_at: string | null
           funding_offsets: Json
           goal_amount: number
           id: string
+          initial_update_at: string | null
           invoice_rejection_reason: string | null
           invoice_reviewed_at: string | null
           invoice_reviewed_by: string | null
           invoice_status: string
           invoice_submitted_at: string | null
           invoice_url: string | null
+          last_required_update_at: string | null
+          next_update_due_at: string | null
           over_raised_flagged_at: string | null
           owner_id: string
           pet_id: string
@@ -1067,12 +1124,16 @@ export type Database = {
           proof_reviewed_at: string | null
           proof_reviewed_by: string | null
           proof_submitted_at: string | null
+          public_verification_url: string | null
           published_at: string | null
           raised_amount: number
           status: Database["public"]["Enums"]["help_now_campaign_status"]
           story: string | null
           ticket_id: string
           title: string | null
+          treatment_update_at: string | null
+          update_overdue: boolean
+          update_reminder_sent_at: string | null
           updated_at: string
           verification_status: string
           verified_amount: number | null
@@ -1084,17 +1145,21 @@ export type Database = {
           disbursement_block_reason?: string | null
           disbursement_eligible_at?: string | null
           disbursement_path?: string
+          disbursement_paused_for_update?: boolean
           document_basis?: string
           expires_at?: string | null
           funding_offsets?: Json
           goal_amount?: number
           id?: string
+          initial_update_at?: string | null
           invoice_rejection_reason?: string | null
           invoice_reviewed_at?: string | null
           invoice_reviewed_by?: string | null
           invoice_status?: string
           invoice_submitted_at?: string | null
           invoice_url?: string | null
+          last_required_update_at?: string | null
+          next_update_due_at?: string | null
           over_raised_flagged_at?: string | null
           owner_id: string
           pet_id: string
@@ -1109,12 +1174,16 @@ export type Database = {
           proof_reviewed_at?: string | null
           proof_reviewed_by?: string | null
           proof_submitted_at?: string | null
+          public_verification_url?: string | null
           published_at?: string | null
           raised_amount?: number
           status?: Database["public"]["Enums"]["help_now_campaign_status"]
           story?: string | null
           ticket_id: string
           title?: string | null
+          treatment_update_at?: string | null
+          update_overdue?: boolean
+          update_reminder_sent_at?: string | null
           updated_at?: string
           verification_status?: string
           verified_amount?: number | null
@@ -1126,17 +1195,21 @@ export type Database = {
           disbursement_block_reason?: string | null
           disbursement_eligible_at?: string | null
           disbursement_path?: string
+          disbursement_paused_for_update?: boolean
           document_basis?: string
           expires_at?: string | null
           funding_offsets?: Json
           goal_amount?: number
           id?: string
+          initial_update_at?: string | null
           invoice_rejection_reason?: string | null
           invoice_reviewed_at?: string | null
           invoice_reviewed_by?: string | null
           invoice_status?: string
           invoice_submitted_at?: string | null
           invoice_url?: string | null
+          last_required_update_at?: string | null
+          next_update_due_at?: string | null
           over_raised_flagged_at?: string | null
           owner_id?: string
           pet_id?: string
@@ -1151,12 +1224,16 @@ export type Database = {
           proof_reviewed_at?: string | null
           proof_reviewed_by?: string | null
           proof_submitted_at?: string | null
+          public_verification_url?: string | null
           published_at?: string | null
           raised_amount?: number
           status?: Database["public"]["Enums"]["help_now_campaign_status"]
           story?: string | null
           ticket_id?: string
           title?: string | null
+          treatment_update_at?: string | null
+          update_overdue?: boolean
+          update_reminder_sent_at?: string | null
           updated_at?: string
           verification_status?: string
           verified_amount?: number | null
