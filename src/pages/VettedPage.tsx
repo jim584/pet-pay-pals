@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { fetchVettedProducts, fetchLastCatalogSync } from "@/lib/vetted-api";
 import { ProductCard } from "@/components/vetted/ProductCard";
@@ -22,7 +21,6 @@ const CATEGORY_TABS = [
 ];
 
 export default function VettedPage() {
-  const { user } = useAuth();
   const isMobile = useIsMobile();
   const [category, setCategory] = useState("all");
   const [search, setSearch] = useState("");
