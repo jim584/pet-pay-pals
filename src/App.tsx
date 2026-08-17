@@ -48,6 +48,7 @@ import AdminReservePage from "./pages/admin/AdminReservePage";
 import AdminReferralsPage from "./pages/admin/AdminReferralsPage";
 import AdminContentPage from "./pages/admin/AdminContentPage";
 import AdminReconsiderationsPage from "./pages/admin/AdminReconsiderationsPage";
+import AdminCampaignInvoicesPage from "./pages/admin/AdminCampaignInvoicesPage";
 import AdminVerificationCoveragePage from "./pages/admin/AdminVerificationCoveragePage";
 import AdminVetLicenseDatabasePage from "./pages/admin/AdminVetLicenseDatabasePage";
 import AdminVettedCatalogPage from "./pages/admin/AdminVettedCatalogPage";
@@ -96,6 +97,7 @@ function AppRoutes() {
           <Route path="vetted-catalog" element={<AdminVettedCatalogPage />} />
           <Route path="content" element={<AdminContentPage />} />
           <Route path="reconsiderations" element={<AdminReconsiderationsPage />} />
+          <Route path="campaign-invoices" element={<AdminCampaignInvoicesPage />} />
         </Route>
         <Route path="/vet-tickets/:id/card" element={<VetCardPage />} />
         {/* Compass menu placeholder routes */}

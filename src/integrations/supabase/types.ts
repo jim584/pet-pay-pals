@@ -801,10 +801,18 @@ export type Database = {
       }
       help_now_campaigns: {
         Row: {
+          clock_paused_at: string | null
           created_at: string
+          document_basis: string
           expires_at: string | null
           goal_amount: number
           id: string
+          invoice_rejection_reason: string | null
+          invoice_reviewed_at: string | null
+          invoice_reviewed_by: string | null
+          invoice_status: string
+          invoice_submitted_at: string | null
+          invoice_url: string | null
           owner_id: string
           pet_id: string
           photo_urls: string[]
@@ -818,10 +826,18 @@ export type Database = {
           verification_status: string
         }
         Insert: {
+          clock_paused_at?: string | null
           created_at?: string
+          document_basis?: string
           expires_at?: string | null
           goal_amount?: number
           id?: string
+          invoice_rejection_reason?: string | null
+          invoice_reviewed_at?: string | null
+          invoice_reviewed_by?: string | null
+          invoice_status?: string
+          invoice_submitted_at?: string | null
+          invoice_url?: string | null
           owner_id: string
           pet_id: string
           photo_urls?: string[]
@@ -835,10 +851,18 @@ export type Database = {
           verification_status?: string
         }
         Update: {
+          clock_paused_at?: string | null
           created_at?: string
+          document_basis?: string
           expires_at?: string | null
           goal_amount?: number
           id?: string
+          invoice_rejection_reason?: string | null
+          invoice_reviewed_at?: string | null
+          invoice_reviewed_by?: string | null
+          invoice_status?: string
+          invoice_submitted_at?: string | null
+          invoice_url?: string | null
           owner_id?: string
           pet_id?: string
           photo_urls?: string[]

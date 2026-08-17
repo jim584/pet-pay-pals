@@ -29,6 +29,7 @@ const adminNav = [
   { title: "Wallet & Reserve", url: "/admin/reserve", icon: Wallet },
   { title: "Referrals", url: "/admin/referrals", icon: Megaphone },
   { title: "Reconsiderations", url: "/admin/reconsiderations", icon: MessageSquareWarning },
+  { title: "Campaign invoices", url: "/admin/campaign-invoices", icon: FileText },
   { title: "Vetted Catalogue", url: "/admin/vetted-catalog", icon: ShoppingBag },
   { title: "Content", url: "/admin/content", icon: FileText },
 ];

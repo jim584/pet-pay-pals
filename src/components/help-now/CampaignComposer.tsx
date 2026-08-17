@@ -13,6 +13,8 @@ import {
   uploadCampaignPhoto, campaignReadyToPublish, MIN_STORY_LENGTH,
   type HelpNowCampaign,
 } from "@/lib/help-now-campaigns-api";
+import { CampaignInvoicePanel } from "./CampaignInvoicePanel";
+import { CampaignExpiryBadge } from "./CampaignExpiryBadge";
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(Number(n ?? 0));
@@ -126,18 +128,22 @@ export function CampaignComposer({ ticketId }: { ticketId: string }) {
             </p>
           </div>
         </div>
-        <Badge variant={published ? "default" : "outline"}>
-          {published ? campaign.status : "draft"}
-        </Badge>
+        <div className="flex flex-col items-end gap-1">
+          <Badge variant={published ? "default" : "outline"}>
+            {published ? campaign.status : "draft"}
+          </Badge>
+          {!published && <CampaignExpiryBadge campaign={campaign} />}
+        </div>
       </div>
 
       {published ? (
-        <div className="space-y-1">
+        <div className="space-y-2">
           <Progress value={pct} />
           <p className="text-xs text-muted-foreground">
             {fmt(campaign.raised_amount)} raised of {fmt(campaign.goal_amount)} —{" "}
             {fmt(Math.max(0, Number(campaign.goal_amount) - Number(campaign.raised_amount)))} still needed
           </p>
+          <CampaignInvoicePanel campaign={campaign} onChange={setCampaign} />
         </div>
       ) : (
         <div className="space-y-2">
