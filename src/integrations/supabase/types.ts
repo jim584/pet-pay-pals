@@ -1411,6 +1411,7 @@ export type Database = {
           species: string
           updated_at: string
           vet_of_record_id: string | null
+          vet_of_record_license_id: string | null
           vet_of_record_set_at: string | null
           weight_kg: number | null
         }
@@ -1429,6 +1430,7 @@ export type Database = {
           species?: string
           updated_at?: string
           vet_of_record_id?: string | null
+          vet_of_record_license_id?: string | null
           vet_of_record_set_at?: string | null
           weight_kg?: number | null
         }
@@ -1447,6 +1449,7 @@ export type Database = {
           species?: string
           updated_at?: string
           vet_of_record_id?: string | null
+          vet_of_record_license_id?: string | null
           vet_of_record_set_at?: string | null
           weight_kg?: number | null
         }
@@ -1463,6 +1466,13 @@ export type Database = {
             columns: ["vet_of_record_id"]
             isOneToOne: false
             referencedRelation: "vet_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pets_vet_of_record_license_id_fkey"
+            columns: ["vet_of_record_license_id"]
+            isOneToOne: false
+            referencedRelation: "vet_license_records"
             referencedColumns: ["id"]
           },
         ]
@@ -2422,6 +2432,7 @@ export type Database = {
           source_url: string | null
           state: string
           updated_at: string
+          vet_profile_id: string | null
         }
         Insert: {
           address_line1?: string | null
@@ -2453,6 +2464,7 @@ export type Database = {
           source_url?: string | null
           state: string
           updated_at?: string
+          vet_profile_id?: string | null
         }
         Update: {
           address_line1?: string | null
@@ -2484,8 +2496,17 @@ export type Database = {
           source_url?: string | null
           state?: string
           updated_at?: string
+          vet_profile_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "vet_license_records_vet_profile_id_fkey"
+            columns: ["vet_profile_id"]
+            isOneToOne: false
+            referencedRelation: "vet_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vet_license_sources: {
         Row: {
@@ -3252,6 +3273,7 @@ export type Database = {
           source_url: string | null
           state: string
           updated_at: string
+          vet_profile_id: string | null
         }[]
         SetofOptions: {
           from: "*"
