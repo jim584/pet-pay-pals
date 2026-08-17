@@ -58,6 +58,8 @@ function AppRoutes() {
         <Route path="/" element={<Index />} />
         <Route path="/auth" element={<Auth />} />
         <Route path="/select-role" element={<SelectRole />} />
+        <Route path="/attestation/:token" element={<AttestationPublicPage />} />
+
         <Route path="/dashboard" element={<DashboardLayout />}>
           <Route index element={<DashboardIndex />} />
           <Route path="pets" element={<PetsPage />} />
