@@ -172,7 +172,10 @@ export function PetFormDialog({ open, onOpenChange, pet, onSuccess }: PetFormDia
         owner_id: user.id,
         photo_url: removePhoto ? null : (pet?.photo_url ?? null),
         vet_of_record_id: form.vet_of_record_id || null,
-        vet_of_record_set_at: form.vet_of_record_id && form.vet_of_record_id !== (pet?.vet_of_record_id ?? "")
+        vet_of_record_license_id: licenseVet?.id ?? null,
+        vet_of_record_set_at: (form.vet_of_record_id || licenseVet?.id) &&
+          (form.vet_of_record_id !== (pet?.vet_of_record_id ?? "") ||
+            (licenseVet?.id ?? null) !== ((pet as { vet_of_record_license_id?: string | null } | undefined)?.vet_of_record_license_id ?? null))
           ? new Date().toISOString()
           : (pet?.vet_of_record_set_at ?? null),
       };
