@@ -1,8 +1,33 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+const jsonHeaders = { ...corsHeaders, "Content-Type": "application/json" };
+
 // Daily job: expire DP accrual rows past their expires_at and redistribute 50/30/20.
-Deno.serve(async (_req) => {
-  const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const admin = createClient(Deno.env.get("SUPABASE_URL")!, serviceKey);
+
+  // Authorization: cron/service-role caller, or a signed-in admin user.
+  const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
+  let authorized = !!token && token === serviceKey;
+  if (!authorized && token) {
+    const { data: userData } = await admin.auth.getUser(token);
+    const uid = userData?.user?.id;
+    if (uid) {
+      const { data: isAdmin } = await admin.rpc("has_role", { _user_id: uid, _role: "admin" });
+      authorized = isAdmin === true;
+    }
+  }
+  if (!authorized) {
+    return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: jsonHeaders });
+  }
+
   const nowIso = new Date().toISOString();
 
   const { data: rows, error } = await admin
@@ -15,7 +40,7 @@ Deno.serve(async (_req) => {
 
   if (error) {
     console.error("query expired DP error:", error);
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: jsonHeaders });
   }
 
   // Resolve the pet each accrual belongs to (benefits are pet-bound).
@@ -82,7 +107,7 @@ Deno.serve(async (_req) => {
     }
   }
 
-  return new Response(JSON.stringify({ processed, totalReserve }), {
-    status: 200, headers: { "Content-Type": "application/json" },
+  return new Response(JSON.stringify({ processed, reserve_added: totalReserve, totalReserve }), {
+    status: 200, headers: jsonHeaders,
   });
 });
