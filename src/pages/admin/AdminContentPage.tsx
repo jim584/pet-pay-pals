@@ -6,6 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { Loader2, Plus, Search, Trash2, Image as ImageIcon } from "lucide-react";
 import { invalidateContentBlock } from "@/hooks/useContentBlock";
@@ -108,23 +115,30 @@ export default function AdminContentPage() {
 
       <Card>
         <CardHeader><CardTitle className="text-base">Create a new content block</CardTitle></CardHeader>
-        <CardContent className="flex flex-wrap items-end gap-3">
-          <div className="flex-1 min-w-[200px]">
+        <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_14rem_auto] sm:items-end">
+          <div className="min-w-0 space-y-1.5">
             <Label htmlFor="newkey">Key (e.g. <code>landing.hero.title</code>)</Label>
             <Input id="newkey" value={newKey} onChange={(e) => setNewKey(e.target.value)} placeholder="landing.hero.title" />
           </div>
-          <div>
+          <div className="min-w-0 space-y-1.5">
             <Label htmlFor="kind">Kind</Label>
-            <select id="kind"
-              className="h-10 rounded-md border bg-background px-3 text-sm"
-              value={newKind}
-              onChange={(e) => setNewKind(e.target.value as any)}>
-              {Object.entries(KIND_DESCRIPTIONS).map(([k, d]) => (
-                <option key={k} value={k}>{k} — {d}</option>
-              ))}
-            </select>
+            <Select value={newKind} onValueChange={(v) => setNewKind(v as ContentBlock["kind"])}>
+              <SelectTrigger id="kind" className="w-full">
+                <SelectValue placeholder="Select a kind" />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(KIND_DESCRIPTIONS) as ContentBlock["kind"][]).map((k) => (
+                  <SelectItem key={k} value={k}>
+                    <span className="font-medium">{k === "image_list" ? "image list" : k}</span>
+                    <span className="block text-xs text-muted-foreground">{KIND_DESCRIPTIONS[k]}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <Button onClick={createBlock}><Plus className="h-4 w-4 mr-1" /> Create</Button>
+          <Button className="w-full sm:w-auto" onClick={createBlock}>
+            <Plus className="h-4 w-4 mr-1" /> Create
+          </Button>
         </CardContent>
       </Card>
 
