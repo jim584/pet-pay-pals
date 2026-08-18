@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Lovable internal plans (do not sync to GitHub)
+.lovable/
